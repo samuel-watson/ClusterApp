@@ -19,7 +19,7 @@ namespace ClusterApp {
 
     void RenderSampleSize(ClusterApp::design& designs);
 
-    void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option, ImFont* unifont);
+    void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option);
 
     void RenderResults(ClusterApp::modelUpdater& updater, ClusterApp::options& option);
 

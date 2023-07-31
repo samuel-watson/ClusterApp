@@ -8,7 +8,7 @@
 #include <GLES3/gl3.h>
 #include <GLFW/glfw3.h>
 
-#include "imgui.h"
+#include "src/clusterapp.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <iostream>
@@ -57,6 +57,7 @@ void loop()
   }
 
   glfwPollEvents();
+  
 
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -73,7 +74,7 @@ void loop()
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::modelChecker checker(designs, model, updater);
 
-  ImGui::PushFont(main_font);
+ // ImGui::PushFont(main_font);
   if (windows.light_mode) {
       ImGui::PushStyleColor(ImGuiCol_WindowBg, colour.base3());
       ImGui::PushStyleColor(ImGuiCol_Text, colour.base03());
@@ -89,18 +90,17 @@ void loop()
       ImGui::PushStyleColor(ImGuiCol_PopupBg, colour.base02());
   }
 
-
   ClusterApp::ShowMainMenu(windows);
   ClusterApp::RenderDesigner(designs, updater, windows);
   if (windows.sample_size)
       ClusterApp::RenderSampleSize(designs);
   if (windows.model)
-      ClusterApp::RenderModel(designs, model, windows, uni_font);
+      ClusterApp::RenderModel(designs, model, windows);
   if (windows.results)
       ClusterApp::RenderResults(updater, windows);
   if (windows.optimiser)
       ClusterApp::RenderOptimiser(designs, updater, results, windows);
-  ImGui::PopFont();
+  //ImGui::PopFont();
   ImGui::PopStyleColor(5);
   // Rendering
 
@@ -155,8 +155,7 @@ int init_imgui()
   // Setup style
   ImGui::StyleColorsDark();
 
-  ImGuiIO& io = ImGui::GetIO();
-
+  ImGuiIO& io = ImGui::GetIO();  
   // Load Fonts
   ImVector<ImWchar> ranges;
   ImFontGlyphRangesBuilder builder;                         // Add a specific character
@@ -164,10 +163,10 @@ int init_imgui()
   builder.AddChar(0x00B2);
   builder.BuildRanges(&ranges);
 
-  ImFont* main_font = io.Fonts->AddFontFromFileTTF("data\twcen.ttf", 18.0f, nullptr, ranges.Data);
-  ImFont* uni_font = io.Fonts->AddFontFromFileTTF("data\didact.ttf", 18.0f, nullptr, ranges.Data);
+  //ImFont* main_font = io.Fonts->AddFontFromFileTTF("data/twcen.ttf", 18.0f, nullptr, ranges.Data);
+  //ImFont* uni_font = 
+  io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data);
   io.Fonts->Build();
-
   resizeCanvas();
 
   return 0;

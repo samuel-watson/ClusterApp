@@ -548,7 +548,7 @@ namespace ClusterApp {
         ImGui::End();
     }
 
-    void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option, ImFont* unifont) {
+    void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option) {
         ImGui::Begin("Statistical Model");
 
         const char* family_items[] = { "Gaussian", "Binomial", "Poisson", "Beta", "Gamma" };
@@ -726,14 +726,13 @@ namespace ClusterApp {
                     }
                     if (cl_cov_item_current == 2) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
-                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                        //ImGui::PushFont(unifont);ImGui::PopFont();
+                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period autoregressive parameter.");
                     }
                     if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
-                        ImGui::DragFloat(u8"\u03B8", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                        ImGui::DragFloat(u8"\u03B8", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             u8"Cluster-period denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");
                     }
                     if (structure_sampling == 1) {
@@ -742,14 +741,12 @@ namespace ClusterApp {
                             "Individual autocorrelation coefficient.");
                         if (ind_cov_item_current == 1) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::PushFont(unifont);
-                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
                         if (ind_cov_item_current == 2 || ind_cov_item_current == 3) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::PushFont(unifont);
-                            ImGui::DragFloat(u8"\u03B8 (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                            ImGui::DragFloat(u8"\u03B8 (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 u8"Individual denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");
                         }
                     }
@@ -757,43 +754,36 @@ namespace ClusterApp {
                 else {
                     ImGui::TextWrapped("Use of ICC, CAC, and IAC values is limited to Gaussian-identity models currently, as these values are not constants. Please set the variance parameters directly.");
                     ImGui::SetNextItemWidth(200);
-                    ImGui::PushFont(unifont);
-                    ImGui::DragFloat(u8"\u03C4\u00B2", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                    ImGui::DragFloat(u8"\u03C4\u00B2", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                         "Cluster-level variance parameter.");
                     if (cl_cov_item_current == 1) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
-                        ImGui::DragFloat(u8"\u03C9\u00B2", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                        ImGui::DragFloat(u8"\u03C9\u00B2", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period level variance parameter.");
                     }
                     if (cl_cov_item_current == 2) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
-                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period autoregressive parameter.");
                     }
                     if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
                         ImGui::DragFloat(u8"\u03B8", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            u8"Cluster-period denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  ImGui::PopFont();
+                            u8"Cluster-period denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  
                     }
                     if (structure_sampling == 1) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::PushFont(unifont);
-                        ImGui::DragFloat(u8"\u03B7", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                        ImGui::DragFloat(u8"\u03B7", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Individual-level variance term");
                         if (ind_cov_item_current == 2) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::PushFont(unifont);
-                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); ImGui::PopFont(); HelpMarker(
+                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
                         if (ind_cov_item_current == 3 || ind_cov_item_current == 4) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::PushFont(unifont);
                             ImGui::DragFloat(u8"\u03B8 (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                u8"Individual denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  ImGui::PopFont();
+                                u8"Individual denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  
                         }
                     }
                     if (family_item_current == 0 || family_item_current == 3 || family_item_current == 4) {
