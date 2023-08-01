@@ -5,10 +5,10 @@
 #include <memory>
 #include <type_traits>
 #include <chrono>
-#include <thread>
-#include <functional>
+//#include <thread>
+//#include <functional>
 #include <numeric>
-#include <boost/math/distributions/normal.hpp>
+#include <random>
 #include "modeltypes.h"
 #include "glmmr/model.hpp"
 
@@ -191,18 +191,21 @@ namespace ClusterApp {
         void update_optimum();
     };
 
-    class modelChecker {
+   class modelChecker {
     public:
         ClusterApp::design& designs;
         ClusterApp::statisticalModel& model;
         ClusterApp::modelUpdater& updater;
-        unsigned int update_interval = 1000;
+        double update_interval = 1000;
+        std::chrono::steady_clock clock;
+        std::chrono::time_point< std::chrono::steady_clock> t0;
         modelChecker(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
-            unsigned int interval = 1000);
+            double interval = 1000);
         void check();
-        void timer_start(std::function<void(void)> func, unsigned int interval);
+        //void timer_start(std::function<void(void)> func, unsigned int interval);
+        void check_time();
     };
 
 

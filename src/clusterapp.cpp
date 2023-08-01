@@ -2,40 +2,10 @@
 
 namespace ClusterApp {
 
-    void ShowMainMenu(ClusterApp::options& windows) {
+    void ShowMainMenu(ClusterApp::options& windows, ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary) {
         if (ImGui::BeginMainMenuBar())
         {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::BeginMenu("Options"))
-                {
-                    ImGui::Checkbox("Light model", &windows.light_mode);
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Trial options"))
-            {
-                ImGui::Checkbox("Two treatments", &windows.two_treatments);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Windows"))
-            {
-                ImGui::Checkbox("Sample size", &windows.sample_size);
-                ImGui::Checkbox("Statistical model", &windows.model);
-                ImGui::Checkbox("Results", &windows.results);
-                ImGui::Checkbox("Optimal design", &windows.optimiser);
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMainMenuBar();
-        }
-    }
-
-    void RenderDesigner(ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::options& option) {
-        ImGui::Begin("Trial Designer", NULL, ImGuiWindowFlags_MenuBar);
-        if (ImGui::BeginMenuBar()) {
-            if (ImGui::BeginMenu("Designs")) {
+            if (ImGui::BeginMenu("Trial Designs")) {
                 if (ImGui::BeginMenu("Parallel")) {
                     static int parallel_t = 1;
                     static int parallel_n = 10;
@@ -122,7 +92,7 @@ namespace ClusterApp {
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Factorial")) {
-                    if (option.two_treatments) {
+                    if (windows.two_treatments) {
                         static int factorial_t;
                         static int factorial_n;
                         static int factorial_J;
@@ -139,13 +109,64 @@ namespace ClusterApp {
                         }
                     }
                     else {
-                        ImGui::Text("To enable this option, set two treatments in trial options.");
+                        ImGui::Text("To enable this option, set two treatments below.");
                     }
                     ImGui::EndMenu();
                 }
+                ImGui::Checkbox("Two treatments", &windows.two_treatments);
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Modify")) {
+            if (ImGui::BeginMenu("Modify design")) {
+                if (ImGui::BeginMenu("Sequences")) {
+                    static int total_t;
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("Sequences", &total_t, 1, 10, 0);
+                    if (ImGui::Button("Set")) {
+                        if (total_t < designs.sequences && total_t > 0) {
+                            int difft = designs.sequences - total_t;
+                            for (int i = 0; i < difft; i++) {
+                                designs.remove_sequence(designs.sequences - 1);
+                            }
+                        }
+                        else if (total_t < designs.sequences) {
+                            int difft = total_t - designs.sequences;
+                            for (int i = 0; i < difft; i++) {
+                                designs.add_sequence();
+                            }
+                        }
+                    }
+                    if (ImGui::MenuItem("Split sequences into clusters")) {
+                        designs.split_sequences();
+                    }
+                    if (ImGui::MenuItem("Combine clusters into sequences")) {
+                        designs.combine_sequences();
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Clusters")) {
+                    static int total_t;
+                    static int total_n;
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
+                    if (ImGui::Button("Set")) {
+                        if (total_t > 0) {
+                            for (int j = 0; j < designs.sequences; j++)  *designs.n_clusters(j) = total_t;
+                        }
+                    }
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
+                    if (ImGui::Button("Set")) {
+                        if (total_n > 0) {
+                            for (int j = 0; j < designs.sequences; j++) {
+                                for (int t = 0; t < designs.time; t++) {
+                                    *designs.n(j, t) = total_n;
+                                }
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
                 if (ImGui::MenuItem("Activate all")) {
                     for (int i = 0; i < designs.sequences; i++) {
                         for (int t = 0; t < designs.time; t++) {
@@ -182,58 +203,46 @@ namespace ClusterApp {
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Sequences")) {
-                static int total_t;
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("Sequences", &total_t, 1, 10, 0);
-                if (ImGui::Button("Set")) {
-                    if (total_t < designs.sequences && total_t > 0) {
-                        int difft = designs.sequences - total_t;
-                        for (int i = 0; i < difft; i++) {
-                            designs.remove_sequence(designs.sequences - 1);
-                        }
+            if (ImGui::BeginMenu("Optimiser")) {
+                if (ImGui::BeginMenu("Sample size")) {
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputInt("Target total sample size", &summary.total_n, 1, 10, 0); ImGui::SameLine();
+                    if (ImGui::SmallButton("Recalculate")) {
+                        summary.total_n = designs.total_n();
+                        updater.update_optimum();
                     }
-                    else if (total_t < designs.sequences) {
-                        int difft = total_t - designs.sequences;
-                        for (int i = 0; i < difft; i++) {
-                            designs.add_sequence();
-                        }
-                    }
+                    ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Split sequences into clusters")) {
-                    designs.split_sequences();
-                }
-                if (ImGui::MenuItem("Combine clusters into sequences")) {
-                    designs.combine_sequences();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Clusters")) {
-                static int total_t;
-                static int total_n;
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
-                if (ImGui::Button("Set")) {
-                    if (total_t > 0) {
-                        for (int j = 0; j < designs.sequences; j++)  *designs.n_clusters(j) = total_t;
-                    }
-                }
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
-                if (ImGui::Button("Set")) {
-                    if (total_n > 0) {
-                        for (int j = 0; j < designs.sequences; j++) {
-                            for (int t = 0; t < designs.time; t++) {
-                                *designs.n(j, t) = total_n;
-                            }
-                        }
+                if (ImGui::BeginMenu("Parameter weights")) {
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::DragFloat("Treatment 1", &updater.model.c_vals[0], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::DragFloat("Treatment 2", &updater.model.c_vals[1], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::DragFloat("Interaction", &updater.model.c_vals[2], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                    if (ImGui::SmallButton("Recalculate")) {
+                        updater.update_optimum();
                     }
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-            ImGui::EndMenuBar();
+            if (ImGui::BeginMenu("Windows"))
+            {
+                ImGui::Checkbox("Light mode", &windows.light_mode);
+                ImGui::Checkbox("Sample size", &windows.sample_size);
+                ImGui::Checkbox("Statistical model", &windows.model);
+                ImGui::Checkbox("Results", &windows.results);
+                ImGui::Checkbox("Optimal design", &windows.optimiser);
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMainMenuBar();
         }
+    }
+
+    void RenderDesigner(ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::options& option) {
+        ImGui::Begin("Trial Designer");
         ImGuiStyle& style = ImGui::GetStyle();
         colourPicker colours;
         int horiztonal_align = 70;
@@ -257,8 +266,6 @@ namespace ClusterApp {
         else {
             large_dim = small_dim;
         }
-
-
 
         ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters.");
         ImGui::Spacing();
@@ -384,7 +391,6 @@ namespace ClusterApp {
                 }
                 if (designs.sequences > 1) {
                     if (ImGui::SmallButton("Remove sequence")) {
-                        //designs.remove_sequence(n);
                         remove_seq = true;
                         which_remove = n;
                     }
@@ -481,7 +487,6 @@ namespace ClusterApp {
         }
         ImGui::PopID();
         ImGui::PopStyleColor(4);
-
 
         if (remove_seq) {
             designs.remove_sequence(which_remove);
@@ -727,13 +732,13 @@ namespace ClusterApp {
                     if (cl_cov_item_current == 2) {
                         ImGui::SetNextItemWidth(200);
                         //ImGui::PushFont(unifont);ImGui::PopFont();
-                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                        ImGui::DragFloat("Autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period autoregressive parameter.");
                     }
                     if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03B8", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            u8"Cluster-period denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");
+                        ImGui::DragFloat("Denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                     }
                     if (structure_sampling == 1) {
                         ImGui::SetNextItemWidth(200);
@@ -741,54 +746,54 @@ namespace ClusterApp {
                             "Individual autocorrelation coefficient.");
                         if (ind_cov_item_current == 1) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                            ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
                         if (ind_cov_item_current == 2 || ind_cov_item_current == 3) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat(u8"\u03B8 (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                u8"Individual denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");
+                            ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                         }
                     }
                 }
                 else {
                     ImGui::TextWrapped("Use of ICC, CAC, and IAC values is limited to Gaussian-identity models currently, as these values are not constants. Please set the variance parameters directly.");
                     ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat(u8"\u03C4\u00B2", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                    ImGui::DragFloat("Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                         "Cluster-level variance parameter.");
                     if (cl_cov_item_current == 1) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03C9\u00B2", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                        ImGui::DragFloat("Cluster-period level variance", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period level variance parameter.");
                     }
                     if (cl_cov_item_current == 2) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03BB", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                        ImGui::DragFloat("Cluster-period autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period autoregressive parameter.");
                     }
                     if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03B8", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            u8"Cluster-period denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  
+                        ImGui::DragFloat("Cluster-period denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");  
                     }
                     if (structure_sampling == 1) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03B7", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                        ImGui::DragFloat("Individual-level variance", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Individual-level variance term");
                         if (ind_cov_item_current == 2) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat(u8"\u03BB (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                            ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
                         if (ind_cov_item_current == 3 || ind_cov_item_current == 4) {
                             ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat(u8"\u03B8 (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                u8"Individual denominator parameter, e.g. exp(\u03B4/\u03B8) for exponential covariance.");  
+                            ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");  
                         }
                     }
                     if (family_item_current == 0 || family_item_current == 3 || family_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(u8"\u03C3\u00B2", &model.cov_pars[2], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        ImGui::DragFloat("Observation-level variance", &model.cov_pars[2], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                             "Observation-level variance term.");
                     }
 
@@ -1029,35 +1034,8 @@ namespace ClusterApp {
     }
 
     void ClusterApp::RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option) {
-        ImGui::Begin("Optimiser", NULL, ImGuiWindowFlags_MenuBar);
+        ImGui::Begin("Optimiser");//, NULL, ImGuiWindowFlags_MenuBar
 
-        if (ImGui::BeginMenuBar()) {
-            if (ImGui::BeginMenu("Options")) {
-                if (ImGui::BeginMenu("Sample size")) {
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Target total sample size", &summary.total_n, 1, 10, 0); ImGui::SameLine();
-                    if (ImGui::SmallButton("Recalculate")) {
-                        summary.total_n = design.total_n();
-                        updater.update_optimum();
-                    }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Parameter weights")) {
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Treatment 1", &updater.model.c_vals[0], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Treatment 2", &updater.model.c_vals[1], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Interaction", &updater.model.c_vals[2], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    if (ImGui::SmallButton("Recalculate")) {
-                        updater.update_optimum();
-                    }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenuBar();
-        }
 
         ImGui::TextWrapped("The design below shows the optimum weights per cluster in the design selected in the main window. Where sequences contain more than one cluster, these have been split out "); HelpMarker(
             "The colour of each cell indicates the weight. Click on the cell to see the weight and the rounded total number of observation. Rounding uses Hamilton's method. The design can be applied to the designer using the button below.");

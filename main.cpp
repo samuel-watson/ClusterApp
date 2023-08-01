@@ -8,12 +8,13 @@
 #include <GLES3/gl3.h>
 #include <GLFW/glfw3.h>
 
-#include "src/clusterapp.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+
+#include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <iostream>
 #include "src/clusterapp.h"
-
 
 GLFWwindow* g_window;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -34,7 +35,7 @@ EM_JS(int, canvas_get_height, (), {
 
 // Function called by javascript
 EM_JS(void, resizeCanvas, (), {
-  js_resizeCanvas();
+   js_resizeCanvas();
 });
 
 void on_size_changed()
@@ -57,14 +58,13 @@ void loop()
   }
 
   glfwPollEvents();
-  
 
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-
+  ImGui::NewFrame();  
   ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
+  // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
   static ClusterApp::design designs;
   static ClusterApp::options windows;
   static ClusterApp::statisticalModel model;
@@ -74,7 +74,7 @@ void loop()
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::modelChecker checker(designs, model, updater);
 
- // ImGui::PushFont(main_font);
+  //ImGui::PushFont(main_font);
   if (windows.light_mode) {
       ImGui::PushStyleColor(ImGuiCol_WindowBg, colour.base3());
       ImGui::PushStyleColor(ImGuiCol_Text, colour.base03());
@@ -90,7 +90,8 @@ void loop()
       ImGui::PushStyleColor(ImGuiCol_PopupBg, colour.base02());
   }
 
-  ClusterApp::ShowMainMenu(windows);
+  checker.check_time();
+  ClusterApp::ShowMainMenu(windows, designs, updater, results);
   ClusterApp::RenderDesigner(designs, updater, windows);
   if (windows.sample_size)
       ClusterApp::RenderSampleSize(designs);
@@ -100,9 +101,8 @@ void loop()
       ClusterApp::RenderResults(updater, windows);
   if (windows.optimiser)
       ClusterApp::RenderOptimiser(designs, updater, results, windows);
-  //ImGui::PopFont();
+  ////ImGui::PopFont();
   ImGui::PopStyleColor(5);
-  // Rendering
 
   ImGui::Render();
 
@@ -131,7 +131,7 @@ int init_gl()
   // Open a window and create its OpenGL context
   int canvasWidth = g_width;
   int canvasHeight = g_height;
-  g_window = glfwCreateWindow(canvasWidth, canvasHeight, "Cluster Trials App", NULL, NULL);
+  g_window = glfwCreateWindow(canvasWidth, canvasHeight, "WebGui Demo", NULL, NULL);
   if( g_window == NULL )
   {
       fprintf( stderr, "Failed to open GLFW window.\n" );
@@ -155,18 +155,25 @@ int init_imgui()
   // Setup style
   ImGui::StyleColorsDark();
 
-  ImGuiIO& io = ImGui::GetIO();  
+  ImGuiIO& io = ImGui::GetIO();
+
   // Load Fonts
+  /*io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 23.0f);
+  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 18.0f);
+  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 26.0f);
+  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 32.0f);
+  io.Fonts->AddFontDefault();*/
+
   ImVector<ImWchar> ranges;
   ImFontGlyphRangesBuilder builder;                         // Add a specific character
   builder.AddRanges(io.Fonts->GetGlyphRangesGreek()); // Add one of the default ranges
   builder.AddChar(0x00B2);
   builder.BuildRanges(&ranges);
 
-  //ImFont* main_font = io.Fonts->AddFontFromFileTTF("data/twcen.ttf", 18.0f, nullptr, ranges.Data);
-  //ImFont* uni_font = 
-  io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF("data/twcen.ttf", 18.0f, nullptr, ranges.Data);
+  //ImFont* uni_font = io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data);
   io.Fonts->Build();
+
   resizeCanvas();
 
   return 0;

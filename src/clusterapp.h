@@ -2,7 +2,6 @@
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "imgui.h"
 #include "imgui_internal.h"
 #include "clusterclasses.h"
 
@@ -13,7 +12,7 @@ namespace ClusterApp {
         const ImVec4& col_btm_left_hover, const ImVec4& col_btm_right_hover, const ImVec4& col_upper_left_active, const ImVec4& col_upper_right_active,
         const ImVec4& col_btm_left_active, const ImVec4& col_btm_right_active);
 
-    void ShowMainMenu(ClusterApp::options& windows);
+    void ShowMainMenu(ClusterApp::options& windows, ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary);
 
     void RenderDesigner(ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::options& option);
 
