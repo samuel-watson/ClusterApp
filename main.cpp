@@ -62,7 +62,7 @@ void loop()
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();  
-  ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+  //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
   // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
   static ClusterApp::design designs;
@@ -92,6 +92,7 @@ void loop()
 
   checker.check_time();
   ClusterApp::ShowMainMenu(windows, designs, updater, results);
+  ClusterApp::AppDockSpace(&windows.dockspace);
   ClusterApp::RenderDesigner(designs, updater, windows);
   if (windows.sample_size)
       ClusterApp::RenderSampleSize(designs);
@@ -131,7 +132,7 @@ int init_gl()
   // Open a window and create its OpenGL context
   int canvasWidth = g_width;
   int canvasHeight = g_height;
-  g_window = glfwCreateWindow(canvasWidth, canvasHeight, "WebGui Demo", NULL, NULL);
+  g_window = glfwCreateWindow(canvasWidth, canvasHeight, "Cluster Trials Designer", NULL, NULL);
   if( g_window == NULL )
   {
       fprintf( stderr, "Failed to open GLFW window.\n" );
@@ -156,22 +157,17 @@ int init_imgui()
   ImGui::StyleColorsDark();
 
   ImGuiIO& io = ImGui::GetIO();
-
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   // Load Fonts
-  /*io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 23.0f);
-  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 18.0f);
-  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 26.0f);
-  io.Fonts->AddFontFromFileTTF("data/xkcd-script.ttf", 32.0f);
-  io.Fonts->AddFontDefault();*/
 
   ImVector<ImWchar> ranges;
-  ImFontGlyphRangesBuilder builder;                         // Add a specific character
-  builder.AddRanges(io.Fonts->GetGlyphRangesGreek()); // Add one of the default ranges
+  ImFontGlyphRangesBuilder builder;                      
+  builder.AddRanges(io.Fonts->GetGlyphRangesGreek()); // Add one of the default ranges - doesn't actually have greek but leaving here in case I change the font
   builder.AddChar(0x00B2);
   builder.BuildRanges(&ranges);
 
   io.Fonts->AddFontFromFileTTF("data/twcen.ttf", 18.0f, nullptr, ranges.Data);
-  //ImFont* uni_font = io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data);
+  //ImFont* uni_font = io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data); // this has greek but haven't figured out how to choose fonts
   io.Fonts->Build();
 
   resizeCanvas();

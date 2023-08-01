@@ -27,12 +27,13 @@ namespace ClusterApp {
     }
 
     struct options {
-        bool sample_size = true;
+        bool sample_size = false;
         bool two_treatments = false;
-        bool model = true;
+        bool model = false;
         bool results = true;
         bool optimiser = true;
         bool light_mode = false;
+        bool dockspace = true;
         options() {};
         ~options() = default;
     };

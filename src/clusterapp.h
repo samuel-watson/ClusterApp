@@ -14,6 +14,8 @@ namespace ClusterApp {
 
     void ShowMainMenu(ClusterApp::options& windows, ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary);
 
+    void AppDockSpace(bool* p_open);
+
     void RenderDesigner(ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::options& option);
 
     void RenderSampleSize(ClusterApp::design& designs);
