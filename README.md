@@ -1,7 +1,7 @@
 ﻿# ClusterApp
 An application for design analysis for cluster randomised trials. The application provides an interactive graphical user interface to design a cluster trial, set model parameters, identify optimal designs, and determine power. A wide range of models are provided for both fixed and random effects, including exchangeable, nested exchangeable, and exponential decay covariance models at cluster and individual levels; Gaussian, binomial, poisson, beta, and gamma models with a range of link functions; and, time fixed effects and cluster time trends. Power, confidence intervals, and standard errors are calculated using GLS covariance and with between-within and [Kenward-Roger](https://doi.org/10.2307/2533558) corrections. Optimal design weights are calculated using the ["Girling" algorithm](https://doi.org/10.2307/2533558). The app also include two treatment designs including factorial trials.
 
-The app is available online at [clustertrials.app](https://www.clustertrial.app/).
+The app is available online at [clustertrial.app](https://www.clustertrial.app/).
 
 ## Using the app
 
