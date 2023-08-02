@@ -15,6 +15,10 @@ The optimal design window shades the active cells according to their weights. Th
 
 ![](clusterapp_lightmode.png)
 
+To enable factorial designs and other designs with two treatments select Trial designs->Two treatments. When there are two treatments, the model will include the individual treatment indicators and their interaction. Cells with the second treatment are coloured yellow, and the interaction are both red/yellow. The results window will show results for both treatments and the interaction, as below. 
+
+![](clusterapp_factorial.png)
+
 # Future features
 The application is still in development stage and may have bugs. For upcoming versions we plan to implement the following features:
 
