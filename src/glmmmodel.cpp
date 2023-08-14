@@ -199,26 +199,35 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         double dofkr = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
         boost::math::students_t dist(dofkr);
         double bvar = res.vcov_beta(idx, idx);
-        double tval = statmodel.te_pars[0] / sqrt(bvar);
-        double tcutoff = boost::math::quantile(dist, 0.975);
-        summary.power_kr = res.dof(idx) > 1 ?  boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-        summary.dof_kr = res.dof(idx);
-        summary.se_kr = sqrt(bvar);
-        summary.ci_width_kr = tcutoff * summary.se_kr;
-        if (option.two_treatments) {
-            bvar = res.vcov_beta(idx+1, idx+1);
-            tval = statmodel.te_pars[1] / sqrt(bvar);
-            summary.power_kr_2 = res.dof(idx+1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-            summary.dof_kr_2 = res.dof(idx + 1);
-            summary.se_kr_2 = sqrt(bvar);
-            summary.ci_width_kr_2 = tcutoff * summary.se_2;
+        double tval, tcutoff;
+        if (!isnan(bvar) && bvar >= 0) {
+            tval = statmodel.te_pars[0] / sqrt(bvar);
+            tcutoff = boost::math::quantile(dist, 0.975);
+            summary.power_kr = res.dof(idx) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+            summary.dof_kr = res.dof(idx);
+            summary.se_kr = sqrt(bvar);
+            summary.ci_width_kr = tcutoff * summary.se_kr;
+            if (option.two_treatments) {
+                bvar = res.vcov_beta(idx + 1, idx + 1);
+                tval = statmodel.te_pars[1] / sqrt(bvar);
+                summary.power_kr_2 = res.dof(idx + 1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_2 = res.dof(idx + 1);
+                summary.se_kr_2 = sqrt(bvar);
+                summary.ci_width_kr_2 = tcutoff * summary.se_2;
 
-            bvar = res.vcov_beta(idx + 2, idx + 2);
-            tval = statmodel.te_pars[2] / sqrt(bvar);
-            summary.power_kr_12 = res.dof(idx+2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-            summary.dof_kr_12 =  res.dof(idx + 2);
-            summary.se_kr_12 = sqrt(bvar);
-            summary.ci_width_kr_12 = tcutoff * summary.se_12;
+                bvar = res.vcov_beta(idx + 2, idx + 2);
+                tval = statmodel.te_pars[2] / sqrt(bvar);
+                summary.power_kr_12 = res.dof(idx + 2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_12 = res.dof(idx + 2);
+                summary.se_kr_12 = sqrt(bvar);
+                summary.ci_width_kr_12 = tcutoff * summary.se_12;
+            }
+        }
+        else {
+            summary.power_kr = 909;
+            summary.dof_kr = 0;
+            summary.se_kr = 0;
+            summary.ci_width_kr = 0;
         }
     }
 }

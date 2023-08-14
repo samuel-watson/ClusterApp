@@ -10,6 +10,7 @@ ClusterApp::modelUpdater::modelUpdater(ClusterApp::design& designs_,
 
 void ClusterApp::modelUpdater::update_data() {
     // iterate over the cluster-periods to get the number of rows, then re-iterate to fill in the information
+    model.update_beta(designs);
     int n_rows = 0;
     for (int i = 0; i < designs.sequences; i++) {
         for (int t = 0; t < designs.time; t++) {

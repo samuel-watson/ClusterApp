@@ -949,7 +949,12 @@ namespace ClusterApp {
             ImGui::TableNextColumn();
             ImGui::Text("%.1f", updater.summary.power_bw);
             ImGui::TableNextColumn();
-            ImGui::Text("%.1f", updater.summary.power_kr);
+            if (updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", updater.summary.power_kr);
+            }            
             ImGui::TableNextColumn();
 
             ImGui::Text("Confidence interval half-width");
@@ -958,7 +963,12 @@ namespace ClusterApp {
             ImGui::TableNextColumn();
             ImGui::Text("%.3f", updater.summary.ci_width_bw);
             ImGui::TableNextColumn();
-            ImGui::Text("%.3f", updater.summary.ci_width_kr);
+            if (updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", updater.summary.ci_width_kr);
+            }
             ImGui::TableNextColumn();
 
             ImGui::Text("Standard error");
@@ -967,7 +977,12 @@ namespace ClusterApp {
             ImGui::TableNextColumn();
             ImGui::Text("%.3f", updater.summary.se);
             ImGui::TableNextColumn();
-            ImGui::Text("%.3f", updater.summary.se_kr);
+            if (updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", updater.summary.se_kr);
+            }
             ImGui::TableNextColumn();
 
             ImGui::Text("Degrees of freedom");
@@ -976,7 +991,12 @@ namespace ClusterApp {
             ImGui::TableNextColumn();
             ImGui::Text("%.1f", updater.summary.dof_bw);
             ImGui::TableNextColumn();
-            ImGui::Text("%.1f", updater.summary.dof_kr);
+            if (updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", updater.summary.dof_kr);
+            }
             ImGui::TableNextColumn();
 
             ImGui::EndTable();
@@ -999,7 +1019,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.power_bw_2);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.1f", updater.summary.power_kr_2);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.power_kr_2);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Confidence interval half-width");
@@ -1008,7 +1033,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width_bw_2);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.3f", updater.summary.ci_width_kr_2);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.ci_width_kr_2);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Standard error");
@@ -1017,7 +1047,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.se_2);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.3f", updater.summary.se_kr_2);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.se_kr_2);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Degrees of freedom");
@@ -1026,7 +1061,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.dof_bw_2);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.1f", updater.summary.dof_kr_2);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.dof_kr_2);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::EndTable();
@@ -1048,7 +1088,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.power_bw_12);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.1f", updater.summary.power_kr_12);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.power_kr_12);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Confidence interval half-width");
@@ -1057,7 +1102,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width_bw_12);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.3f", updater.summary.ci_width_kr_12);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.ci_width_kr_12);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Standard error");
@@ -1066,7 +1116,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.se_12);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.3f", updater.summary.se_kr_12);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.se_kr_12);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::Text("Degrees of freedom");
@@ -1075,7 +1130,12 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.dof_bw_12);
                 ImGui::TableNextColumn();
-                ImGui::Text("%.1f", updater.summary.dof_kr_12);
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.dof_kr_12);
+                }
                 ImGui::TableNextColumn();
 
                 ImGui::EndTable();

@@ -5,11 +5,11 @@ ClusterApp::modelChecker::modelChecker(ClusterApp::design& designs_,
     ClusterApp::modelUpdater& updater_,
     double interval) : designs(designs_), model(model_), updater(updater_), update_interval(interval), t0(clock.now()) {};
 
-//timer_start([this]() {this->check(); }, interval);
 
 void ClusterApp::modelChecker::check() {
     bool dcheck = designs.check();
-    std::pair<bool, bool> mcheck = model.check();
+    if (dcheck) model.update_beta(designs);
+    std::pair<bool, bool> mcheck = model.check();    
     if (dcheck || mcheck.first || mcheck.second) {
         updater.update = true;
         if (dcheck || mcheck.first) {
@@ -21,15 +21,6 @@ void ClusterApp::modelChecker::check() {
     }
 }
 
-//void ClusterApp::modelChecker::timer_start(std::function<void(void)> func, unsigned int interval) {
-//    std::thread([func, interval]() {
-//        while (true)
-//        {
-//            func();
-//            std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-//        }
-//        }).detach();
-//};
 
 void ClusterApp::modelChecker::check_time() {
     auto t1 = clock.now();
