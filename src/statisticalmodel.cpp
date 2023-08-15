@@ -52,9 +52,6 @@ void ClusterApp::statisticalModel::update_beta(ClusterApp::design& design) {
 }
 
 void ClusterApp::statisticalModel::set_beta_random(const double m, const double s) {
-    /*boost::mt19937 rng(time(0));
-    boost::math::normal_distribution<> nd(m, s);
-    boost::variate_generator<boost::mt19937&, boost::math::normal_distribution<> > var_nor(rng, nd);*/
     std::default_random_engine generator; 
     std::mt19937 rng(generator());
     rng.seed(time(0));

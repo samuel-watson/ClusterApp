@@ -204,7 +204,6 @@ namespace ClusterApp {
             ClusterApp::modelUpdater& updater_,
             double interval = 1000);
         void check();
-        //void timer_start(std::function<void(void)> func, unsigned int interval);
         void check_time();
     };
 

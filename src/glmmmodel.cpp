@@ -132,7 +132,11 @@ void ClusterApp::glmmModel::update_parameters() {
             (*model).model.data.set_var_par(1 - statmodel.cov_pars[2]);
         }
     }
-
+    /*int P = (*model).model.linear_predictor.P();
+    if (P != beta.size()) {
+        beta.resize(P);
+        std:fill(beta.begin(), beta.end(), 0);
+    }*/
     (*model).update_beta(beta);
     (*model).update_theta(theta);
     (*model).matrix.W.update();
@@ -171,23 +175,51 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
         Eigen::MatrixXd M = (*model).matrix.information_matrix();
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval = statmodel.te_pars[0] / sqrt(M(idx,idx));
-        summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
-        summary.dof = (*model).model.n();
-        summary.se = sqrt(M(idx, idx));
-        summary.ci_width = zcutoff * summary.se;
+        double zval;
+        double bvar = M(idx, idx);
+        if (!isnan(bvar) && bvar > 0) {
+            zval = statmodel.te_pars[0] / sqrt(bvar);
+            summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
+            summary.dof = (*model).model.n();
+            summary.se = sqrt(M(idx, idx));
+            summary.ci_width = zcutoff * summary.se;
+        }
+        else {
+            summary.power = 909;
+            summary.dof = 0;
+            summary.se = 0;
+            summary.ci_width = 0;
+        }
         if (option.two_treatments) {
-            zval = statmodel.te_pars[0] / sqrt(M(idx+1, idx+1));
-            summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
-            summary.dof_2 = (*model).model.n();
-            summary.se_2 = sqrt(M(idx+1, idx+1));
-            summary.ci_width_2 = zcutoff * summary.se_2;
-
-            zval = statmodel.te_pars[0] / sqrt(M(idx + 2, idx + 2));
-            summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
-            summary.dof_12 = (*model).model.n();
-            summary.se_12 = sqrt(M(idx + 2, idx + 2));
-            summary.ci_width_12 = zcutoff * summary.se_12;
+            bvar = M(idx + 1, idx + 1);
+            if (!isnan(bvar) && bvar > 0) {
+                zval = statmodel.te_pars[1] / sqrt(bvar);
+                summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
+                summary.dof_2 = (*model).model.n();
+                summary.se_2 = sqrt(M(idx + 1, idx + 1));
+                summary.ci_width_2 = zcutoff * summary.se_2;
+            }
+            else {
+                summary.power_2 = 909;
+                summary.dof_2 = 0;
+                summary.se_2 = 0;
+                summary.ci_width_2 = 0;
+            }
+            bvar = M(idx + 2, idx + 2);
+            if (!isnan(bvar) && bvar > 0) {
+                zval = statmodel.te_pars[2] / sqrt(bvar);
+                summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
+                summary.dof_12 = (*model).model.n();
+                summary.se_12 = sqrt(M(idx + 2, idx + 2));
+                summary.ci_width_12 = zcutoff * summary.se_12;
+            }
+            else {
+                summary.power_12 = 909;
+                summary.dof_12 = 0;
+                summary.se_12 = 0;
+                summary.ci_width_12 = 0;
+            }
+            
         }
     }
 }
@@ -200,34 +232,52 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         boost::math::students_t dist(dofkr);
         double bvar = res.vcov_beta(idx, idx);
         double tval, tcutoff;
-        if (!isnan(bvar) && bvar >= 0) {
+        if (!isnan(bvar) && bvar > 0) {
             tval = statmodel.te_pars[0] / sqrt(bvar);
             tcutoff = boost::math::quantile(dist, 0.975);
             summary.power_kr = res.dof(idx) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
             summary.dof_kr = res.dof(idx);
             summary.se_kr = sqrt(bvar);
-            summary.ci_width_kr = tcutoff * summary.se_kr;
-            if (option.two_treatments) {
-                bvar = res.vcov_beta(idx + 1, idx + 1);
-                tval = statmodel.te_pars[1] / sqrt(bvar);
-                summary.power_kr_2 = res.dof(idx + 1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-                summary.dof_kr_2 = res.dof(idx + 1);
-                summary.se_kr_2 = sqrt(bvar);
-                summary.ci_width_kr_2 = tcutoff * summary.se_2;
-
-                bvar = res.vcov_beta(idx + 2, idx + 2);
-                tval = statmodel.te_pars[2] / sqrt(bvar);
-                summary.power_kr_12 = res.dof(idx + 2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-                summary.dof_kr_12 = res.dof(idx + 2);
-                summary.se_kr_12 = sqrt(bvar);
-                summary.ci_width_kr_12 = tcutoff * summary.se_12;
-            }
+            summary.ci_width_kr = tcutoff * summary.se_kr;            
         }
         else {
             summary.power_kr = 909;
             summary.dof_kr = 0;
             summary.se_kr = 0;
             summary.ci_width_kr = 0;
+        }
+
+        if (option.two_treatments) {
+            bvar = res.vcov_beta(idx + 1, idx + 1);
+            if (!isnan(bvar) && bvar >= 0) {
+                tval = statmodel.te_pars[1] / sqrt(bvar);
+                summary.power_kr_2 = res.dof(idx + 1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_2 = res.dof(idx + 1);
+                summary.se_kr_2 = sqrt(bvar);
+                summary.ci_width_kr_2 = tcutoff * summary.se_2;
+            }
+            else {
+                summary.power_kr_2 = 909;
+                summary.dof_kr_2 = 0;
+                summary.se_kr_2 = 0;
+                summary.ci_width_kr_2 = 0;
+            }
+            
+            bvar = res.vcov_beta(idx + 2, idx + 2);
+            if (!isnan(bvar) && bvar >= 0) {
+                tval = statmodel.te_pars[2] / sqrt(bvar);
+                summary.power_kr_12 = res.dof(idx + 2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_12 = res.dof(idx + 2);
+                summary.se_kr_12 = sqrt(bvar);
+                summary.ci_width_kr_12 = tcutoff * summary.se_12;
+            }
+            else {
+                summary.power_kr_12 = 909;
+                summary.dof_kr_12 = 0;
+                summary.se_kr_12 = 0;
+                summary.ci_width_kr_12 = 0;
+            }
+            
         }
     }
 }
@@ -237,24 +287,49 @@ void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
         Eigen::MatrixXd M = (*model).matrix.information_matrix();
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval = statmodel.te_pars[0] / sqrt(M(idx, idx));
+        double zval;
+        double bvar = M(idx, idx);        
         double dofbw = dof - (*model).model.linear_predictor.P();
         dofbw = dofbw > 1 ? dofbw : 1.0;
         boost::math::students_t dist(dofbw);
         double tcutoff = boost::math::quantile(dist, 0.975);
-        summary.power_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
-        summary.dof_bw = dof - (*model).model.linear_predictor.P();
-        summary.ci_width_bw = tcutoff * summary.se;
+        if (!isnan(bvar) && bvar > 0) {
+            zval = statmodel.te_pars[0] / sqrt(bvar);                         
+            summary.power_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
+            summary.dof_bw = dof - (*model).model.linear_predictor.P();
+            summary.ci_width_bw = tcutoff * summary.se;
+        }
+        else {
+            summary.power_bw = 0;
+            summary.dof_bw = 0;
+            summary.ci_width_bw = 0;
+        }
         if (option.two_treatments) {
-            //zval = statmodel.te_pars[1] / sqrt(M(idx+1, idx+1));
-            summary.power_bw_2 = boost::math::cdf(dist, zval - tcutoff) * 100;
-            summary.dof_bw_2 = dofbw;
-            summary.ci_width_bw_2 = tcutoff * summary.se_2;
-
-            //zval = statmodel.te_pars[2] / sqrt(M(idx+2, idx+2));
-            summary.power_bw_12 = boost::math::cdf(dist, zval - tcutoff) * 100;
-            summary.dof_bw_12 = dofbw;
-            summary.ci_width_bw_12 = tcutoff * summary.se_12;
+            bvar = M(idx + 1, idx + 1);
+            if (!isnan(bvar) && bvar > 0) {
+                zval = statmodel.te_pars[1] / sqrt(bvar);
+                summary.power_bw_2 = boost::math::cdf(dist, zval - tcutoff) * 100;
+                summary.dof_bw_2 = dofbw;
+                summary.ci_width_bw_2 = tcutoff * summary.se_2;
+            }
+            else {
+                summary.power_bw_2 = 909;
+                summary.dof_bw_2 = 0;
+                summary.ci_width_bw_2 = 0;
+            }            
+            bvar = M(idx + 2, idx + 2);
+            if (!isnan(bvar) && bvar > 0) {
+                zval = statmodel.te_pars[2] / sqrt(M(idx + 2, idx + 2));
+                summary.power_bw_12 = boost::math::cdf(dist, zval - tcutoff) * 100;
+                summary.dof_bw_12 = dofbw;
+                summary.ci_width_bw_12 = tcutoff * summary.se_12;
+            }
+            else {
+                summary.power_bw_12 = 909;
+                summary.dof_bw_12 = 0;
+                summary.ci_width_bw_12 = 0;
+            }
+            
         }
     }
 }

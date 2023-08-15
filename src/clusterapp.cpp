@@ -1019,7 +1019,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.power_bw_2);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_2 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1033,7 +1033,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width_bw_2);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_2 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1047,7 +1047,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.se_2);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_2 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1061,7 +1061,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.dof_bw_2);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_2 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1088,7 +1088,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.power_bw_12);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_12 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1102,7 +1102,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width_bw_12);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_12 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1116,7 +1116,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.se_12);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_12 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
@@ -1130,7 +1130,7 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.dof_bw_12);
                 ImGui::TableNextColumn();
-                if (updater.summary.power_kr == 909) {
+                if (updater.summary.power_kr_12 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
