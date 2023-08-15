@@ -12,7 +12,7 @@ SOURCES += ./src/statisticalmodel.cpp ./src/glmmmodel.cpp ./src/modelupdater.cpp
 
 LIBS = -lGL
 WEBGL_VER = -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1 
-USE_WASM = -s WASM=1 -s ALLOW_MEMORY_GROWTH=1  
+USE_WASM = -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=5MB
 CPPFLAGS += -I$(BOOST_DIR) -I$(EIGEN_DIR) 
 LDFLAGS += --shell-file shell_full.html
 
@@ -21,7 +21,7 @@ LDFLAGS += --shell-file shell_full.html
 all: $(SOURCES) $(OUTPUT)
 
 $(OUTPUT): $(SOURCES) 
-	$(CXX)  $(SOURCES) -std=c++17 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS)
+	$(CXX)  $(SOURCES) -std=c++17 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os -g2 --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS)
 clean:
 	rm -f $(OUTPUT)
 

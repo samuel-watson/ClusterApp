@@ -1,6 +1,7 @@
 #include "clusterclasses.h"
 
 void ClusterApp::design::initialise_data() {
+
     for (int i = 0; i < sequences; i++) {
         periods.emplace_back();
         for (int t = 0; t < time; t++) {
@@ -229,28 +230,20 @@ void ClusterApp::design::set_staircase(const int t, const int n, const int J) {
 void ClusterApp::design::set_factorial(const int t, const int n, const int J) {
     sequences = 1;
     time = 1;
-    periods.clear();
-    n_per_sequence.clear();
-    periods.emplace_back();
+    periods.resize(4);
+    n_per_sequence.resize(4);
+    for (int i = 0; i < 4; i++)n_per_sequence[i] = J;
+    periods[0].resize(t);
+    periods[1].resize(t);
+    periods[2].resize(t);
+    periods[3].resize(t);
+
     for (int i = 0; i < t; i++) {
-        periods[0].push_back(ClusterApp::sequencePeriod(true, n, false, false));
+        periods[0][i] = ClusterApp::sequencePeriod(true, n, false, false);
+        periods[1][i] = ClusterApp::sequencePeriod(true, n, true, false);
+        periods[2][i] = ClusterApp::sequencePeriod(true, n, false, true);
+        periods[3][i] = ClusterApp::sequencePeriod(true, n, true, true);
     }
-    n_per_sequence.push_back(J);
-    periods.emplace_back();
-    for (int i = 0; i < t; i++) {
-        periods[1].push_back(ClusterApp::sequencePeriod(true, n, true, false));
-    }
-    n_per_sequence.push_back(J);
-    periods.emplace_back();
-    for (int i = 0; i < t; i++) {
-        periods[2].push_back(ClusterApp::sequencePeriod(true, n, false, true));
-    }
-    n_per_sequence.push_back(J);
-    periods.emplace_back();
-    for (int i = 0; i < t; i++) {
-        periods[3].push_back(ClusterApp::sequencePeriod(true, n, true, true));
-    }
-    n_per_sequence.push_back(J);
     sequences = 4;
     time = t;
 }
