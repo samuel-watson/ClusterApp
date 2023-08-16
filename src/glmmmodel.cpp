@@ -88,6 +88,7 @@ void ClusterApp::glmmModel::update_formula() {
 }
 void ClusterApp::glmmModel::update_parameters() {
     std::vector<double> beta;
+    double mean_n = designs.mean_n();
     beta.push_back(statmodel.te_pars[0]);
     if (option.two_treatments) {
         beta.push_back(statmodel.te_pars[1]);
@@ -99,22 +100,26 @@ void ClusterApp::glmmModel::update_parameters() {
         if (statmodel.covariance == ClusterApp::Covariance::exchangeable) {
             theta.push_back(statmodel.ixx_pars[0]);
         }       
-        if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+        else if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
             double tau1 = statmodel.ixx_pars[0] * statmodel.ixx_pars[1];
             double tau2 = statmodel.ixx_pars[0] * (1 - statmodel.ixx_pars[1]);
             theta.push_back(tau1);
             theta.push_back(tau2);
         }
-        if (statmodel.covariance == ClusterApp::Covariance::autoregressive || statmodel.covariance == ClusterApp::Covariance::exponential || statmodel.covariance == ClusterApp::Covariance::squared_exponential) {
+        else if (statmodel.covariance == ClusterApp::Covariance::autoregressive || statmodel.covariance == ClusterApp::Covariance::exponential || statmodel.covariance == ClusterApp::Covariance::squared_exponential) {
+            theta.push_back(statmodel.ixx_pars[0]);
             theta.push_back(statmodel.cov_pars[1]);
         }
+
         if (statmodel.sampling == ClusterApp::Sampling::cohort) {
             double tau3 = statmodel.ixx_pars[2] * (1 - statmodel.ixx_pars[0]);
+            tau3 = tau3 / mean_n;
             theta.push_back(tau3);
             if (statmodel.ind_covariance != ClusterApp::IndividualCovariance::exchangeable) {
                 theta.push_back(statmodel.cov_pars[4]);
             }
         }
+
         if (statmodel.link == ClusterApp::Link::identity) {
             if (statmodel.sampling == ClusterApp::Sampling::cohort) {
                 double tau4 = (1 - statmodel.ixx_pars[0]) * (1 - statmodel.ixx_pars[2]);
@@ -144,11 +149,7 @@ void ClusterApp::glmmModel::update_parameters() {
             (*model).model.data.set_var_par(1 - statmodel.cov_pars[2]);
         }
     }
-    /*int P = (*model).model.linear_predictor.P();
-    if (P != beta.size()) {
-        beta.resize(P);
-        std:fill(beta.begin(), beta.end(), 0);
-    }*/
+
     (*model).update_beta(beta);
     (*model).update_theta(theta);
     (*model).matrix.W.update();
@@ -190,7 +191,7 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
         double zval;
         double bvar = M(idx, idx);
         if (!isnan(bvar) && bvar > 0) {
-            zval = statmodel.te_pars[0] / sqrt(bvar);
+            zval = abs(statmodel.te_pars[0] / sqrt(bvar));
             summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
             summary.dof = (*model).model.n();
             summary.se = sqrt(M(idx, idx));
@@ -205,7 +206,7 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
         if (option.two_treatments) {
             bvar = M(idx + 1, idx + 1);
             if (!isnan(bvar) && bvar > 0) {
-                zval = statmodel.te_pars[1] / sqrt(bvar);
+                zval = abs(statmodel.te_pars[1] / sqrt(bvar));
                 summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
                 summary.dof_2 = (*model).model.n();
                 summary.se_2 = sqrt(M(idx + 1, idx + 1));
@@ -219,7 +220,7 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
             }
             bvar = M(idx + 2, idx + 2);
             if (!isnan(bvar) && bvar > 0) {
-                zval = statmodel.te_pars[2] / sqrt(bvar);
+                zval = abs(statmodel.te_pars[2] / sqrt(bvar));
                 summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
                 summary.dof_12 = (*model).model.n();
                 summary.se_12 = sqrt(M(idx + 2, idx + 2));
@@ -245,7 +246,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         double bvar = res.vcov_beta(idx, idx);
         double tval, tcutoff;
         if (!isnan(bvar) && bvar > 0) {
-            tval = statmodel.te_pars[0] / sqrt(bvar);
+            tval = abs(statmodel.te_pars[0] / sqrt(bvar));
             tcutoff = boost::math::quantile(dist, 0.975);
             summary.power_kr = res.dof(idx) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
             summary.dof_kr = res.dof(idx);
@@ -262,7 +263,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         if (option.two_treatments) {
             bvar = res.vcov_beta(idx + 1, idx + 1);
             if (!isnan(bvar) && bvar >= 0) {
-                tval = statmodel.te_pars[1] / sqrt(bvar);
+                tval = abs(statmodel.te_pars[1] / sqrt(bvar));
                 summary.power_kr_2 = res.dof(idx + 1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
                 summary.dof_kr_2 = res.dof(idx + 1);
                 summary.se_kr_2 = sqrt(bvar);
@@ -277,7 +278,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
             
             bvar = res.vcov_beta(idx + 2, idx + 2);
             if (!isnan(bvar) && bvar >= 0) {
-                tval = statmodel.te_pars[2] / sqrt(bvar);
+                tval = abs(statmodel.te_pars[2] / sqrt(bvar));
                 summary.power_kr_12 = res.dof(idx + 2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
                 summary.dof_kr_12 = res.dof(idx + 2);
                 summary.se_kr_12 = sqrt(bvar);
@@ -306,7 +307,7 @@ void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
         boost::math::students_t dist(dofbw);
         double tcutoff = boost::math::quantile(dist, 0.975);
         if (!isnan(bvar) && bvar > 0) {
-            zval = statmodel.te_pars[0] / sqrt(bvar);                         
+            zval = abs(statmodel.te_pars[0] / sqrt(bvar));                         
             summary.power_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
             summary.dof_bw = dof - (*model).model.linear_predictor.P();
             summary.ci_width_bw = tcutoff * summary.se;
@@ -319,7 +320,7 @@ void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
         if (option.two_treatments) {
             bvar = M(idx + 1, idx + 1);
             if (!isnan(bvar) && bvar > 0) {
-                zval = statmodel.te_pars[1] / sqrt(bvar);
+                zval = abs(statmodel.te_pars[1] / sqrt(bvar));
                 summary.power_bw_2 = boost::math::cdf(dist, zval - tcutoff) * 100;
                 summary.dof_bw_2 = dofbw;
                 summary.ci_width_bw_2 = tcutoff * summary.se_2;
@@ -331,7 +332,7 @@ void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
             }            
             bvar = M(idx + 2, idx + 2);
             if (!isnan(bvar) && bvar > 0) {
-                zval = statmodel.te_pars[2] / sqrt(M(idx + 2, idx + 2));
+                zval = abs(statmodel.te_pars[2] / sqrt(M(idx + 2, idx + 2)));
                 summary.power_bw_12 = boost::math::cdf(dist, zval - tcutoff) * 100;
                 summary.dof_bw_12 = dofbw;
                 summary.ci_width_bw_12 = tcutoff * summary.se_12;

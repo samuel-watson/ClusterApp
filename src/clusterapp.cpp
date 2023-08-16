@@ -243,7 +243,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.1.121");
+                    ImGui::Text("Version: 0.1.122");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
 
                     if (ImGui::Button("Close"))
@@ -255,6 +255,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.1.122");
+                    ImGui::Text("- Fixed aggregated model specification in call to glmmr - it wasn't dividing by number of observations.");
                     ImGui::Text("Version: 0.1.121");
                     ImGui::Text("- Fixed covariance parameter values when using nested exchangeable function.");
 

@@ -65,6 +65,7 @@ namespace ClusterApp {
         int total_clusters();
         int total_cluster_periods();
         int total_n();
+        double mean_n();
         void set_parallel(const int t, const int n, const int J);
         void set_parallel_with_baseline(const int t, const int n, const int J);
         void set_stepped_wedge(const int t, const int n, const int J);
@@ -150,6 +151,7 @@ namespace ClusterApp {
         std::unique_ptr<glmmr::Model> model;
         ClusterApp::statisticalModel& statmodel;
         ClusterApp::options& option;
+        ClusterApp::design& designs;
         std::string formula = "int+(1|gr(cl))";
         std::string family = "gaussian";
         std::string link = "identity";
@@ -158,7 +160,7 @@ namespace ClusterApp {
         double zcutoff = boost::math::quantile(norm, 0.975);
         int dof = 1;
         std::vector<double> optimal_weights = { 0.5, 0.5 };
-        glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_) : statmodel(statmodel_), option(option_) {};
+        glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_, ClusterApp::design& designs_) : statmodel(statmodel_), option(option_), designs(designs_) {};
         ~glmmModel() = default;
         void update_formula();
         void update_parameters();

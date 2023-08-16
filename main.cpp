@@ -70,7 +70,7 @@ void loop()
   static ClusterApp::statisticalModel model;
   static ClusterApp::colourPicker colour;
   static ClusterApp::modelSummary results(designs);
-  static ClusterApp::glmmModel glmm(model, windows);
+  static ClusterApp::glmmModel glmm(model, windows, designs);
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::modelChecker checker(designs, model, updater);
 

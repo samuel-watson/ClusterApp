@@ -136,6 +136,12 @@ int ClusterApp::design::total_n() {
     return total;
 }
 
+double ClusterApp::design::mean_n() {
+    int totaln = total_n();
+    int totalcl_periods = total_cluster_periods();
+    return totaln / (double)totalcl_periods;
+}
+
 void ClusterApp::design::set_parallel(const int t, const int n, const int J) {
     sequences = 1;
     time = 1;
