@@ -6904,9 +6904,9 @@ var stackAlloc = a0 => (stackAlloc = wasmExports["ob"])(a0);
 
 var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["pb"])(a0);
 
-var ___start_em_js = Module["___start_em_js"] = 151352;
+var ___start_em_js = Module["___start_em_js"] = 151560;
 
-var ___stop_em_js = Module["___stop_em_js"] = 151458;
+var ___stop_em_js = Module["___stop_em_js"] = 151666;
 
 Module["addRunDependency"] = addRunDependency;
 

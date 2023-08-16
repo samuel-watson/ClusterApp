@@ -237,6 +237,33 @@ namespace ClusterApp {
                 ImGui::Checkbox("Dockspace", &windows.dockspace);
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Help")) {
+                if (ImGui::Button("About"))
+                    ImGui::OpenPopup("About");
+                if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+                {                    
+                    ImGui::Text("(c) Sam Watson 2023.");
+                    ImGui::Text("Version: 0.1.121");
+                    ImGui::Text("Code and license information is available on the GitHub repo.");
+
+                    if (ImGui::Button("Close"))
+                        ImGui::CloseCurrentPopup();
+                    ImGui::EndPopup();
+                }
+
+                if (ImGui::Button("Changelog"))
+                    ImGui::OpenPopup("Version info");
+                if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+                {
+                    ImGui::Text("Version: 0.1.121");
+                    ImGui::Text("- Fixed covariance parameter values when using nested exchangeable function.");
+
+                    if (ImGui::Button("Close"))
+                        ImGui::CloseCurrentPopup();
+                    ImGui::EndPopup();
+                }
+                ImGui::EndMenu();
+            }
 
             ImGui::EndMainMenuBar();
         }

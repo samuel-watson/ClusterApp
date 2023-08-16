@@ -96,21 +96,33 @@ void ClusterApp::glmmModel::update_parameters() {
     beta.insert(beta.end(), statmodel.beta_pars.begin(), statmodel.beta_pars.end());
     std::vector<double> theta;
     if (statmodel.family == ClusterApp::Family::gaussian) {
-        theta.push_back(statmodel.ixx_pars[0]);
+        if (statmodel.covariance == ClusterApp::Covariance::exchangeable) {
+            theta.push_back(statmodel.ixx_pars[0]);
+        }       
         if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
-            theta.push_back(statmodel.ixx_pars[1]);
+            double tau1 = statmodel.ixx_pars[0] * statmodel.ixx_pars[1];
+            double tau2 = statmodel.ixx_pars[0] * (1 - statmodel.ixx_pars[1]);
+            theta.push_back(tau1);
+            theta.push_back(tau2);
         }
         if (statmodel.covariance == ClusterApp::Covariance::autoregressive || statmodel.covariance == ClusterApp::Covariance::exponential || statmodel.covariance == ClusterApp::Covariance::squared_exponential) {
             theta.push_back(statmodel.cov_pars[1]);
         }
         if (statmodel.sampling == ClusterApp::Sampling::cohort) {
-            theta.push_back(statmodel.ixx_pars[2]);
+            double tau3 = statmodel.ixx_pars[2] * (1 - statmodel.ixx_pars[0]);
+            theta.push_back(tau3);
             if (statmodel.ind_covariance != ClusterApp::IndividualCovariance::exchangeable) {
                 theta.push_back(statmodel.cov_pars[4]);
             }
         }
         if (statmodel.link == ClusterApp::Link::identity) {
-            (*model).model.data.set_var_par(1 - statmodel.ixx_pars[0]);
+            if (statmodel.sampling == ClusterApp::Sampling::cohort) {
+                double tau4 = (1 - statmodel.ixx_pars[0]) * (1 - statmodel.ixx_pars[2]);
+                (*model).model.data.set_var_par(tau4);
+            }
+            else {
+                (*model).model.data.set_var_par(1 - statmodel.ixx_pars[0]);
+            }           
         }
         else {
             (*model).model.data.set_var_par(1 - statmodel.cov_pars[2]);
