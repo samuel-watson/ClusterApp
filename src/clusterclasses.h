@@ -209,5 +209,16 @@ namespace ClusterApp {
         void check_time();
     };
 
+   class plotData {
+   public:
+       ClusterApp::glmmModel& glmm;
+       ClusterApp::XAxis xaxis = ClusterApp::XAxis::clusters_per_sequence;
+       ClusterApp::YAxis yaxis = ClusterApp::YAxis::power;
+       int n_series = 1;
+       int n_points = 20;
+       std::vector<double> x;
+       std::vector<std::vector<double> > y;
+       plotData(ClusterApp::glmmModel& glmm_) : glmm(glmm_) {};
+   };
 
 }

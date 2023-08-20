@@ -93,14 +93,22 @@ void loop()
   checker.check_time();
   ClusterApp::ShowMainMenu(windows, designs, updater, results);
   ClusterApp::AppDockSpace(&windows.dockspace);
+  ImGui::SetNextWindowSize(ImVec2(750,500), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_FirstUseEver);
   ClusterApp::RenderDesigner(designs, updater, windows);
   if (windows.sample_size)
       ClusterApp::RenderSampleSize(designs);
   if (windows.model)
+      ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2(750, 50), ImGuiCond_FirstUseEver);
       ClusterApp::RenderModel(designs, model, windows);
   if (windows.results)
+      ImGui::SetNextWindowSize(ImVec2(750, 300), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2(0, 550), ImGuiCond_FirstUseEver);
       ClusterApp::RenderResults(updater, windows);
   if (windows.optimiser)
+      ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2(750, 350), ImGuiCond_FirstUseEver);
       ClusterApp::RenderOptimiser(designs, updater, results, windows);
   ////ImGui::PopFont();
   ImGui::PopStyleColor(5);

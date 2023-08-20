@@ -79,6 +79,27 @@ namespace ClusterApp {
         cohort = 2
     };
 
+    enum class XAxis {
+        clusters_per_sequence = 1,
+        individual_n = 2,
+        cov_par_1 = 3,
+        cov_par_2 = 4,
+        cov_par_3 = 5,
+        cov_par_4 = 6,
+        cov_par_5 = 7,
+        treatment_effect = 8,
+        baseline = 9
+    };
+
+    enum class YAxis {
+        power = 1,
+        ci_width = 2,
+        power_bw = 3,
+        ci_width_bw = 4,
+        power_kr = 5,
+        ci_width_kr = 6
+    };
+
     struct CRC {
         boost::crc_32_type crc;
         template <typename T>
