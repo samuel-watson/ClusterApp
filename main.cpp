@@ -73,6 +73,7 @@ void loop()
   static ClusterApp::glmmModel glmm(model, windows, designs);
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::modelChecker checker(designs, model, updater);
+  static ClusterApp::plotData plotdata(glmm);
 
   //ImGui::PushFont(main_font);
   if (windows.light_mode) {
@@ -96,20 +97,34 @@ void loop()
   ImGui::SetNextWindowSize(ImVec2(750,500), ImGuiCond_FirstUseEver);
   ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_FirstUseEver);
   ClusterApp::RenderDesigner(designs, updater, windows);
-  if (windows.sample_size)
+
+  if (windows.sample_size) {
       ClusterApp::RenderSampleSize(designs);
-  if (windows.model)
+  }
+      
+  if (windows.model) {
       ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowPos(ImVec2(750, 50), ImGuiCond_FirstUseEver);
       ClusterApp::RenderModel(designs, model, windows);
-  if (windows.results)
+  }
+      
+  if (windows.results) {
       ImGui::SetNextWindowSize(ImVec2(750, 300), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowPos(ImVec2(0, 550), ImGuiCond_FirstUseEver);
       ClusterApp::RenderResults(updater, windows);
-  if (windows.optimiser)
+  }
+      
+  if (windows.optimiser) {
       ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowPos(ImVec2(750, 350), ImGuiCond_FirstUseEver);
       ClusterApp::RenderOptimiser(designs, updater, results, windows);
+  }
+
+  if (windows.plotter) {
+      ClusterApp::RenderPlotter(plotdata);
+  }
+      
+   
   ////ImGui::PopFont();
   ImGui::PopStyleColor(5);
 

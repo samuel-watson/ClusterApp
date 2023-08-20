@@ -140,7 +140,9 @@ void ClusterApp::glmmModel::update_parameters() {
             theta.push_back(statmodel.cov_pars[1]);
         }
         if (statmodel.sampling == ClusterApp::Sampling::cohort) {
-            theta.push_back(statmodel.cov_pars[3]);
+            double tau3 = statmodel.cov_pars[3];
+            tau3 = tau3 / mean_n;
+            theta.push_back(tau3);
             if (statmodel.ind_covariance != ClusterApp::IndividualCovariance::exchangeable) {
                 theta.push_back(statmodel.cov_pars[4]);
             }

@@ -63,7 +63,7 @@ void ClusterApp::modelUpdater::update_summary_statistics() {
     glmm.power_kr(summary);
     glmm.power_bw(summary);
     summary.dof = (double)designs.total_n();
-    summary.total_n = designs.total_n();
+    if(!manual_n_optim) summary.total_n = designs.total_n();
 }
 
 void ClusterApp::modelUpdater::update_optimum() {

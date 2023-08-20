@@ -34,6 +34,7 @@ namespace ClusterApp {
         bool optimiser = true;
         bool light_mode = false;
         bool dockspace = true;
+        bool plotter = false;
         options() {};
         ~options() = default;
     };

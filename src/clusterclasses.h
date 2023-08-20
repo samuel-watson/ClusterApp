@@ -178,6 +178,7 @@ namespace ClusterApp {
         ClusterApp::modelSummary& summary;
         ClusterApp::glmmModel& glmm;
         bool update = false;
+        bool manual_n_optim = false;
         Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
         std::vector<std::vector<double> > optimum_data = { {0.5},{0.5} };
         std::vector<std::vector<int> > optimum_n = { {10},{10} };

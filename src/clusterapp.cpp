@@ -144,8 +144,8 @@ namespace ClusterApp {
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Clusters")) {
-                    static int total_t;
-                    static int total_n;
+                    static int total_t = 1;
+                    static int total_n = 10;
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
                     if (ImGui::Button("Set")) {
@@ -205,10 +205,12 @@ namespace ClusterApp {
             }
             if (ImGui::BeginMenu("Optimiser")) {
                 if (ImGui::BeginMenu("Sample size")) {
+                    static int optim_total_n = designs.total_n();
                     ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Target total sample size", &summary.total_n, 1, 10, 0); ImGui::SameLine();
+                    ImGui::InputInt("Target total sample size", &optim_total_n, 1, 10, 0); ImGui::SameLine();
                     if (ImGui::SmallButton("Recalculate")) {
-                        summary.total_n = designs.total_n();
+                        summary.total_n = optim_total_n;
+                        updater.manual_n_optim = true;
                         updater.update_optimum();
                     }
                     ImGui::EndMenu();
@@ -234,6 +236,7 @@ namespace ClusterApp {
                 ImGui::Checkbox("Statistical model", &windows.model);
                 ImGui::Checkbox("Results", &windows.results);
                 ImGui::Checkbox("Optimal design", &windows.optimiser);
+                ImGui::Checkbox("Plotting", &windows.plotter);
                 ImGui::Checkbox("Dockspace", &windows.dockspace);
                 ImGui::EndMenu();
             }
@@ -257,6 +260,9 @@ namespace ClusterApp {
                 {
                     ImGui::Text("Version: 0.1.123");
                     ImGui::BulletText("Set default start size and positions for windows.");
+                    ImGui::BulletText("Updated cohort parameter for non-Gaussian models.");
+                    ImGui::BulletText("Fixed optimum set sample size button not doing anything.");
+                    ImGui::BulletText("Added placeholder for plotting.");
                     ImGui::Text("Version: 0.1.122");
                     ImGui::BulletText("Fixed aggregated model specification in call to glmmr - it wasn't dividing by number of observations.");
                     ImGui::Text("Version: 0.1.121");
@@ -1176,7 +1182,7 @@ namespace ClusterApp {
         ImGui::End();
     }
 
-    void ClusterApp::RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option) {
+    void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option) {
         ImGui::Begin("Optimiser");//, NULL, ImGuiWindowFlags_MenuBar
 
 
@@ -1281,6 +1287,13 @@ namespace ClusterApp {
         if (ImGui::SmallButton("Apply Design")) {
             updater.designs.apply_design(updater.optimum_n);
         }
+
+        ImGui::End();
+    }
+
+    void RenderPlotter(ClusterApp::plotData& plot) {
+        ImGui::Begin("Plotter");
+        ImGui::Text("New plot window");
 
         ImGui::End();
     }
