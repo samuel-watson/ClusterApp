@@ -1,5 +1,4 @@
-#ifndef GLMMRSPARSEEXT_H
-#define GLMMRSPARSEEXT_H
+#pragma once
 
 #include "general.h"
 // extends some of the SparseChol functions and operators to Eigen classes
@@ -106,5 +105,3 @@ inline sparse submat_sparse(const sparse& A, intvec rows){
 }
 
 }
-
-#endif

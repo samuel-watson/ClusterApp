@@ -158,11 +158,8 @@ void ClusterApp::glmmModel::update_parameters() {
 }
 
 void ClusterApp::glmmModel::update_model_data(const Eigen::ArrayXXd& data) {
-    if (modelbits)modelbits.release();
     if (model)model.release();
-    modelbits = std::unique_ptr<glmmr::ModelBits>(new glmmr::ModelBits(formula,
-        data, colnames, family, link));
-    model = std::unique_ptr<glmmr::Model>(new glmmr::Model(*modelbits));
+    model = std::unique_ptr<glmm>(new glmm(formula, data, colnames, family, link));
     // update weights
     Eigen::ArrayXd weights(data.rows());
     for (int i = 0; i < data.rows(); i++) {

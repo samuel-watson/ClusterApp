@@ -32,9 +32,12 @@ namespace ClusterApp {
         bool model = true;
         bool results = true;
         bool optimiser = true;
-        bool light_mode = false;
+        bool light_mode = true;
         bool dockspace = true;
         bool plotter = false;
+        bool show_n_period = false;
+        bool show_status_period = true;
+        bool show_J_seq = false;
         options() {};
         ~options() = default;
     };

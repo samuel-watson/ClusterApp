@@ -10,7 +10,7 @@
 #include <numeric>
 #include <random>
 #include "modeltypes.h"
-#include "glmmr/model.hpp"
+#include "glmmr.h"
 
 
 namespace ClusterApp {
@@ -147,8 +147,7 @@ namespace ClusterApp {
 
     class glmmModel {
     public:
-        std::unique_ptr<glmmr::ModelBits> modelbits;
-        std::unique_ptr<glmmr::Model> model;
+        std::unique_ptr<glmm> model;
         ClusterApp::statisticalModel& statmodel;
         ClusterApp::options& option;
         ClusterApp::design& designs;
@@ -220,6 +219,8 @@ namespace ClusterApp {
        std::vector<double> x;
        std::vector<std::vector<double> > y;
        plotData(ClusterApp::glmmModel& glmm_) : glmm(glmm_) {};
+       std::pair<double, double> x_axis_limits;
+       std::pair<double, double> y_axis_limits;
    };
 
 }

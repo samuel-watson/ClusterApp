@@ -20,8 +20,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 Lesser General Public License for more details.
  */
 
-#ifndef SPARSECHOL_H
-#define SPARSECHOL_H
+#pragma once
+
 #include <cmath>
 #include "sparse.h"
 
@@ -196,5 +196,3 @@ class SparseChol {
       return I;
     }
 };
-
-#endif

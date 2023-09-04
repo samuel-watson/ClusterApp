@@ -1,5 +1,4 @@
-#ifndef FAMILY_H
-#define FAMILY_H
+#pragma once
 
 #include "general.h"
 
@@ -32,6 +31,3 @@ public:
   Family(){};
 };
 }
-
-
-#endif

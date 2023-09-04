@@ -246,7 +246,9 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.1.123");
+                    ImGui::Text("Version: 0.2.001");
+                    ImGui::Text("glmmrBase Version: 0.4.6");
+                    ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
 
                     if (ImGui::Button("Close"))
@@ -258,6 +260,9 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.2.001");
+                    ImGui::BulletText("Updated to glmmrBase 0.4.6.");
+                    ImGui::BulletText("Added counts in designer for sequences and periods.");
                     ImGui::Text("Version: 0.1.123");
                     ImGui::BulletText("Set default start size and positions for windows.");
                     ImGui::BulletText("Updated cohort parameter for non-Gaussian models.");
@@ -356,19 +361,26 @@ namespace ClusterApp {
             large_dim = small_dim;
         }
 
-        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters.");
+        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters."); HelpMarker(
+            "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
+        ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
+        ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
+        ImGui::Checkbox("Intervention status", &option.show_status_period);
+        ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
         ImGui::Spacing();
 
-        ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align + 30);
-        ImGui::Text("TIME");
+        //ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align + 30);
+        //ImGui::Text("TIME");
 
         //ImGui::Text("SEQUENCE"); ImGui::SameLine(horiztonal_align);
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        if(option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
         ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
+
         for (int t = 0; t <= designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + t);
             if (ImGui::Button("+", ImVec2(small_dim, small_dim))) {
@@ -387,6 +399,7 @@ namespace ClusterApp {
 
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        if (option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         for (int t = 0; t < designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + designs.time + 2 + designs.sequences + t);
             ImGui::Button(int_to_char(t + 1), ImVec2(large_dim, small_dim));
@@ -433,11 +446,18 @@ namespace ClusterApp {
 
         for (int n = 0; n < designs.sequences; n++)
         {
-            //ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align);
+            if (option.show_J_seq) {
+                std::string label_j = std::to_string(*designs.n_clusters(n));
+                char* char_array_j = new char[label_j.length() + 1];
+                strcpy(char_array_j, label_j.c_str());
+                ImGui::Button(char_array_j, ImVec2(small_dim, small_dim)); ImGui::SameLine();
+            }
+
             ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
             ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
+            
             ImGui::PushID(designs.time * designs.sequences + designs.time + 1 + n);
             if (ImGui::Button("+", ImVec2(small_dim, small_dim))) {
                 designs.add_sequence(n);
@@ -498,8 +518,15 @@ namespace ClusterApp {
                 ImGui::PushID(t + n * designs.time);
                 std::string label = "";
                 if (*designs.active(n, t)) {
-                    label = std::to_string(*designs.intervention(n, t));
-                    if (option.two_treatments)label += "/" + std::to_string(*designs.intervention_2(n, t));
+                    if (option.show_n_period) {
+                        label += "n=";
+                        label += std::to_string(*designs.n(n, t));
+                        if (option.show_status_period) label += " | ";
+                    }
+                    if (option.show_status_period) {
+                        label += std::to_string(*designs.intervention(n, t));
+                        if (option.two_treatments)label += "/" + std::to_string(*designs.intervention_2(n, t));
+                    }                    
                     if (*designs.intervention(n, t) && !*designs.intervention_2(n, t)) {
                         ImGui::PushStyleColor(ImGuiCol_Button, colours.red());
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.red(1));
@@ -570,6 +597,7 @@ namespace ClusterApp {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
         ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
+        if (option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::PushID(designs.time * designs.sequences + designs.time + 1 + designs.sequences);
         if (ImGui::Button("+", ImVec2(small_dim, small_dim))) {
             designs.add_sequence();
@@ -1294,6 +1322,13 @@ namespace ClusterApp {
     void RenderPlotter(ClusterApp::plotData& plot) {
         ImGui::Begin("Plotter");
         ImGui::Text("New plot window");
+
+        const char* xaxis_items_exchangeable[] = { "Clusters per sequence", "N per cluster-period", "ICC", "Treatment effect", "Baseline"};
+        const char* xaxis_items_other[] = { "Clusters per sequence", "N per cluster-period", "ICC", "CAC", "Treatment effect", "Baseline" };
+        static int xaxis_item_current = 0;
+
+        // add combo box - need to switch the labels depending on the model. This function needs the stat model as an input
+        // then add switch statement to update plot data
 
         ImGui::End();
     }

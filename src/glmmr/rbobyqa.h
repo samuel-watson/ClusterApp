@@ -1,5 +1,4 @@
-#ifndef RBOBYQA_H
-#define RBOBYQA_H
+#pragma once
 
 #include <algorithm>
 #include <vector>
@@ -98,4 +97,3 @@ public:
 
 }
 
-#endif

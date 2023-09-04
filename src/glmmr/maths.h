@@ -1,7 +1,4 @@
-#ifndef MATHS_H
-#define MATHS_H
-
-#define _USE_MATH_DEFINES
+#pragma once
 
 #include <cmath> 
 #include <unordered_map>
@@ -447,5 +444,3 @@ inline std::vector<int> linseq(int start, int end) {
 }
 }
 
-
-#endif

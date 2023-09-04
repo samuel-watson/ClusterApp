@@ -1,5 +1,4 @@
-#ifndef FORMULA_HPP
-#define FORMULA_HPP
+#pragma once
 
 #include "general.h"
 #include "interpreter.h"
@@ -133,5 +132,3 @@ inline strvec glmmr::Formula::z(){
 inline strvec glmmr::Formula::re_terms(){
   return re_terms_;
 }
-
-#endif

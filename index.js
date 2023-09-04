@@ -532,7 +532,7 @@ function createWasm() {
   wasmExports = exports;
   wasmMemory = wasmExports["hb"];
   updateMemoryViews();
-  wasmTable = wasmExports["lb"];
+  wasmTable = wasmExports["mb"];
   addOnInit(wasmExports["ib"]);
   removeRunDependency("wasm-instantiate");
   return exports;
@@ -6896,7 +6896,7 @@ var _free = a0 => (_free = wasmExports["jb"])(a0);
 
 var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["kb"])(a0, a1);
 
-var _malloc = a0 => (_malloc = wasmExports["mb"])(a0);
+var _malloc = a0 => (_malloc = wasmExports["lb"])(a0);
 
 var ___errno_location = () => (___errno_location = wasmExports["nb"])();
 
@@ -6904,9 +6904,9 @@ var stackAlloc = a0 => (stackAlloc = wasmExports["ob"])(a0);
 
 var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["pb"])(a0);
 
-var ___start_em_js = Module["___start_em_js"] = 151936;
+var ___start_em_js = Module["___start_em_js"] = 154944;
 
-var ___stop_em_js = Module["___stop_em_js"] = 152042;
+var ___stop_em_js = Module["___stop_em_js"] = 155050;
 
 Module["addRunDependency"] = addRunDependency;
 

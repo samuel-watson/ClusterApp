@@ -1,5 +1,4 @@
-#ifndef MODELEXTRADATA_HPP
-#define MODELEXTRADATA_HPP
+#pragma once
 
 #include "general.h"
 
@@ -51,5 +50,3 @@ public:
 
 
 }
-
-#endif

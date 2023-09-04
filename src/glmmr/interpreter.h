@@ -1,5 +1,4 @@
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#pragma once
 
 #include "general.h"
 #include "calculator.hpp"
@@ -192,8 +191,6 @@ inline intvec interpret_re_par(const std::string& fn,
   
   auto addA = [&] (){
     for(int i = 0; i<col_idx.size();i++){
-      B.push_back(col_idx[i]);
-      B.push_back(col_idx[i]);
       B.push_back(col_idx[i]);
       B.push_back(col_idx[i]);
     }
@@ -506,5 +503,3 @@ inline void link_to_likelihood(glmmr::calculator& calc,
 }
 
 }
-
-#endif

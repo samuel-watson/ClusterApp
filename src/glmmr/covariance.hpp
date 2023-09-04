@@ -1,5 +1,4 @@
-#ifndef COVARIANCE_HPP
-#define COVARIANCE_HPP
+#pragma once
 
 #define _USE_MATH_DEFINES
 
@@ -878,7 +877,3 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
     block_count += block_size;
   }
 }
-
-
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef SPARSE_H
-#define SPARSE_H
+#pragma once
 
 #include <vector>
 #include <algorithm>
@@ -216,5 +215,3 @@ inline sparse identity(int n){
   A.Ax = dblvec(n,1);
   return A;
 }
-
-#endif

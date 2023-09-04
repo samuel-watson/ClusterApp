@@ -1,5 +1,4 @@
-#ifndef LINEARPREDICTOR_HPP
-#define LINEARPREDICTOR_HPP
+#pragma once
 
 #include "general.h"
 #include "interpreter.h"
@@ -147,5 +146,3 @@ private:
   bool x_set = false;
 };
 }
-
-#endif

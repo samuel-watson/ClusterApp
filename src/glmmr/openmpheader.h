@@ -1,7 +1,4 @@
-#ifndef OPENMPHEADER_H
-#define OPENMPHEADER_H
-
-#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
+#pragma once
 
 #ifdef _OPENMP
 #include <omp.h> 
@@ -18,6 +15,4 @@
 #define omp_get_wtime()        0
 #define omp_set_dynamic(a) // empty statement to remove the call
 #define OMP_IS_USED false
-#endif
-
 #endif

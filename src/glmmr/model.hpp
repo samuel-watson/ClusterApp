@@ -1,5 +1,4 @@
-#ifndef MODEL_HPP
-#define MODEL_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -10,71 +9,83 @@
 
 namespace glmmr {
 
-using namespace Eigen;
+    using namespace Eigen;
 
-class Model {
-public:
-  glmmr::ModelBits& model;
-  glmmr::RandomEffects re;
-  glmmr::ModelMatrix matrix;
-  glmmr::ModelOptim optim;
-  glmmr::ModelMCMC mcmc;
-  
-  Model(glmmr::ModelBits& model_) : model(model_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
-  
-  void set_offset(const VectorXd& offset_);
-  void set_weights(const ArrayXd& weights_);
-  void set_y(const VectorXd& y_);
-  void update_beta(const dblvec &beta_);
-  void update_theta(const dblvec &theta_);
-  void update_u(const MatrixXd &u_);
-  void set_trace(int trace_);
-};
+    template<typename modeltype>
+    class Model {
+    public:
+        modeltype model;
+        glmmr::RandomEffects<modeltype> re;
+        glmmr::ModelMatrix<modeltype> matrix;
+        glmmr::ModelOptim<modeltype> optim;
+        glmmr::ModelMCMC<modeltype> mcmc;
+
+        Model(const std::string& formula_,
+            const ArrayXXd& data_,
+            const strvec& colnames_,
+            std::string family_,
+            std::string link_) : model(formula_, data_, colnames_, family_, link_), re(model), matrix(model, re), optim(model, matrix, re), mcmc(model, matrix, re) {};
+
+        virtual void set_offset(const VectorXd& offset_);
+        virtual void set_weights(const ArrayXd& weights_);
+        virtual void set_y(const VectorXd& y_);
+        virtual void update_beta(const dblvec& beta_);
+        virtual void update_theta(const dblvec& theta_);
+        virtual void update_u(const MatrixXd& u_);
+        virtual void set_trace(int trace_);
+        // add in functions to run the whole fitting algorithm here
+    };
 
 }
 
-inline void glmmr::Model::set_offset(const VectorXd& offset_){
-  model.data.set_offset(offset_);
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_) {
+    model.data.set_offset(offset_);
 }
 
-inline void glmmr::Model::set_weights(const ArrayXd& weights_){
-  model.data.set_weights(weights_);
-  if((weights_ != 1.0).any()){
-    model.weighted = true;
-  }
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_weights(const ArrayXd& weights_) {
+    model.data.set_weights(weights_);
+    if ((weights_ != 1.0).any()) {
+        model.weighted = true;
+    }
 }
 
-inline void glmmr::Model::set_y(const VectorXd& y_){
-  model.data.update_y(y_);
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_y(const VectorXd& y_) {
+    model.data.update_y(y_);
 }
 
-inline void glmmr::Model::update_beta(const dblvec &beta_){
-  model.linear_predictor.update_parameters(beta_);
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_beta(const dblvec& beta_) {
+    model.linear_predictor.update_parameters(beta_);
 }
 
-inline void glmmr::Model::update_theta(const dblvec &theta_){
-  model.covariance.update_parameters(theta_);
-  re.ZL = model.covariance.ZL_sparse();
-  re.zu_ = re.ZL*re.u_;
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_theta(const dblvec& theta_) {
+    model.covariance.update_parameters(theta_);
+    re.ZL = model.covariance.ZL_sparse();
+    re.zu_ = re.ZL * re.u_;
 }
 
-inline void glmmr::Model::update_u(const MatrixXd &u_){
-  if(u_.cols()!=re.u(false).cols()){
-    re.u_.conservativeResize(model.covariance.Q(),u_.cols());
-    re.zu_.conservativeResize(model.covariance.Q(),u_.cols());
-  }
-  re.u_ = u_;
-  re.zu_ = re.ZL*re.u_;
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_u(const MatrixXd& u_) {
+    if (u_.cols() != re.u(false).cols()) {
+        re.u_.conservativeResize(model.covariance.Q(), u_.cols());
+        re.zu_.conservativeResize(model.covariance.Q(), u_.cols());
+    }
+    re.u_ = u_;
+    re.zu_ = re.ZL * re.u_;
 }
 
-inline void glmmr::Model::set_trace(int trace_){
-  optim.trace = trace_;
-  mcmc.trace = trace_;
-  if(trace_ > 0){
-    mcmc.verbose = true;
-  } else {
-    mcmc.verbose = false;
-  }
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_trace(int trace_) {
+    optim.trace = trace_;
+    mcmc.trace = trace_;
+    if (trace_ > 0) {
+        mcmc.verbose = true;
+    }
+    else {
+        mcmc.verbose = false;
+    }
 }
-
-#endif

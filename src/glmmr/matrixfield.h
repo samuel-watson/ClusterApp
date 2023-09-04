@@ -1,5 +1,4 @@
-#ifndef MATRIXFIELD_H
-#define MATRIXFIELD_H
+#pragma once
 
 #include <cmath> 
 #include <memory>
@@ -66,5 +65,3 @@ public:
 };
 
 }
-
-#endif
