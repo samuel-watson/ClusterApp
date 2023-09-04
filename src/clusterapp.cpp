@@ -375,7 +375,9 @@ namespace ClusterApp {
         //ImGui::Text("SEQUENCE"); ImGui::SameLine(horiztonal_align);
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
-        if(option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        if (option.show_J_seq) {
+            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        }
         ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
@@ -399,7 +401,9 @@ namespace ClusterApp {
 
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
-        if (option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        if (option.show_J_seq) {
+            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        }
         for (int t = 0; t < designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + designs.time + 2 + designs.sequences + t);
             ImGui::Button(int_to_char(t + 1), ImVec2(large_dim, small_dim));
@@ -526,7 +530,8 @@ namespace ClusterApp {
                     if (option.show_status_period) {
                         label += std::to_string(*designs.intervention(n, t));
                         if (option.two_treatments)label += "/" + std::to_string(*designs.intervention_2(n, t));
-                    }                    
+                    }
+
                     if (*designs.intervention(n, t) && !*designs.intervention_2(n, t)) {
                         ImGui::PushStyleColor(ImGuiCol_Button, colours.red());
                         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.red(1));
@@ -597,7 +602,10 @@ namespace ClusterApp {
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
         ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
-        if (option.show_J_seq)ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        if (option.show_J_seq) {
+            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+        }
+
         ImGui::PushID(designs.time * designs.sequences + designs.time + 1 + designs.sequences);
         if (ImGui::Button("+", ImVec2(small_dim, small_dim))) {
             designs.add_sequence();
