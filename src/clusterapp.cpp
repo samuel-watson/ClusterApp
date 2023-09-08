@@ -246,7 +246,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.2.001");
+                    ImGui::Text("Version: 0.2.011");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -260,6 +260,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.2.011");
+                    ImGui::BulletText("Added design effects for exchangeable and nested exchangeable models.");
                     ImGui::Text("Version: 0.2.001");
                     ImGui::BulletText("Updated to glmmrBase 0.4.6.");
                     ImGui::BulletText("Added counts in designer for sequences and periods.");
@@ -361,7 +363,7 @@ namespace ClusterApp {
             large_dim = small_dim;
         }
 
-        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters."); HelpMarker(
+        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
             "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
         ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
         ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
@@ -845,7 +847,13 @@ namespace ClusterApp {
 
             if (ImGui::TreeNode("Covariance parameters")) {
 
-                if (family_item_current == 0 && link_item_current == 0) {
+                if (!(family_item_current == 0 && link_item_current == 0)) {
+                    ImGui::TextWrapped("You can set the variance terms for non-Gaussian models using the ICC and related statistics, or by setting the parameter values directly."); ImGui::SameLine();
+                    HelpMarker("Use of ICC, CAC, and IAC values for non-Gaussian-identity models uses the mean individual-level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
+                    ImGui::Checkbox("Use ICC?", &option.use_icc_for_non_gaussian);
+                }
+
+                if ((family_item_current == 0 && link_item_current == 0) || option.use_icc_for_non_gaussian) {
                     ImGui::SetNextItemWidth(200);
                     ImGui::DragFloat("ICC", &model.ixx_pars[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                         "Intra-class correlation coefficient.");
@@ -882,7 +890,6 @@ namespace ClusterApp {
                     }
                 }
                 else {
-                    ImGui::TextWrapped("Use of ICC, CAC, and IAC values is limited to Gaussian-identity models currently, as these values are not constants. Please set the variance parameters directly.");
                     ImGui::SetNextItemWidth(200);
                     ImGui::DragFloat("Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                         "Cluster-level variance parameter.");
@@ -899,7 +906,7 @@ namespace ClusterApp {
                     if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Cluster-period denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");  
+                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                     }
                     if (structure_sampling == 1) {
                         ImGui::SetNextItemWidth(200);
@@ -913,10 +920,10 @@ namespace ClusterApp {
                         if (ind_cov_item_current == 3 || ind_cov_item_current == 4) {
                             ImGui::SetNextItemWidth(200);
                             ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");  
+                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                         }
                     }
-                    if (family_item_current == 0 || family_item_current == 3 || family_item_current == 4) {
+                    if (family_item_current == 3 || family_item_current == 4) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Observation-level variance", &model.cov_pars[2], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                             "Observation-level variance term.");
@@ -1075,6 +1082,25 @@ namespace ClusterApp {
             ImGui::EndTable();
         }
 
+        if (!option.two_treatments && (updater.model.covariance == ClusterApp::Covariance::exchangeable || updater.model.covariance == ClusterApp::Covariance::nested_exchangeable)) {
+            ImGui::Text("Design Effect Analysis"); ImGui::SameLine(); HelpMarker(
+                "For comparison we report the power and confidence interval half-width for exchangeable and nested exchangeable models using an adapted approach of Hooper et al (2016). Use of ICC, CAC, and IAC values for non - Gaussian - identity models uses the mean individual - level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
+
+            ImGui::Text("Total observations: "); ImGui::SameLine();
+            ImGui::Text("%.0f", updater.summary.individual_n); ImGui::SameLine(); HelpMarker(
+                "This value is corrected for the allocation ratio between treatment and control conditions.");
+            ImGui::Text("Design Effect: "); ImGui::SameLine();
+            ImGui::Text("%.3f", updater.summary.design_effect);
+            ImGui::Text("Power: "); ImGui::SameLine();
+            ImGui::Text("%.1f", updater.summary.power_de);
+            ImGui::Text("95%% Confidence-interval half width: "); ImGui::SameLine();
+            ImGui::Text("%.3f", updater.summary.ci_width_de);
+            ImGui::Text("Standard error: "); ImGui::SameLine();
+            ImGui::Text("%.3f", updater.summary.se_de);
+            ImGui::Text("Assumed observation level variance: "); ImGui::SameLine();
+            ImGui::Text("%.3f", updater.summary.individual_var);
+        }
+
         if (option.two_treatments) {
             ImGui::Text("Treatment 2");
             if (ImGui::BeginTable("results 2", 4, flags))
@@ -1222,7 +1248,7 @@ namespace ClusterApp {
         ImGui::Begin("Optimiser");//, NULL, ImGuiWindowFlags_MenuBar
 
 
-        ImGui::TextWrapped("The design below shows the optimum weights per cluster in the design selected in the main window. Where sequences contain more than one cluster, these have been split out "); HelpMarker(
+        ImGui::TextWrapped("The design below shows the optimum weights per cluster in the design selected in the main window. Where sequences contain more than one cluster, these have been split out "); ImGui::SameLine(); HelpMarker(
             "The colour of each cell indicates the weight. Click on the cell to see the weight and the rounded total number of observation. Rounding uses Hamilton's method. The design can be applied to the designer using the button below.");
   
         if (option.two_treatments) {

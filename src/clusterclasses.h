@@ -142,6 +142,14 @@ namespace ClusterApp {
         double dof_kr_12 = 1;
         double dof_bw_12 = 1;
 
+        double design_effect = 0;
+        double individual_se = 0;
+        double power_de = 0;
+        double ci_width_de = 0;
+        double se_de = 1;
+        double individual_n = 1;
+        double individual_var = 1;
+
         modelSummary(ClusterApp::design& design) : total_n(design.total_n()) {};
     };
 
@@ -168,6 +176,10 @@ namespace ClusterApp {
         void power_kr(ClusterApp::modelSummary& summary);
         void power_bw(ClusterApp::modelSummary& summary);
         void optimum(int N);
+        float individual_n();
+        double design_effect();
+        void power_de(ClusterApp::modelSummary& summary);
+        double mean_individual_variance(bool weighted = true);
     };
 
     class modelUpdater {

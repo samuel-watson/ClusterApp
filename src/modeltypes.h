@@ -38,6 +38,7 @@ namespace ClusterApp {
         bool show_n_period = false;
         bool show_status_period = true;
         bool show_J_seq = false;
+        bool use_icc_for_non_gaussian = true;
         options() {};
         ~options() = default;
     };

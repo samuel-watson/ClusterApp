@@ -1,5 +1,6 @@
 #include "clusterclasses.h"
 #include <boost/math/distributions/students_t.hpp>
+#include "glmmr/maths.h"
 
 void ClusterApp::glmmModel::update_formula() {
     std::string new_formula = "int";
@@ -86,6 +87,29 @@ void ClusterApp::glmmModel::update_formula() {
         break;
     }
 }
+
+double ClusterApp::glmmModel::mean_individual_variance(bool weighted) {
+    Eigen::VectorXd w = glmmr::maths::dhdmu((*model).model.xb(),(*model).model.family);
+    // weighted mean
+    double var = 0;
+    if (weighted) {
+        int count = 0;
+        for (int i = 0; i < designs.sequences; i++) {
+            for (int t = 0; t < designs.time; t++) {
+                if (*designs.active(i, t)) {
+                    var += w(count) * (*designs.n(i,t));
+                }
+            }
+        }
+        var *= (1.0 / designs.total_n());
+    }
+    else {
+        var = w.array().mean();
+    }
+        
+    return var;
+}
+
 void ClusterApp::glmmModel::update_parameters() {
     std::vector<double> beta;
     double mean_n = designs.mean_n();
@@ -95,6 +119,9 @@ void ClusterApp::glmmModel::update_parameters() {
         beta.push_back(statmodel.te_pars[2]);
     }
     beta.insert(beta.end(), statmodel.beta_pars.begin(), statmodel.beta_pars.end());
+
+    // if non-gaussian then convert parameters both ways
+
     std::vector<double> theta;
     if (statmodel.family == ClusterApp::Family::gaussian) {
         if (statmodel.covariance == ClusterApp::Covariance::exchangeable) {
@@ -135,6 +162,42 @@ void ClusterApp::glmmModel::update_parameters() {
 
     }
     else {
+
+        // switch between ICC and parameter specifications
+        statmodel.cov_pars[2] = mean_individual_variance(false);
+        double ind_level_error = statmodel.cov_pars[2];
+        double cl_level_error;
+        if (option.use_icc_for_non_gaussian) {
+            if (statmodel.sampling == ClusterApp::Sampling::cohort) {
+                statmodel.cov_pars[3] = statmodel.ixx_pars[2] * statmodel.cov_pars[2] / (1 - statmodel.ixx_pars[2]);
+                ind_level_error += statmodel.cov_pars[3];
+            }
+            cl_level_error = statmodel.ixx_pars[0] * ind_level_error / (1 - statmodel.ixx_pars[0]);
+            if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+                statmodel.cov_pars[0] = statmodel.ixx_pars[1] * cl_level_error;
+                statmodel.cov_pars[1] = ( 1- statmodel.ixx_pars[1])  * cl_level_error;
+            }
+            else  {
+                statmodel.cov_pars[0] = cl_level_error;
+            }
+        }
+        else {
+            if (statmodel.sampling == ClusterApp::Sampling::cohort) {                
+                ind_level_error += statmodel.cov_pars[3];
+            }
+            cl_level_error = statmodel.cov_pars[0];
+            if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+                cl_level_error += statmodel.cov_pars[1];
+            }
+            statmodel.ixx_pars[0] = cl_level_error / (cl_level_error + ind_level_error);
+            if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+                statmodel.ixx_pars[1] = statmodel.cov_pars[1] / cl_level_error;
+            }
+            if (statmodel.sampling == ClusterApp::Sampling::cohort) {
+                statmodel.ixx_pars[2] = statmodel.cov_pars[3] / ind_level_error;
+            }
+        }
+
         theta.push_back(statmodel.cov_pars[0]);
         if (statmodel.covariance != ClusterApp::Covariance::exchangeable) {
             theta.push_back(statmodel.cov_pars[1]);
@@ -359,4 +422,86 @@ void ClusterApp::glmmModel::optimum(int N) {
         if (weights.size() != optimal_weights.size()) optimal_weights.resize(weights.size());
         for (int i = 0; i < weights.size(); i++) optimal_weights[i] = weights(i);
     }
+}
+
+float ClusterApp::glmmModel::individual_n() {
+    int n0 = 0;
+    int n1 = 0;
+    for (int i = 0; i < designs.sequences; i++) {
+        for (int t = 0; t < designs.time; t++) {
+            if (*designs.active(i, t)) {
+                if (*designs.intervention(i, t)) {
+                    n1 += *designs.n(i, t) * (*designs.n_clusters(i));
+                }
+                else {
+                    n0 += *designs.n(i, t) * (*designs.n_clusters(i));
+                }
+            }
+        }
+    }
+    float r = (float)n1 / (float)n0;
+    float m = 2 * r * n0 / (1 + r);
+    return m;
+}
+
+
+double ClusterApp::glmmModel::design_effect() {
+    std::vector<int> colsums(designs.time);
+    std::vector<int> rowsums(designs.sequences);
+    
+    double deffr = 1;
+    double r = 1;
+    double m = designs.mean_n();
+    double L = (double)designs.sequences;   
+    double deffc = 1 + (m - 1) * statmodel.ixx_pars[0];   
+
+    if (designs.time > 1) {
+        double ixx_par = statmodel.covariance == ClusterApp::Covariance::nested_exchangeable ? statmodel.ixx_pars[0] * statmodel.ixx_pars[1] : statmodel.ixx_pars[0];
+        if (statmodel.sampling == ClusterApp::Sampling::cohort) {
+            r = m * ixx_par + (1 - statmodel.ixx_pars[0]) * statmodel.ixx_pars[2];
+        }
+        else {
+            r = m * ixx_par;
+        }
+        r *= (1 / deffc);
+
+        float B, C, D;
+        for (int i = 0; i < designs.sequences; i++) {
+            for (int t = 0; t < designs.time; t++) {
+                if (*designs.active(i, t) && *designs.intervention(i, t)) {
+                    colsums[t]++;
+                    rowsums[i]++;
+                }
+            }
+        }
+
+        B = 0;
+        C = 0;
+        D = 0;
+        for (int i = 0; i < designs.sequences; i++) {
+            B += rowsums[i];
+            C += rowsums[i] * rowsums[i];
+        }
+        for (int t = 0; t < designs.time; t++) {
+            D += colsums[t] * colsums[t];
+        }
+
+        deffr = L * L * (1 - r) * (1 + designs.time * r);
+        double deffr_denom = 4 * (L * B - D + r * (B * B + L * designs.time * B - designs.time * D - L * C));
+        deffr *= 1 / deffr_denom;
+    }
+    return deffc * deffr;
+}
+
+void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary) {
+    // get sample sizes and design effects - also update summary to include new variables
+    summary.individual_var = mean_individual_variance(false);
+    summary.individual_n = individual_n();
+    summary.individual_n *= (1.0 / designs.time);
+    summary.design_effect = design_effect();
+    summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
+    summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n) ;
+    double zval = abs(statmodel.te_pars[0] / summary.se_de);
+    summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
+    summary.ci_width_de = zcutoff * summary.se_de;
 }
