@@ -78,6 +78,9 @@ namespace ClusterApp {
         bool check(bool update_if_changed = true);
         void apply_design(std::vector<std::vector<int> >& n);
         int active_time_periods();
+        void swap_cells(int source, int target);
+        void copy_cells(int source, int target);
+        void move_cells(int source, int target);
     };
 
     class statisticalModel {

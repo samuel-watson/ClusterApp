@@ -246,7 +246,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.2.011");
+                    ImGui::Text("Version: 0.2.012");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -260,6 +260,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.2.012");
+                    ImGui::BulletText("Added drag and drop for the designer.");
                     ImGui::Text("Version: 0.2.011");
                     ImGui::BulletText("Added design effects for exchangeable and nested exchangeable models.");
                     ImGui::Text("Version: 0.2.001");
@@ -363,12 +365,23 @@ namespace ClusterApp {
             large_dim = small_dim;
         }
 
-        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
+        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
             "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
         ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
         ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
         ImGui::Checkbox("Intervention status", &option.show_status_period);
         ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
+        ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
+        enum Mode
+        {
+            Mode_Copy,
+            Mode_Move,
+            Mode_Swap
+        };
+        static int mode = 0;
+        if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
+        if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
+        if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
         ImGui::Spacing();
 
         //ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align + 30);
@@ -521,7 +534,8 @@ namespace ClusterApp {
             ImGui::PopID();
             ImGui::PopStyleColor(4);
             for (int t = 0; t < designs.time; t++) {
-                ImGui::PushID(t + n * designs.time);
+                int id = t + n * designs.time;
+                ImGui::PushID(id);
                 std::string label = "";
                 if (*designs.active(n, t)) {
                     if (option.show_n_period) {
@@ -594,6 +608,41 @@ namespace ClusterApp {
                     }
                 }
                 ImGui::PopStyleColor(3);
+
+                // Our buttons are both drag sources and drag targets here!
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+                {
+                    // Set payload to carry the index of our item (could be anything)
+                    ImGui::SetDragDropPayload("DND_DEMO_CELL", &id, sizeof(int));
+
+                    // Display preview (could be anything, e.g. when dragging an image we could decide to display
+                    // the filename and a small preview of the image, etc.)
+                    if (mode == Mode_Copy) { ImGui::Text("Copy"); }
+                    if (mode == Mode_Move) { ImGui::Text("Move"); }
+                    if (mode == Mode_Swap) { ImGui::Text("Swap"); }
+                    ImGui::EndDragDropSource();
+                }
+                if (ImGui::BeginDragDropTarget())
+                {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+                    {
+                        IM_ASSERT(payload->DataSize == sizeof(int));
+                        int payload_id = *(const int*)payload->Data;
+                        if (mode == Mode_Copy)
+                        {
+                            designs.copy_cells(payload_id, id);
+                        }
+                        if (mode == Mode_Move)
+                        {
+                            designs.move_cells(payload_id, id);
+                        }
+                        if (mode == Mode_Swap)
+                        {
+                            designs.swap_cells(payload_id, id);
+                        }
+                    }
+                    ImGui::EndDragDropTarget();
+                }
 
                 ImGui::PopID();
                 if (t < (designs.time - 1))ImGui::SameLine();

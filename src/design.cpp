@@ -348,3 +348,31 @@ int ClusterApp::design::active_time_periods() {
     int totalT = std::reduce(active_period.begin(),active_period.end());
     return totalT;
 }
+
+void ClusterApp::design::swap_cells(int source, int target) {
+    int i_source = source / time;
+    int t_source = source - i_source * time;
+    int i_target = target / time;
+    int t_target = target - i_target * time;
+
+    ClusterApp::sequencePeriod sp_target(periods[i_target][t_target]);
+    periods[i_target][t_target].copy_properties(periods[i_source][t_source]);
+    periods[i_source][t_source].copy_properties(sp_target);
+}
+
+void ClusterApp::design::copy_cells(int source, int target) {
+    int i_source = source / time;
+    int t_source = source - i_source * time;
+    int i_target = target / time;
+    int t_target = target - i_target * time;
+    periods[i_target][t_target].copy_properties(periods[i_source][t_source]);
+}
+
+void ClusterApp::design::move_cells(int source, int target) {
+    int i_source = source / time;
+    int t_source = source - i_source * time;
+    int i_target = target / time;
+    int t_target = target - i_target * time;
+    periods[i_target][t_target].copy_properties(periods[i_source][t_source]);
+    *active(i_source, t_source) = false;
+}
