@@ -229,13 +229,17 @@ namespace ClusterApp {
        ClusterApp::glmmModel& glmm;
        ClusterApp::XAxis xaxis = ClusterApp::XAxis::clusters_per_sequence;
        ClusterApp::YAxis yaxis = ClusterApp::YAxis::power;
+       ClusterApp::XAxis series = ClusterApp::XAxis::icc;
        int n_series = 1;
-       int n_points = 20;
-       std::vector<double> x;
-       std::vector<std::vector<double> > y;
        plotData(ClusterApp::glmmModel& glmm_) : glmm(glmm_) {};
-       std::pair<double, double> x_axis_limits;
-       std::pair<double, double> y_axis_limits;
+       std::pair<float, float> x_axis_limits;
+       float x_data[20];
+       float y_data_1[20];
+       float y_data_2[20];
+       float y_data_3[20];
+       float x_series[3];
+       void update_data();
+       //void extract_y(ClusterApp::modelSummary& summary, int i, int series);
    };
 
 }

@@ -85,7 +85,7 @@ namespace ClusterApp {
     };
 
     enum class XAxis {
-        clusters_per_sequence = 1,
+        clusters = 1,
         individual_n = 2,
         cov_par_1 = 3,
         cov_par_2 = 4,
@@ -93,7 +93,10 @@ namespace ClusterApp {
         cov_par_4 = 6,
         cov_par_5 = 7,
         treatment_effect = 8,
-        baseline = 9
+        baseline = 9,
+        icc = 10,
+        cac = 11,
+        iac = 12
     };
 
     enum class YAxis {
@@ -102,7 +105,9 @@ namespace ClusterApp {
         power_bw = 3,
         ci_width_bw = 4,
         power_kr = 5,
-        ci_width_kr = 6
+        ci_width_kr = 6,
+        power_de = 7,
+        ci_width_de = 8
     };
 
     struct CRC {
@@ -213,6 +218,17 @@ namespace ClusterApp {
             }
             else {
                 return (ImVec4)ImColor::HSV(0.126f, 1.000f, 0.910f);
+            }
+        }
+        ImVec4 green(const int type = 0) {
+            if (type == 0) {
+                return (ImVec4)ImColor::HSV(0.189f, 1.000f, 0.600f);
+            }
+            else if (type == 1) {
+                return (ImVec4)ImColor::HSV(0.189f, 1.000f, 0.700f);
+            }
+            else {
+                return (ImVec4)ImColor::HSV(0.189f, 1.000f, 0.800f);
             }
         }
     };

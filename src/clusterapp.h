@@ -4,6 +4,8 @@
 
 #include "imgui_internal.h"
 #include "clusterclasses.h"
+#include <iomanip>
+#include <sstream>
 //#include "implot.h"
 
 namespace ClusterApp {

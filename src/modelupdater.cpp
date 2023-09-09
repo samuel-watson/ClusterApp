@@ -41,21 +41,21 @@ void ClusterApp::modelUpdater::update_data() {
     glmm.update_formula();
     glmm.update_model_data(data);
     glmm.dof = designs.total_cluster_periods();
-    update_summary_statistics();
-    update_optimum();
+    if (glmm.option.results)update_summary_statistics();
+    if (glmm.option.optimiser) update_optimum();
 };
 
 void ClusterApp::modelUpdater::update_formula() {
     glmm.update_formula();
-    update_summary_statistics();
-    update_optimum();
+    if (glmm.option.results)update_summary_statistics();
+    if(glmm.option.optimiser) update_optimum();
 }
 
 void ClusterApp::modelUpdater::update_parameters() {
     model.update_beta(designs);
     glmm.update_parameters();
-    update_summary_statistics();
-    update_optimum();
+    if (glmm.option.results) update_summary_statistics();
+    if (glmm.option.optimiser) update_optimum();
 }
 
 void ClusterApp::modelUpdater::update_summary_statistics() {
