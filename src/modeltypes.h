@@ -96,7 +96,8 @@ namespace ClusterApp {
         baseline = 9,
         icc = 10,
         cac = 11,
-        iac = 12
+        iac = 12,
+        total_n = 13
     };
 
     enum class YAxis {

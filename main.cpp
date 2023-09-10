@@ -72,8 +72,9 @@ void loop()
   static ClusterApp::modelSummary results(designs);
   static ClusterApp::glmmModel glmm(model, windows, designs);
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
-  static ClusterApp::modelChecker checker(designs, model, updater);
-  static ClusterApp::plotData plotdata(glmm);
+  static ClusterApp::plotData plotdata(glmm,updater);
+  static ClusterApp::modelChecker checker(designs, model, updater, plotdata);
+  
 
   //ImGui::PushFont(main_font);
   if (windows.light_mode) {
@@ -173,6 +174,7 @@ int init_imgui()
   // Setup Dear ImGui binding
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   ImGui_ImplGlfw_InitForOpenGL(g_window, true);
   ImGui_ImplOpenGL3_Init();
 

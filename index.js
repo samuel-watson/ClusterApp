@@ -530,10 +530,10 @@ function createWasm() {
  function receiveInstance(instance, module) {
   var exports = instance.exports;
   wasmExports = exports;
-  wasmMemory = wasmExports["hb"];
+  wasmMemory = wasmExports["mb"];
   updateMemoryViews();
-  wasmTable = wasmExports["mb"];
-  addOnInit(wasmExports["ib"]);
+  wasmTable = wasmExports["rb"];
+  addOnInit(wasmExports["nb"]);
   removeRunDependency("wasm-instantiate");
   return exports;
  }
@@ -3117,6 +3117,138 @@ var nowIsMonotonic = true;
 
 var __emscripten_get_now_is_monotonic = () => nowIsMonotonic;
 
+function convertI32PairToI53Checked(lo, hi) {
+ return hi + 2097152 >>> 0 < 4194305 - !!lo ? (lo >>> 0) + hi * 4294967296 : NaN;
+}
+
+function __gmtime_js(time_low, time_high, tmPtr) {
+ var time = convertI32PairToI53Checked(time_low, time_high);
+ var date = new Date(time * 1e3);
+ HEAP32[tmPtr >> 2] = date.getUTCSeconds();
+ HEAP32[tmPtr + 4 >> 2] = date.getUTCMinutes();
+ HEAP32[tmPtr + 8 >> 2] = date.getUTCHours();
+ HEAP32[tmPtr + 12 >> 2] = date.getUTCDate();
+ HEAP32[tmPtr + 16 >> 2] = date.getUTCMonth();
+ HEAP32[tmPtr + 20 >> 2] = date.getUTCFullYear() - 1900;
+ HEAP32[tmPtr + 24 >> 2] = date.getUTCDay();
+ var start = Date.UTC(date.getUTCFullYear(), 0, 1, 0, 0, 0, 0);
+ var yday = (date.getTime() - start) / (1e3 * 60 * 60 * 24) | 0;
+ HEAP32[tmPtr + 28 >> 2] = yday;
+}
+
+var isLeapYear = year => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+
+var MONTH_DAYS_LEAP_CUMULATIVE = [ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 ];
+
+var MONTH_DAYS_REGULAR_CUMULATIVE = [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 ];
+
+var ydayFromDate = date => {
+ var leap = isLeapYear(date.getFullYear());
+ var monthDaysCumulative = leap ? MONTH_DAYS_LEAP_CUMULATIVE : MONTH_DAYS_REGULAR_CUMULATIVE;
+ var yday = monthDaysCumulative[date.getMonth()] + date.getDate() - 1;
+ return yday;
+};
+
+function __localtime_js(time_low, time_high, tmPtr) {
+ var time = convertI32PairToI53Checked(time_low, time_high);
+ var date = new Date(time * 1e3);
+ HEAP32[tmPtr >> 2] = date.getSeconds();
+ HEAP32[tmPtr + 4 >> 2] = date.getMinutes();
+ HEAP32[tmPtr + 8 >> 2] = date.getHours();
+ HEAP32[tmPtr + 12 >> 2] = date.getDate();
+ HEAP32[tmPtr + 16 >> 2] = date.getMonth();
+ HEAP32[tmPtr + 20 >> 2] = date.getFullYear() - 1900;
+ HEAP32[tmPtr + 24 >> 2] = date.getDay();
+ var yday = ydayFromDate(date) | 0;
+ HEAP32[tmPtr + 28 >> 2] = yday;
+ HEAP32[tmPtr + 36 >> 2] = -(date.getTimezoneOffset() * 60);
+ var start = new Date(date.getFullYear(), 0, 1);
+ var summerOffset = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+ var winterOffset = start.getTimezoneOffset();
+ var dst = (summerOffset != winterOffset && date.getTimezoneOffset() == Math.min(winterOffset, summerOffset)) | 0;
+ HEAP32[tmPtr + 32 >> 2] = dst;
+}
+
+var __mktime_js = function(tmPtr) {
+ var ret = (() => {
+  var date = new Date(HEAP32[tmPtr + 20 >> 2] + 1900, HEAP32[tmPtr + 16 >> 2], HEAP32[tmPtr + 12 >> 2], HEAP32[tmPtr + 8 >> 2], HEAP32[tmPtr + 4 >> 2], HEAP32[tmPtr >> 2], 0);
+  var dst = HEAP32[tmPtr + 32 >> 2];
+  var guessedOffset = date.getTimezoneOffset();
+  var start = new Date(date.getFullYear(), 0, 1);
+  var summerOffset = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+  var winterOffset = start.getTimezoneOffset();
+  var dstOffset = Math.min(winterOffset, summerOffset);
+  if (dst < 0) {
+   HEAP32[tmPtr + 32 >> 2] = Number(summerOffset != winterOffset && dstOffset == guessedOffset);
+  } else if (dst > 0 != (dstOffset == guessedOffset)) {
+   var nonDstOffset = Math.max(winterOffset, summerOffset);
+   var trueOffset = dst > 0 ? dstOffset : nonDstOffset;
+   date.setTime(date.getTime() + (trueOffset - guessedOffset) * 6e4);
+  }
+  HEAP32[tmPtr + 24 >> 2] = date.getDay();
+  var yday = ydayFromDate(date) | 0;
+  HEAP32[tmPtr + 28 >> 2] = yday;
+  HEAP32[tmPtr >> 2] = date.getSeconds();
+  HEAP32[tmPtr + 4 >> 2] = date.getMinutes();
+  HEAP32[tmPtr + 8 >> 2] = date.getHours();
+  HEAP32[tmPtr + 12 >> 2] = date.getDate();
+  HEAP32[tmPtr + 16 >> 2] = date.getMonth();
+  HEAP32[tmPtr + 20 >> 2] = date.getYear();
+  return date.getTime() / 1e3;
+ })();
+ return setTempRet0((tempDouble = ret, +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)), 
+ ret >>> 0;
+};
+
+var __timegm_js = function(tmPtr) {
+ var ret = (() => {
+  var time = Date.UTC(HEAP32[tmPtr + 20 >> 2] + 1900, HEAP32[tmPtr + 16 >> 2], HEAP32[tmPtr + 12 >> 2], HEAP32[tmPtr + 8 >> 2], HEAP32[tmPtr + 4 >> 2], HEAP32[tmPtr >> 2], 0);
+  var date = new Date(time);
+  HEAP32[tmPtr + 24 >> 2] = date.getUTCDay();
+  var start = Date.UTC(date.getUTCFullYear(), 0, 1, 0, 0, 0, 0);
+  var yday = (date.getTime() - start) / (1e3 * 60 * 60 * 24) | 0;
+  HEAP32[tmPtr + 28 >> 2] = yday;
+  return date.getTime() / 1e3;
+ })();
+ return setTempRet0((tempDouble = ret, +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)), 
+ ret >>> 0;
+};
+
+var stringToUTF8 = (str, outPtr, maxBytesToWrite) => stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+
+var stringToNewUTF8 = str => {
+ var size = lengthBytesUTF8(str) + 1;
+ var ret = _malloc(size);
+ if (ret) stringToUTF8(str, ret, size);
+ return ret;
+};
+
+var __tzset_js = (timezone, daylight, tzname) => {
+ var currentYear = (new Date).getFullYear();
+ var winter = new Date(currentYear, 0, 1);
+ var summer = new Date(currentYear, 6, 1);
+ var winterOffset = winter.getTimezoneOffset();
+ var summerOffset = summer.getTimezoneOffset();
+ var stdTimezoneOffset = Math.max(winterOffset, summerOffset);
+ HEAPU32[timezone >> 2] = stdTimezoneOffset * 60;
+ HEAP32[daylight >> 2] = Number(winterOffset != summerOffset);
+ function extractZone(date) {
+  var match = date.toTimeString().match(/\(([A-Za-z ]+)\)$/);
+  return match ? match[1] : "GMT";
+ }
+ var winterName = extractZone(winter);
+ var summerName = extractZone(summer);
+ var winterNamePtr = stringToNewUTF8(winterName);
+ var summerNamePtr = stringToNewUTF8(summerName);
+ if (summerOffset < winterOffset) {
+  HEAPU32[tzname >> 2] = winterNamePtr;
+  HEAPU32[tzname + 4 >> 2] = summerNamePtr;
+ } else {
+  HEAPU32[tzname >> 2] = summerNamePtr;
+  HEAPU32[tzname + 4 >> 2] = winterNamePtr;
+ }
+};
+
 var _abort = () => {
  abort("");
 };
@@ -4109,10 +4241,6 @@ function _fd_read(fd, iov, iovcnt, pnum) {
  }
 }
 
-function convertI32PairToI53Checked(lo, hi) {
- return hi + 2097152 >>> 0 < 4194305 - !!lo ? (lo >>> 0) + hi * 4294967296 : NaN;
-}
-
 function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
  var offset = convertI32PairToI53Checked(offset_low, offset_high);
  try {
@@ -4846,8 +4974,6 @@ function _glGetProgramiv(program, pname, p) {
  }
 }
 
-var stringToUTF8 = (str, outPtr, maxBytesToWrite) => stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
-
 function _glGetShaderInfoLog(shader, maxLength, length, infoLog) {
  var log = GLctx.getShaderInfoLog(GL.shaders[shader]);
  if (log === null) log = "(unknown error)";
@@ -5144,13 +5270,6 @@ function GLFW_Window(id, width, height, title, monitor, share) {
  this.charFunc = null;
  this.userptr = null;
 }
-
-var stringToNewUTF8 = str => {
- var size = lengthBytesUTF8(str) + 1;
- var ret = _malloc(size);
- if (ret) stringToUTF8(str, ret, size);
- return ret;
-};
 
 var GLFW = {
  WindowFromId: function(id) {
@@ -6420,8 +6539,6 @@ function _glfwWindowHint(target, hint) {
  GLFW.hints[target] = hint;
 }
 
-var isLeapYear = year => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-
 var arraySum = (array, index) => {
  var sum = 0;
  for (var i = 0; i <= index; sum += array[i++]) {}
@@ -6774,114 +6891,119 @@ var wasmImports = {
  a: ___assert_fail,
  b: ___cxa_throw,
  fa: ___syscall_fcntl64,
- gb: ___syscall_ioctl,
- fb: ___syscall_openat,
- bb: __emscripten_get_now_is_monotonic,
+ lb: ___syscall_ioctl,
+ kb: ___syscall_openat,
+ gb: __emscripten_get_now_is_monotonic,
+ la: __gmtime_js,
+ ka: __localtime_js,
+ ja: __mktime_js,
+ ia: __timegm_js,
+ fb: __tzset_js,
  u: _abort,
  ca: canvas_get_height,
  ba: canvas_get_width,
- ab: _emscripten_date_now,
- $a: _emscripten_get_now,
- _a: _emscripten_memcpy_big,
- Za: _emscripten_resize_heap,
- Ya: _emscripten_set_main_loop,
- Xa: _emscripten_set_wheel_callback_on_thread,
- eb: _environ_get,
- db: _environ_sizes_get,
+ eb: _emscripten_date_now,
+ db: _emscripten_get_now,
+ cb: _emscripten_memcpy_big,
+ bb: _emscripten_resize_heap,
+ ab: _emscripten_set_main_loop,
+ $a: _emscripten_set_wheel_callback_on_thread,
+ jb: _environ_get,
+ ib: _environ_sizes_get,
  ea: _fd_close,
- cb: _fd_read,
- ia: _fd_seek,
+ hb: _fd_read,
+ ma: _fd_seek,
  da: _fd_write,
  aa: _glActiveTexture,
  $: _glAttachShader,
  n: _glBindBuffer,
  k: _glBindTexture,
  t: _glBindVertexArrayOES,
- Wa: _glBlendEquation,
- Va: _glBlendEquationSeparate,
+ _a: _glBlendEquation,
+ Za: _glBlendEquationSeparate,
  _: _glBlendFuncSeparate,
  m: _glBufferData,
  Z: _glBufferSubData,
  Y: _glClear,
  X: _glClearColor,
  W: _glCompileShader,
- Ua: _glCreateProgram,
+ Ya: _glCreateProgram,
  V: _glCreateShader,
  U: _glDeleteShader,
- Ta: _glDeleteVertexArraysOES,
+ Xa: _glDeleteVertexArraysOES,
  T: _glDetachShader,
  f: _glDisable,
- Sa: _glDrawElements,
+ Wa: _glDrawElements,
  g: _glEnable,
  s: _glEnableVertexAttribArray,
  S: _glGenBuffers,
- Ra: _glGenTextures,
- Qa: _glGenVertexArraysOES,
+ Va: _glGenTextures,
+ Ua: _glGenVertexArraysOES,
  r: _glGetAttribLocation,
  c: _glGetIntegerv,
- Pa: _glGetProgramInfoLog,
+ Ta: _glGetProgramInfoLog,
  R: _glGetProgramiv,
- Oa: _glGetShaderInfoLog,
+ Sa: _glGetShaderInfoLog,
  Q: _glGetShaderiv,
  P: _glGetUniformLocation,
  j: _glIsEnabled,
- Na: _glIsProgram,
- Ma: _glLinkProgram,
+ Ra: _glIsProgram,
+ Qa: _glLinkProgram,
  O: _glScissor,
  N: _glShaderSource,
- La: _glTexImage2D,
+ Pa: _glTexImage2D,
  M: _glTexParameteri,
- Ka: _glUniform1i,
- Ja: _glUniformMatrix4fv,
+ Oa: _glUniform1i,
+ Na: _glUniformMatrix4fv,
  L: _glUseProgram,
  q: _glVertexAttribPointer,
  p: _glViewport,
  d: _glfwCreateStandardCursor,
  K: _glfwCreateWindow,
- Ia: _glfwDestroyWindow,
- Ha: _glfwFocusWindow,
- Ga: _glfwGetClipboardString,
- Fa: _glfwGetCursorPos,
+ Ma: _glfwDestroyWindow,
+ La: _glfwFocusWindow,
+ Ka: _glfwGetClipboardString,
+ Ja: _glfwGetCursorPos,
  J: _glfwGetFramebufferSize,
  l: _glfwGetInputMode,
- Ea: _glfwGetJoystickAxes,
- Da: _glfwGetJoystickButtons,
+ Ia: _glfwGetJoystickAxes,
+ Ha: _glfwGetJoystickButtons,
  e: _glfwGetKey,
- Ca: _glfwGetMonitorContentScale,
- Ba: _glfwGetMonitorPos,
- Aa: _glfwGetMonitorWorkarea,
- za: _glfwGetMonitors,
- ya: _glfwGetTime,
- xa: _glfwGetVideoMode,
+ Ga: _glfwGetMonitorContentScale,
+ Fa: _glfwGetMonitorPos,
+ Ea: _glfwGetMonitorWorkarea,
+ Da: _glfwGetMonitors,
+ Ca: _glfwGetTime,
+ Ba: _glfwGetVideoMode,
  I: _glfwGetWindowAttrib,
  o: _glfwGetWindowPos,
  H: _glfwGetWindowSize,
- wa: _glfwInit,
+ Aa: _glfwInit,
  i: _glfwMakeContextCurrent,
- va: _glfwPollEvents,
+ za: _glfwPollEvents,
  G: _glfwSetCharCallback,
- ua: _glfwSetClipboardString,
- ta: _glfwSetCursor,
+ ya: _glfwSetClipboardString,
+ xa: _glfwSetCursor,
  F: _glfwSetCursorEnterCallback,
- sa: _glfwSetCursorPos,
+ wa: _glfwSetCursorPos,
  E: _glfwSetCursorPosCallback,
  D: _glfwSetErrorCallback,
- ra: _glfwSetInputMode,
+ va: _glfwSetInputMode,
  C: _glfwSetKeyCallback,
  B: _glfwSetMonitorCallback,
  A: _glfwSetMouseButtonCallback,
  z: _glfwSetScrollCallback,
- qa: _glfwSetWindowCloseCallback,
+ ua: _glfwSetWindowCloseCallback,
  y: _glfwSetWindowFocusCallback,
- pa: _glfwSetWindowOpacity,
+ ta: _glfwSetWindowOpacity,
  x: _glfwSetWindowPos,
- oa: _glfwSetWindowPosCallback,
+ sa: _glfwSetWindowPosCallback,
  w: _glfwSetWindowSize,
- na: _glfwSetWindowSizeCallback,
- ma: _glfwSetWindowTitle,
- la: _glfwShowWindow,
- ka: _glfwSwapBuffers,
- ja: _glfwSwapInterval,
+ ra: _glfwSetWindowSizeCallback,
+ qa: _glfwSetWindowTitle,
+ pa: _glfwShowWindow,
+ oa: _glfwSwapBuffers,
+ na: _glfwSwapInterval,
  v: _glfwTerminate,
  h: _glfwWindowHint,
  ha: resizeCanvas,
@@ -6890,23 +7012,25 @@ var wasmImports = {
 
 var asm = createWasm();
 
-var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["ib"])();
+var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["nb"])();
 
-var _free = a0 => (_free = wasmExports["jb"])(a0);
+var _free = a0 => (_free = wasmExports["ob"])(a0);
 
-var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["kb"])(a0, a1);
+var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["pb"])(a0, a1);
 
-var _malloc = a0 => (_malloc = wasmExports["lb"])(a0);
+var _malloc = a0 => (_malloc = wasmExports["qb"])(a0);
 
-var ___errno_location = () => (___errno_location = wasmExports["nb"])();
+var ___errno_location = () => (___errno_location = wasmExports["sb"])();
 
-var stackAlloc = a0 => (stackAlloc = wasmExports["ob"])(a0);
+var setTempRet0 = a0 => (setTempRet0 = wasmExports["tb"])(a0);
 
-var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["pb"])(a0);
+var stackAlloc = a0 => (stackAlloc = wasmExports["ub"])(a0);
 
-var ___start_em_js = Module["___start_em_js"] = 156576;
+var ___cxa_is_pointer_type = a0 => (___cxa_is_pointer_type = wasmExports["vb"])(a0);
 
-var ___stop_em_js = Module["___stop_em_js"] = 156682;
+var ___start_em_js = Module["___start_em_js"] = 161872;
+
+var ___stop_em_js = Module["___stop_em_js"] = 161978;
 
 Module["addRunDependency"] = addRunDependency;
 

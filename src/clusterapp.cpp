@@ -1408,9 +1408,9 @@ namespace ClusterApp {
 
         const char* xaxis_items_exchangeable[] = { "Clusters per sequence", "N per cluster-period", "ICC", "Treatment effect", "Baseline"};
         const char* xaxis_items_other[] = { "Clusters per sequence", "N per cluster-period", "ICC", "Treatment effect", "Baseline", "CAC" };
-        static int xaxis_item_current = 1;
-        static int series_item_current = 2;
-        const char* yaxis_items[] = { "Power (GLS)", "CI width (GLS)", "Power (GLS-BW)", "CI width (GLS-BW)" };
+        static int xaxis_item_current = 2;
+        static int series_item_current = 4;
+        const char* yaxis_items[] = { "Power (GLS)", "CI width (GLS)", "Power (GLS-BW)", "CI width (GLS-BW)", "Power (KR)", "CI width (KR)", "Power (Design effect)", "CI width (Design effect)" };
         static int yaxis_item_current = 0;
         static int lower_int[] = { 1,10 };
         static int upper_int[] = { 3, 100 };
@@ -1423,10 +1423,11 @@ namespace ClusterApp {
         static float series_baseline[] = {0.0, 0.5, 1.0};
         static float series_cac[] = {0.2,0.5,0.8};
         const short s16_one = 1;
-        static bool multiple_series = false;
         static std::string series_label = "";
         colourPicker colours;
         static int print_prec = 3;
+        std::string x_label = "";
+        std::string ylabel = "";
 
         ImGui::SetNextItemWidth(200);
         if (plot.glmm.statmodel.covariance == ClusterApp::Covariance::exchangeable) {            
@@ -1450,6 +1451,7 @@ namespace ClusterApp {
             plot.x_axis_limits.first = (float)lower_int[0];
             plot.x_axis_limits.second = (float)upper_int[0];
             print_prec = 0;
+            x_label = "Clusters";
             break;
         case 1:
             plot.xaxis = ClusterApp::XAxis::individual_n;
@@ -1460,6 +1462,7 @@ namespace ClusterApp {
             plot.x_axis_limits.first = (float)lower_int[1];
             plot.x_axis_limits.second = (float)upper_int[1];
             print_prec = 0;
+            x_label = "n";
             break;
         case 2:
             plot.xaxis = ClusterApp::XAxis::icc;
@@ -1470,6 +1473,7 @@ namespace ClusterApp {
             plot.x_axis_limits.first = lower_float[0];
             plot.x_axis_limits.second = upper_float[0];
             print_prec = 3;
+            x_label = "ICC";
             break;
         case 3:
             plot.xaxis = ClusterApp::XAxis::treatment_effect;
@@ -1480,6 +1484,7 @@ namespace ClusterApp {
             plot.x_axis_limits.first = lower_float[1];
             plot.x_axis_limits.second = upper_float[1];
             print_prec = 3;
+            x_label = "Treatment effect";
             break;
         case 4:
             plot.xaxis = ClusterApp::XAxis::baseline;
@@ -1490,6 +1495,7 @@ namespace ClusterApp {
             plot.x_axis_limits.first = lower_float[2];
             plot.x_axis_limits.second = upper_float[2];
             print_prec = 3;
+            x_label = "Baseline";
             break;
         case 5:
             plot.xaxis = ClusterApp::XAxis::cac;
@@ -1500,26 +1506,47 @@ namespace ClusterApp {
             plot.x_axis_limits.first = lower_float[3];
             plot.x_axis_limits.second = upper_float[3];
             print_prec = 3;
+            x_label = "CAC";
             break;
         }               
 
         switch (yaxis_item_current) {
         case 0:
             plot.yaxis = ClusterApp::YAxis::power;
+            ylabel = "Power (%%)";
             break;
         case 1:
             plot.yaxis = ClusterApp::YAxis::ci_width;
+            ylabel = "95%% CI half-width";
             break;
         case 2:
             plot.yaxis = ClusterApp::YAxis::power_bw;
+            ylabel = "Power (%%)";
             break;
         case 3:
             plot.yaxis = ClusterApp::YAxis::ci_width_bw;
+            ylabel = "95%% CI half-width";
+            break;
+        case 4:
+            plot.yaxis = ClusterApp::YAxis::power_kr;
+            ylabel = "Power (%%)";
+            break;
+        case 5:
+            plot.yaxis = ClusterApp::YAxis::ci_width_kr;
+            ylabel = "95%% CI half-width";
+            break;
+        case 6:
+            plot.yaxis = ClusterApp::YAxis::power_de;
+            ylabel = "Power (%%)";
+            break;
+        case 7:
+            plot.yaxis = ClusterApp::YAxis::ci_width_de;
+            ylabel = "95%% CI half-width";
             break;
         }
  
-        ImGui::Checkbox("Multiple series?", &multiple_series);
-        if (multiple_series) {
+        ImGui::Checkbox("Multiple series?", &plot.multiple_series);
+        if (plot.multiple_series) {
             ImGui::Text("Add up to three series");
             ImGui::SetNextItemWidth(200);
             if (plot.glmm.statmodel.covariance == ClusterApp::Covariance::exchangeable) {
@@ -1739,6 +1766,25 @@ namespace ClusterApp {
                 ImGui::PopID();
             }
 
+        }
+
+        if (!plot.initialised)plot.update_data();
+
+        char* x_char_array = new char[x_label.length() + 1];
+        strcpy(x_char_array, x_label.c_str());
+        char* y_char_array = new char[ylabel.length() + 1];
+        strcpy(y_char_array, ylabel.c_str());
+
+        static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+        static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+
+        if (ImPlot::BeginPlot("Cluster trial plot")) {
+            ImPlot::SetupAxis(ImAxis_X1, x_char_array,xflags);
+            ImPlot::SetupAxis(ImAxis_Y1, y_char_array, yflags);
+            ImPlot::PushStyleColor(ImPlotCol_Line, colours.red());
+            ImPlot::PlotLine("Series 1", plot.x_data, plot.y_data_1, plot.n_data_points);
+            ImPlot::PopStyleColor();
+            ImPlot::EndPlot();
         }
 
         ImGui::End();

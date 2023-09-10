@@ -183,6 +183,7 @@ namespace ClusterApp {
         double design_effect();
         void power_de(ClusterApp::modelSummary& summary);
         double mean_individual_variance(bool weighted = true);
+        std::vector<int> round_weights(std::vector<float> w, int n);
     };
 
     class modelUpdater {
@@ -201,6 +202,7 @@ namespace ClusterApp {
             ClusterApp::modelSummary& summary_,
             ClusterApp::glmmModel& glmm_);
         ~modelUpdater() = default;
+        Eigen::ArrayXXd generate_data();
         void update_data();
         void update_formula();
         void update_parameters();
@@ -208,38 +210,51 @@ namespace ClusterApp {
         void update_optimum();
     };
 
-   class modelChecker {
+    class plotData {
+    public:
+        ClusterApp::glmmModel& glmm;
+        ClusterApp::modelUpdater& updater;
+        ClusterApp::XAxis xaxis = ClusterApp::XAxis::icc;
+        ClusterApp::YAxis yaxis = ClusterApp::YAxis::power;
+        ClusterApp::XAxis series = ClusterApp::XAxis::cac;
+        int n_series = 1;
+        bool multiple_series = false;
+        int n_data_points = 20;
+        plotData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) {};
+        std::pair<float, float> x_axis_limits;
+        std::pair<float, float> y_axis_limits;
+        float x_data[20];
+        float y_data_1[20];
+        float y_data_2[20];
+        float y_data_3[20];
+        float x_series[3];
+        void update_data();
+        bool initialised = false;
+        bool check();
+        int crc_val = 0;
+        void extract_y(ClusterApp::modelSummary& summary, int i, int series);
+        float max_y();
+        float min_y();
+    };
+
+    class modelChecker {
     public:
         ClusterApp::design& designs;
         ClusterApp::statisticalModel& model;
         ClusterApp::modelUpdater& updater;
+        ClusterApp::plotData& plot;
         double update_interval = 1000;
         std::chrono::steady_clock clock;
         std::chrono::time_point< std::chrono::steady_clock> t0;
         modelChecker(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
+            ClusterApp::plotData& plot_,
             double interval = 1000);
         void check();
         void check_time();
     };
 
-   class plotData {
-   public:
-       ClusterApp::glmmModel& glmm;
-       ClusterApp::XAxis xaxis = ClusterApp::XAxis::clusters_per_sequence;
-       ClusterApp::YAxis yaxis = ClusterApp::YAxis::power;
-       ClusterApp::XAxis series = ClusterApp::XAxis::icc;
-       int n_series = 1;
-       plotData(ClusterApp::glmmModel& glmm_) : glmm(glmm_) {};
-       std::pair<float, float> x_axis_limits;
-       float x_data[20];
-       float y_data_1[20];
-       float y_data_2[20];
-       float y_data_3[20];
-       float x_series[3];
-       void update_data();
-       //void extract_y(ClusterApp::modelSummary& summary, int i, int series);
-   };
 
 }
+

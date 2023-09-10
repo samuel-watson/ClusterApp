@@ -8,6 +8,37 @@ ClusterApp::modelUpdater::modelUpdater(ClusterApp::design& designs_,
     update_data();
 };
 
+Eigen::ArrayXXd ClusterApp::modelUpdater::generate_data() {
+    int n_rows = 0;
+    for (int i = 0; i < designs.sequences; i++) {
+        for (int t = 0; t < designs.time; t++) {
+            if (*designs.active(i, t)) {
+                n_rows += *designs.n_clusters(i);
+            }
+        }
+    }
+    Eigen::ArrayXXd newdata(n_rows, data.cols());
+    int cl_number = 1;
+    int row_number = 0;
+    for (int i = 0; i < designs.sequences; i++) {
+        for (int j = 0; j < *designs.n_clusters(i); j++) {
+            for (int t = 0; t < designs.time; t++) {
+                if (*designs.active(i, t)) {
+                    newdata(row_number, 0) = cl_number;
+                    newdata(row_number, 1) = t + 1;
+                    newdata(row_number, 2) = *designs.n(i, t);
+                    newdata(row_number, 3) = *designs.intervention(i, t);
+                    newdata(row_number, 4) = *designs.intervention_2(i, t);
+                    newdata(row_number, 5) = newdata(row_number, 3) * newdata(row_number, 4);
+                    row_number++;
+                }
+            }
+            cl_number++;
+        }
+    }
+    return newdata;
+}
+
 void ClusterApp::modelUpdater::update_data() {
     // iterate over the cluster-periods to get the number of rows, then re-iterate to fill in the information
     model.update_beta(designs);

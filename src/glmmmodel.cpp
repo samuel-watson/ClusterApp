@@ -505,3 +505,26 @@ void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary) {
     summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
     summary.ci_width_de = zcutoff * summary.se_de;
 }
+
+std::vector<int> ClusterApp::glmmModel::round_weights(std::vector<float> w, int n) {
+    int total = w.size();
+    std::vector<double> totals(total);
+    std::vector<double> rem(total);
+    int remn = n;
+    for (int i = 0; i < total; i++) {
+        double rn = n * w[i];
+        totals[i] = std::floor(rn);
+        rem[i] = n * w[i] - totals[i];
+        remn -= totals[i];
+    }
+    while (remn > 0) {
+        auto largest_remainder_iter = std::max_element(rem.begin(), rem.end());
+        auto largest_remainder_idx = std::distance(rem.begin(), largest_remainder_iter);
+        totals[largest_remainder_idx] += 1;
+        rem[largest_remainder_idx] = 0;
+        remn -= 1;
+    }
+    std::vector<int> result(total);
+    for (int i = 0; i < total; i++)result[i] = (int)totals[i];
+    return result;
+}

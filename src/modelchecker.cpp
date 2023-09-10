@@ -3,7 +3,9 @@
 ClusterApp::modelChecker::modelChecker(ClusterApp::design& designs_,
     ClusterApp::statisticalModel& model_,
     ClusterApp::modelUpdater& updater_,
-    double interval) : designs(designs_), model(model_), updater(updater_), update_interval(interval), t0(clock.now()) {};
+    ClusterApp::plotData& plot_,
+    double interval) : designs(designs_), model(model_), updater(updater_), plot(plot_),
+    update_interval(interval), t0(clock.now()) {};
 
 
 void ClusterApp::modelChecker::check() {
@@ -19,6 +21,8 @@ void ClusterApp::modelChecker::check() {
         if (mcheck.second && !mcheck.first)updater.update_parameters();
         updater.update = false;
     }
+    bool pcheck = plot.check();
+    if (pcheck) plot.update_data();
 }
 
 
