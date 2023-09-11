@@ -35,10 +35,11 @@ namespace ClusterApp {
         bool light_mode = true;
         bool dockspace = true;
         bool plotter = false;
-        bool show_n_period = false;
-        bool show_status_period = true;
-        bool show_J_seq = false;
+        bool show_n_period = true;
+        bool show_status_period = false;
+        bool show_J_seq = true;
         bool use_icc_for_non_gaussian = true;
+        bool debug_info = false;
         options() {};
         ~options() = default;
     };

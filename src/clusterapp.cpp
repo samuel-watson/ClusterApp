@@ -116,120 +116,136 @@ namespace ClusterApp {
                 ImGui::Checkbox("Two treatments", &windows.two_treatments);
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Modify design")) {
-                if (ImGui::BeginMenu("Sequences")) {
-                    static int total_t;
+            if (ImGui::BeginMenu("Edit")) {
+
+                if (ImGui::BeginMenu("Statistics")) {
                     ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Sequences", &total_t, 1, 10, 0);
-                    if (ImGui::Button("Set")) {
-                        if (total_t < designs.sequences && total_t > 0) {
-                            int difft = designs.sequences - total_t;
-                            for (int i = 0; i < difft; i++) {
-                                designs.remove_sequence(designs.sequences - 1);
-                            }
-                        }
-                        else if (total_t < designs.sequences) {
-                            int difft = total_t - designs.sequences;
-                            for (int i = 0; i < difft; i++) {
-                                designs.add_sequence();
-                            }
-                        }
-                    }
-                    if (ImGui::MenuItem("Split sequences into clusters")) {
-                        designs.split_sequences();
-                    }
-                    if (ImGui::MenuItem("Combine clusters into sequences")) {
-                        designs.combine_sequences();
-                    }
+                    ImGui::DragFloat("Alpha", &updater.model.alpha, 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
+
                     ImGui::EndMenu();
                 }
-                if (ImGui::BeginMenu("Clusters")) {
-                    static int total_t = 1;
-                    static int total_n = 10;
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
-                    if (ImGui::Button("Set")) {
-                        if (total_t > 0) {
-                            for (int j = 0; j < designs.sequences; j++)  *designs.n_clusters(j) = total_t;
+
+                if (ImGui::BeginMenu("Design")) {
+                    if (ImGui::BeginMenu("Sequences")) {
+                        static int total_t;
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("Sequences", &total_t, 1, 10, 0);
+                        if (ImGui::Button("Set")) {
+                            if (total_t < designs.sequences && total_t > 0) {
+                                int difft = designs.sequences - total_t;
+                                for (int i = 0; i < difft; i++) {
+                                    designs.remove_sequence(designs.sequences - 1);
+                                }
+                            }
+                            else if (total_t < designs.sequences) {
+                                int difft = total_t - designs.sequences;
+                                for (int i = 0; i < difft; i++) {
+                                    designs.add_sequence();
+                                }
+                            }
+                        }
+                        if (ImGui::MenuItem("Split sequences into clusters")) {
+                            designs.split_sequences();
+                        }
+                        if (ImGui::MenuItem("Combine clusters into sequences")) {
+                            designs.combine_sequences();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::BeginMenu("Clusters")) {
+                        static int total_t = 1;
+                        static int total_n = 10;
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
+                        if (ImGui::Button("Set")) {
+                            if (total_t > 0) {
+                                for (int j = 0; j < designs.sequences; j++)  *designs.n_clusters(j) = total_t;
+                            }
+                        }
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
+                        if (ImGui::Button("Set")) {
+                            if (total_n > 0) {
+                                for (int j = 0; j < designs.sequences; j++) {
+                                    for (int t = 0; t < designs.time; t++) {
+                                        *designs.n(j, t) = total_n;
+                                    }
+                                }
+                            }
+                            ImGui::EndMenu();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if (ImGui::MenuItem("Activate all")) {
+                        for (int i = 0; i < designs.sequences; i++) {
+                            for (int t = 0; t < designs.time; t++) {
+                                *designs.active(i, t) = true;
+                            }
                         }
                     }
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
-                    if (ImGui::Button("Set")) {
-                        if (total_n > 0) {
-                            for (int j = 0; j < designs.sequences; j++) {
-                                for (int t = 0; t < designs.time; t++) {
-                                    *designs.n(j, t) = total_n;
+                    if (ImGui::MenuItem("Deactivate all")) {
+                        for (int i = 0; i < designs.sequences; i++) {
+                            for (int t = 0; t < designs.time; t++) {
+                                *designs.active(i, t) = false;
+                            }
+                        }
+                    }
+                    if (ImGui::BeginMenu("Time periods")) {
+                        static int total_t;
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("Time periods", &total_t, 1, 10, 0);
+                        if (ImGui::Button("Set")) {
+                            if (total_t < designs.time && total_t > 0) {
+                                int difft = designs.time - total_t;
+                                for (int i = 0; i < difft; i++) {
+                                    designs.remove_period(designs.time - 1);
+                                }
+                            }
+                            else if (total_t > designs.time) {
+                                int difft = total_t - designs.time;
+                                for (int i = 0; i < difft; i++) {
+                                    designs.add_period();
                                 }
                             }
                         }
                         ImGui::EndMenu();
                     }
+
+
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Activate all")) {
-                    for (int i = 0; i < designs.sequences; i++) {
-                        for (int t = 0; t < designs.time; t++) {
-                            *designs.active(i, t) = true;
+
+                if (ImGui::BeginMenu("Optimiser")) {
+                    if (ImGui::BeginMenu("Sample size")) {
+                        static int optim_total_n = designs.total_n();
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::InputInt("Target total sample size", &optim_total_n, 1, 10, 0); ImGui::SameLine();
+                        if (ImGui::SmallButton("Recalculate")) {
+                            summary.total_n = optim_total_n;
+                            updater.manual_n_optim = true;
+                            updater.update_optimum();
                         }
+                        ImGui::EndMenu();
                     }
-                }
-                if (ImGui::MenuItem("Deactivate all")) {
-                    for (int i = 0; i < designs.sequences; i++) {
-                        for (int t = 0; t < designs.time; t++) {
-                            *designs.active(i, t) = false;
+                    if (ImGui::BeginMenu("Parameter weights")) {
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::DragFloat("Treatment 1", &updater.model.c_vals[0], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::DragFloat("Treatment 2", &updater.model.c_vals[1], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        ImGui::SetNextItemWidth(100);
+                        ImGui::DragFloat("Interaction", &updater.model.c_vals[2], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        if (ImGui::SmallButton("Recalculate")) {
+                            updater.update_optimum();
                         }
-                    }
-                }
-                if (ImGui::BeginMenu("Time periods")) {
-                    static int total_t;
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Time periods", &total_t, 1, 10, 0);
-                    if (ImGui::Button("Set")) {
-                        if (total_t < designs.time && total_t > 0) {
-                            int difft = designs.time - total_t;
-                            for (int i = 0; i < difft; i++) {
-                                designs.remove_period(designs.time - 1);
-                            }
-                        }
-                        else if (total_t > designs.time) {
-                            int difft = total_t - designs.time;
-                            for (int i = 0; i < difft; i++) {
-                                designs.add_period();
-                            }
-                        }
+                        ImGui::EndMenu();
                     }
                     ImGui::EndMenu();
                 }
+                
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Optimiser")) {
-                if (ImGui::BeginMenu("Sample size")) {
-                    static int optim_total_n = designs.total_n();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("Target total sample size", &optim_total_n, 1, 10, 0); ImGui::SameLine();
-                    if (ImGui::SmallButton("Recalculate")) {
-                        summary.total_n = optim_total_n;
-                        updater.manual_n_optim = true;
-                        updater.update_optimum();
-                    }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Parameter weights")) {
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Treatment 1", &updater.model.c_vals[0], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Treatment 2", &updater.model.c_vals[1], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::DragFloat("Interaction", &updater.model.c_vals[2], 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    if (ImGui::SmallButton("Recalculate")) {
-                        updater.update_optimum();
-                    }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Windows"))
+            
+            if (ImGui::BeginMenu("View"))
             {
                 ImGui::Checkbox("Light mode", &windows.light_mode);
                 ImGui::Checkbox("Sample size", &windows.sample_size);
@@ -238,6 +254,7 @@ namespace ClusterApp {
                 ImGui::Checkbox("Optimal design", &windows.optimiser);
                 ImGui::Checkbox("Plotting", &windows.plotter);
                 ImGui::Checkbox("Dockspace", &windows.dockspace);
+                ImGui::Checkbox("Debug Info", &windows.debug_info);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -246,7 +263,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.2.012");
+                    ImGui::Text("Version: 0.2.014");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -260,6 +277,11 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.2.014");
+                    ImGui::BulletText("Added plotting.");
+                    ImGui::BulletText("Added set alpha value.");
+                    ImGui::BulletText("Added parameters using group means.");
+                    ImGui::BulletText("Few minor UI tweaks.");
                     ImGui::Text("Version: 0.2.012");
                     ImGui::BulletText("Added drag and drop for the designer.");
                     ImGui::Text("Version: 0.2.011");
@@ -391,7 +413,7 @@ namespace ClusterApp {
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         if (option.show_J_seq) {
-            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+            ImGui::Dummy(ImVec2(small_dim*1.5, small_dim)); ImGui::SameLine();
         }
         ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
@@ -417,7 +439,7 @@ namespace ClusterApp {
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         if (option.show_J_seq) {
-            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+            ImGui::Dummy(ImVec2(small_dim*1.5, small_dim)); ImGui::SameLine();
         }
         for (int t = 0; t < designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + designs.time + 2 + designs.sequences + t);
@@ -469,7 +491,7 @@ namespace ClusterApp {
                 std::string label_j = std::to_string(*designs.n_clusters(n));
                 char* char_array_j = new char[label_j.length() + 1];
                 strcpy(char_array_j, label_j.c_str());
-                ImGui::Button(char_array_j, ImVec2(small_dim, small_dim)); ImGui::SameLine();
+                ImGui::Button(char_array_j, ImVec2(small_dim * 1.5, small_dim)); ImGui::SameLine();
             }
 
             ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
@@ -654,7 +676,7 @@ namespace ClusterApp {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
         ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
         if (option.show_J_seq) {
-            ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
+            ImGui::Dummy(ImVec2(small_dim * 1.5, small_dim)); ImGui::SameLine();
         }
 
         ImGui::PushID(designs.time * designs.sequences + designs.time + 1 + designs.sequences);
@@ -669,8 +691,11 @@ namespace ClusterApp {
             remove_seq = false;
         }
 
-        ImGui::Text("Design Checksum"); ImGui::SameLine();
-        ImGui::Text("%d", designs.crc_val);
+        if (option.debug_info) {
+            ImGui::Text("Design Checksum"); ImGui::SameLine();
+            ImGui::Text("%d", designs.crc_val);
+        }
+        
         ImGui::End();
     }
 
@@ -747,6 +772,8 @@ namespace ClusterApp {
         static int ind_cov_item_current = 0;
         const char* linpred_items[] = { "Time period fixed effects", "Cluster-specific linear trends" };
         static int linpred_item_current = 0;
+        static float control_mean = 0.5;
+        static float treatment_mean = 0.5;
 
         if (ImGui::TreeNode("Statistical Model")) {
             ImGui::SetNextItemWidth(200);
@@ -1040,16 +1067,115 @@ namespace ClusterApp {
 
                 ImGui::TreePop();
             }
-            ImGui::TreePop();
-        }
 
-        if (ImGui::TreeNode("Model info")) {
-            ImGui::Text("Model checksum"); ImGui::SameLine();
-            ImGui::Text("%d", model.crc_val);
-            ImGui::Text("Parameters checksum"); ImGui::SameLine();
-            ImGui::Text("%d", model.crc_val_pars);
+            if (!option.two_treatments) {
+                if (ImGui::TreeNode("Set using group means")) {
+                    ImGui::TextWrapped("Automatically set fixed effect parameters by specifying the mean outcomes in treatment and control groups. Temporal variation is assumed to be zero. For non-linear models, a correction is applied for the random effect. Parameter values can be found above.");
+                      
+
+                    switch (model.family) {
+                    case ClusterApp::Family::gaussian:
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Control group mean", &control_mean, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        break;
+                    case ClusterApp::Family::binomial: case ClusterApp::Family::beta:
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Control group mean", &control_mean, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None);
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None);
+                        break;
+                    case ClusterApp::Family::poisson: case ClusterApp::Family::gamma:
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Control group mean", &control_mean, 0.01f, 0.0f, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        ImGui::SetNextItemWidth(150);
+                        ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, 0.0f, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                        break;
+                    }
+                    
+
+                    if (ImGui::Button("Update")) {
+                        float re_adj = model.cov_pars[0];
+                        if (model.covariance == ClusterApp::Covariance::nested_exchangeable)re_adj += model.cov_pars[1];
+                        if (model.sampling == ClusterApp::Sampling::cohort) re_adj += model.cov_pars[3] / design.mean_n();
+                        re_adj *= 0.5;
+                        switch (model.link) {
+                        case ClusterApp::Link::identity:
+                        {
+                            if (model.include_intercept == 1) {
+                                model.beta_pars[0] = control_mean;
+                            }
+                            else {
+                                for (int l = 0; l < model.beta_pars.size(); l++) {
+                                    model.beta_pars[l] = control_mean;
+                                }
+                            }
+                            model.te_pars[0] = treatment_mean;
+                            break;
+                        }
+                        case ClusterApp::Link::log:
+                        {
+                            if (model.include_intercept == 1) {
+                                model.beta_pars[0] = log(control_mean) - re_adj;
+                            }
+                            else {
+                                for (int l = 0; l < model.beta_pars.size(); l++) {
+                                    model.beta_pars[l] = log(control_mean) - re_adj;
+                                }
+                            }
+                            model.te_pars[0] = log(treatment_mean) - log(control_mean);
+                            break;
+                        }
+                        case ClusterApp::Link::logit:
+                        {
+                            if (model.include_intercept == 1) {
+                                model.beta_pars[0] = log(control_mean/(1-control_mean)) - re_adj;
+                            }
+                            else {
+                                for (int l = 0; l < model.beta_pars.size(); l++) {
+                                    model.beta_pars[l] = log(control_mean / (1 - control_mean)) - re_adj;
+                                }
+                            }
+                            model.te_pars[0] = log(treatment_mean/(1-treatment_mean)) - log(control_mean / (1 - control_mean));
+                            break; 
+                        }
+                        case ClusterApp::Link::probit:
+                        {
+                            boost::math::normal norm = boost::math::normal(0.0, 1.0);
+                            if (model.include_intercept == 1) {                                
+                                model.beta_pars[0] = boost::math::quantile(norm, control_mean) - re_adj;
+                            }
+                            else {
+                                for (int l = 0; l < model.beta_pars.size(); l++) {
+                                    model.beta_pars[l] = boost::math::quantile(norm, control_mean) -re_adj;
+                                }
+                            }
+                            model.te_pars[0] = boost::math::quantile(norm, treatment_mean) - model.beta_pars[0];
+                            break; 
+                        }
+
+                        }
+                    }
+                                       
+
+                    ImGui::TreePop();
+                }
+            }
+            
+
             ImGui::TreePop();
         }
+        if (option.debug_info) {
+            if (ImGui::TreeNode("Model info")) {
+                ImGui::Text("Model checksum"); ImGui::SameLine();
+                ImGui::Text("%d", model.crc_val);
+                ImGui::Text("Parameters checksum"); ImGui::SameLine();
+                ImGui::Text("%d", model.crc_val_pars);
+                ImGui::TreePop();
+            }
+        }
+        
 
         ImGui::End();
     };
@@ -1135,19 +1261,27 @@ namespace ClusterApp {
             ImGui::Text("Design Effect Analysis"); ImGui::SameLine(); HelpMarker(
                 "For comparison we report the power and confidence interval half-width for exchangeable and nested exchangeable models using an adapted approach of Hooper et al (2016). Use of ICC, CAC, and IAC values for non - Gaussian - identity models uses the mean individual - level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
 
-            ImGui::Text("Total observations: "); ImGui::SameLine();
-            ImGui::Text("%.0f", updater.summary.individual_n); ImGui::SameLine(); HelpMarker(
-                "This value is corrected for the allocation ratio between treatment and control conditions.");
-            ImGui::Text("Design Effect: "); ImGui::SameLine();
-            ImGui::Text("%.3f", updater.summary.design_effect);
-            ImGui::Text("Power: "); ImGui::SameLine();
-            ImGui::Text("%.1f", updater.summary.power_de);
-            ImGui::Text("95%% Confidence-interval half width: "); ImGui::SameLine();
-            ImGui::Text("%.3f", updater.summary.ci_width_de);
-            ImGui::Text("Standard error: "); ImGui::SameLine();
-            ImGui::Text("%.3f", updater.summary.se_de);
-            ImGui::Text("Assumed observation level variance: "); ImGui::SameLine();
-            ImGui::Text("%.3f", updater.summary.individual_var);
+            if (updater.summary.power_de == 909) {
+                ImGui::TextWrapped("Error. Check parameter values. For example, if the log-binomial model produces probabilities outside [0,1] then this error will appear.");
+            }
+            else {
+                ImGui::Text("Total observations: "); ImGui::SameLine();
+                ImGui::Text("%.0f", updater.summary.individual_n); ImGui::SameLine(); HelpMarker(
+                    "The sample size for the single period, individual-level RCT. This value is corrected for the allocation ratio between treatment and control conditions.");
+                ImGui::Text("Design effect: "); ImGui::SameLine();
+                ImGui::Text("%.3f", updater.summary.design_effect);
+                ImGui::Text("Power: "); ImGui::SameLine();
+                ImGui::Text("%.1f", updater.summary.power_de);
+                ImGui::Text("95%% Confidence-interval half-width: "); ImGui::SameLine();
+                ImGui::Text("%.3f", updater.summary.ci_width_de);
+                ImGui::Text("Standard error: "); ImGui::SameLine();
+                ImGui::Text("%.3f", updater.summary.se_de);
+                ImGui::Text("Assumed observation level variance: "); ImGui::SameLine();
+                ImGui::Text("%.3f", updater.summary.individual_var);
+            }
+
+            
+            
         }
 
         if (option.two_treatments) {
@@ -1406,16 +1540,12 @@ namespace ClusterApp {
         ImGui::Begin("Plotter");
         ImGui::Text("Plot settings");
 
-        const char* xaxis_items_exchangeable[] = { "Clusters per sequence", "N per cluster-period", "ICC", "Treatment effect", "Baseline"};
-        const char* xaxis_items_other[] = { "Clusters per sequence", "N per cluster-period", "ICC", "Treatment effect", "Baseline", "CAC" };
+        const char* xaxis_items_exchangeable[] = { "Clusters", "N per cluster-period", "ICC", "Treatment effect", "Baseline"};
+        const char* xaxis_items_other[] = { "Clusters", "N per cluster-period", "ICC", "Treatment effect", "Baseline", "CAC" };
         static int xaxis_item_current = 2;
         static int series_item_current = 4;
         const char* yaxis_items[] = { "Power (GLS)", "CI width (GLS)", "Power (GLS-BW)", "CI width (GLS-BW)", "Power (KR)", "CI width (KR)", "Power (Design effect)", "CI width (Design effect)" };
         static int yaxis_item_current = 0;
-        static int lower_int[] = { 1,10 };
-        static int upper_int[] = { 3, 100 };
-        static float upper_float[] = { 0.5, 1.0, 1.0, 0.9 };
-        static float lower_float[] = { 0.01, 0.0, 0.0, 0.1 };
         static int series_clusters[] = { 1,2,3 };
         static int series_n[] = { 10,20,30 };
         static float series_icc[] = {0.01,0.02,0.05};
@@ -1436,6 +1566,7 @@ namespace ClusterApp {
         else {
             ImGui::Combo("X-Axis", &xaxis_item_current, xaxis_items_other, IM_ARRAYSIZE(xaxis_items_other));
         }
+        ImGui::SameLine(); HelpMarker("Clusters is the total number of clusters in the trial. The clusters are assumed to be allocated in the same ratio as the design (subject to rounding, which uses Hamilton's method).");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(200);
         ImGui::Combo("Y-Axis", &yaxis_item_current, yaxis_items, IM_ARRAYSIZE(yaxis_items));
@@ -1445,66 +1576,54 @@ namespace ClusterApp {
         case 0:
             plot.xaxis = ClusterApp::XAxis::clusters;
             ImGui::SetNextItemWidth(100);
-            ImGui::InputScalar("Lower", ImGuiDataType_S16, &lower_int[0], &s16_one, NULL, "%d"); ImGui::SameLine();
+            ImGui::InputScalar("Lower", ImGuiDataType_S16, &plot.lower_int[0], &s16_one, NULL, "%d"); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::InputScalar("Upper", ImGuiDataType_S16, &upper_int[0], &s16_one, NULL, "%d");
-            plot.x_axis_limits.first = (float)lower_int[0];
-            plot.x_axis_limits.second = (float)upper_int[0];
+            ImGui::InputScalar("Upper", ImGuiDataType_S16, &plot.upper_int[0], &s16_one, NULL, "%d");
             print_prec = 0;
             x_label = "Clusters";
             break;
         case 1:
             plot.xaxis = ClusterApp::XAxis::individual_n;
             ImGui::SetNextItemWidth(100);
-            ImGui::InputScalar("Lower", ImGuiDataType_S16, &lower_int[1], &s16_one, NULL, "%d"); ImGui::SameLine();
+            ImGui::InputScalar("Lower", ImGuiDataType_S16, &plot.lower_int[1], &s16_one, NULL, "%d"); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::InputScalar("Upper", ImGuiDataType_S16, &upper_int[1], &s16_one, NULL, "%d");
-            plot.x_axis_limits.first = (float)lower_int[1];
-            plot.x_axis_limits.second = (float)upper_int[1];
+            ImGui::InputScalar("Upper", ImGuiDataType_S16, &plot.upper_int[1], &s16_one, NULL, "%d");
             print_prec = 0;
             x_label = "n";
             break;
         case 2:
             plot.xaxis = ClusterApp::XAxis::icc;
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Lower", &lower_float[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
+            ImGui::DragFloat("Lower", &plot.lower_float[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Upper", &upper_float[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
-            plot.x_axis_limits.first = lower_float[0];
-            plot.x_axis_limits.second = upper_float[0];
+            ImGui::DragFloat("Upper", &plot.upper_float[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
             print_prec = 3;
             x_label = "ICC";
             break;
         case 3:
             plot.xaxis = ClusterApp::XAxis::treatment_effect;
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Lower", &lower_float[1], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
+            ImGui::DragFloat("Lower", &plot.lower_float[1], 0.01f, -FLT_MAX, -FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Upper", &upper_float[1], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
-            plot.x_axis_limits.first = lower_float[1];
-            plot.x_axis_limits.second = upper_float[1];
+            ImGui::DragFloat("Upper", &plot.upper_float[1], 0.01f, -FLT_MAX, -FLT_MAX, "%.2f", ImGuiSliderFlags_None);
             print_prec = 3;
             x_label = "Treatment effect";
             break;
         case 4:
             plot.xaxis = ClusterApp::XAxis::baseline;
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Lower", &lower_float[2], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
+            ImGui::DragFloat("Lower", &plot.lower_float[2], 0.01f, -FLT_MAX, -FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Upper", &upper_float[2], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
-            plot.x_axis_limits.first = lower_float[2];
-            plot.x_axis_limits.second = upper_float[2];
+            ImGui::DragFloat("Upper", &plot.upper_float[2], 0.01f, -FLT_MAX, -FLT_MAX, "%.2f", ImGuiSliderFlags_None);
             print_prec = 3;
             x_label = "Baseline";
             break;
         case 5:
             plot.xaxis = ClusterApp::XAxis::cac;
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Lower", &lower_float[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
+            ImGui::DragFloat("Lower", &plot.lower_float[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();
             ImGui::SetNextItemWidth(100);
-            ImGui::DragFloat("Upper", &upper_float[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
-            plot.x_axis_limits.first = lower_float[3];
-            plot.x_axis_limits.second = upper_float[3];
+            ImGui::DragFloat("Upper", &plot.upper_float[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None);
             print_prec = 3;
             x_label = "CAC";
             break;
@@ -1775,17 +1894,39 @@ namespace ClusterApp {
         char* y_char_array = new char[ylabel.length() + 1];
         strcpy(y_char_array, ylabel.c_str());
 
-        static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
-        static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_RangeFit;
+        static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit; //| ImPlotAxisFlags_RangeFit
+        static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit;
 
-        if (ImPlot::BeginPlot("Cluster trial plot")) {
-            ImPlot::SetupAxis(ImAxis_X1, x_char_array,xflags);
-            ImPlot::SetupAxis(ImAxis_Y1, y_char_array, yflags);
-            ImPlot::PushStyleColor(ImPlotCol_Line, colours.red());
-            ImPlot::PlotLine("Series 1", plot.x_data, plot.y_data_1, plot.n_data_points);
-            ImPlot::PopStyleColor();
-            ImPlot::EndPlot();
+        if (!plot.updating) {
+            if (ImPlot::BeginPlot("Cluster trial plot")) {
+                ImPlot::SetupAxis(ImAxis_X1, x_char_array, xflags);
+                ImPlot::SetupAxis(ImAxis_Y1, y_char_array, yflags);
+                ImPlot::PushStyleColor(ImPlotCol_Line, colours.red());
+                ImPlot::PlotLine("Series 1", plot.x_data, plot.y_data_1, plot.n_data_points);
+                ImPlot::PopStyleColor();
+                if (plot.multiple_series) {
+                    if (plot.n_series > 1) {
+                        ImPlot::PushStyleColor(ImPlotCol_Line, colours.blue());
+                        ImPlot::PlotLine("Series 2", plot.x_data, plot.y_data_2, plot.n_data_points);
+                        ImPlot::PopStyleColor();
+                        if (plot.n_series == 3) {
+                            ImPlot::PushStyleColor(ImPlotCol_Line, colours.green());
+                            ImPlot::PlotLine("Series 3", plot.x_data, plot.y_data_3, plot.n_data_points);
+                            ImPlot::PopStyleColor();
+                        }
+                    }
+                }
+
+                ImPlot::EndPlot();
+            }
         }
+        else {
+            ImGui::Text("Calculating...");
+        }
+
+        ImGui::Text("X-axis limits:");
+        ImGui::Text("%.3f", plot.x_axis_limits.first);
+        ImGui::Text("%.3f", plot.x_axis_limits.second);
 
         ImGui::End();
     }

@@ -1,8 +1,48 @@
 #include "clusterclasses.h"
 
 void ClusterApp::plotData::update_data() {
-
+	updating = true;
 	ClusterApp::modelSummary summary(glmm.designs);
+
+	switch (xaxis) {
+	case ClusterApp::XAxis::clusters:
+	{
+		x_axis_limits.first = (float)lower_int[0];
+		x_axis_limits.second = (float)upper_int[0];
+		break;
+	}
+	case ClusterApp::XAxis::individual_n:
+	{
+		x_axis_limits.first = (float)lower_int[1];
+		x_axis_limits.second = (float)upper_int[1];
+		break;
+	}
+	case ClusterApp::XAxis::icc:
+	{
+		x_axis_limits.first = lower_float[0];
+		x_axis_limits.second = upper_float[0];
+		break;
+	}
+	case ClusterApp::XAxis::treatment_effect:
+	{
+		x_axis_limits.first = lower_float[1];
+		x_axis_limits.second = upper_float[1];
+		break;
+	}
+	case ClusterApp::XAxis::baseline:
+	{
+		x_axis_limits.first = lower_float[2];
+		x_axis_limits.second = upper_float[2];
+		break;
+	}
+	case ClusterApp::XAxis::cac:
+	{
+		x_axis_limits.first = lower_float[3];
+		x_axis_limits.second = upper_float[3];
+		break;
+	}
+	}
+
 	float lower = x_axis_limits.first;
 	float upper = x_axis_limits.second;
 	float diff = (upper - lower) / 19;
@@ -145,7 +185,7 @@ void ClusterApp::plotData::update_data() {
 						*glmm.designs.n(k, t) = (int)x_data[i];
 					}
 				}
-				glmm.update_parameters();
+				glmm.update_model_data(updater.generate_data());
 				extract_y(summary, i, j);
 			}			
 			int counter = 0;
@@ -251,6 +291,7 @@ void ClusterApp::plotData::update_data() {
 	y_axis_limits.first = min_y();
 	y_axis_limits.second = max_y();
 	initialised = true;
+	updating = false;
 }
 
 void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, int s) {
@@ -289,7 +330,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::power_bw:
 	{
-		glmm.power(summary);
+		glmm.power_bw(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.power_bw;
@@ -305,7 +346,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::ci_width_bw:
 	{
-		glmm.power(summary);
+		glmm.power_bw(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.ci_width_bw;
@@ -321,7 +362,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::power_kr:
 	{
-		glmm.power(summary);
+		glmm.power_kr(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.power_kr;
@@ -337,7 +378,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::ci_width_kr:
 	{
-		glmm.power(summary);
+		glmm.power_kr(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.ci_width_kr;
@@ -353,7 +394,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::power_de:
 	{
-		glmm.power(summary);
+		glmm.power_de(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.power_de;
@@ -369,7 +410,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::ci_width_de:
 	{
-		glmm.power(summary);
+		glmm.power_de(summary);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.ci_width_de;
@@ -393,8 +434,14 @@ bool ClusterApp::plotData::check() {
 		crc(static_cast<std::underlying_type_t<ClusterApp::XAxis>>(xaxis));
 		crc(static_cast<std::underlying_type_t<ClusterApp::YAxis>>(yaxis));
 		crc(static_cast<std::underlying_type_t<ClusterApp::XAxis>>(series));
-		crc(x_axis_limits.first);
-		crc(x_axis_limits.second);
+		for (int i = 0; i < 2; i++) {
+			crc(lower_int[i]);
+			crc(upper_int[i]);
+		}
+		for (int i = 0; i < 4; i++) {
+			crc(lower_float[i]);
+			crc(upper_float[i]);
+		}
 		crc(n_series);
 		crc(multiple_series);
 		bool has_changed = crc_val != crc.get();

@@ -13,6 +13,7 @@ std::pair<bool, bool> ClusterApp::statisticalModel::check() {
     for (int i = 0; i < ixx_pars.size(); i++)crc2(ixx_pars[i]);
     for (int i = 0; i < cov_pars.size(); i++)crc2(cov_pars[i]);
     for (int i = 0; i < beta_pars.size(); i++)crc2(beta_pars[i]);
+    crc2(alpha);
     int new_val = crc.get();
     int new_val2 = crc2.get();
     std::pair<bool, bool> has_changed;

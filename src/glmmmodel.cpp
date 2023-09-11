@@ -247,6 +247,7 @@ void ClusterApp::glmmModel::update_model_data(const Eigen::ArrayXXd& data) {
 
 void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
     if (model) {
+        zcutoff = boost::math::quantile(norm, 1-statmodel.alpha/2);
         Eigen::MatrixXd M = (*model).matrix.information_matrix();
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
@@ -301,6 +302,7 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
 
 void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
     if (model) {
+        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
         kenward_data res = (*model).matrix.kenward_roger();
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
         double dofkr = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
@@ -359,6 +361,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
 
 void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
     if (model) {
+        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
         Eigen::MatrixXd M = (*model).matrix.information_matrix();
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
@@ -495,15 +498,30 @@ double ClusterApp::glmmModel::design_effect() {
 
 void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary) {
     // get sample sizes and design effects - also update summary to include new variables
-    summary.individual_var = mean_individual_variance(false);
-    summary.individual_n = individual_n();
-    summary.individual_n *= (1.0 / designs.time);
-    summary.design_effect = design_effect();
-    summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
-    summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n) ;
-    double zval = abs(statmodel.te_pars[0] / summary.se_de);
-    summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
-    summary.ci_width_de = zcutoff * summary.se_de;
+    double individual_var = mean_individual_variance(false);
+    if (!isnan(individual_var) && individual_var > 0) {
+        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
+        summary.individual_var = mean_individual_variance(false);
+        summary.individual_n = individual_n();
+        summary.individual_n *= (1.0 / designs.time);
+        summary.design_effect = design_effect();
+        summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
+        summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n);
+        double zval = abs(statmodel.te_pars[0] / summary.se_de);
+        summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
+        summary.ci_width_de = zcutoff * summary.se_de;
+    }
+    else {
+        summary.individual_var = 0;
+        summary.individual_n = 0;
+        summary.design_effect = design_effect();
+        summary.individual_se = 0;
+        summary.se_de = 0;
+        summary.power_de = 909;
+        summary.ci_width_de = 0;
+    }
+
+    
 }
 
 std::vector<int> ClusterApp::glmmModel::round_weights(std::vector<float> w, int n) {

@@ -15,11 +15,11 @@ SOURCES += $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_items.cpp
 
 LIBS = -lGL
 WEBGL_VER = -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1 
-USE_WASM = -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=10MB
+USE_WASM = -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=15MB 
 CPPFLAGS += -I$(BOOST_DIR) -I$(EIGEN_DIR) 
 LDFLAGS += --shell-file shell_full.html
 
-# for debigging add: -s NO_DISABLE_EXCEPTION_CATCHING and remove optimisation flag
+# for debigging add: -s NO_DISABLE_EXCEPTION_CATCHING and remove optimisation flag -Os -g2
 
 all: $(SOURCES) $(OUTPUT)
 

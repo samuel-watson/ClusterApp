@@ -104,6 +104,7 @@ namespace ClusterApp {
         std::pair<bool, bool> check();
         void update_beta(ClusterApp::design& design);
         void set_beta_random(const double m, const double s);
+        float alpha = 0.05;
     };
 
     struct modelSummary {
@@ -235,6 +236,11 @@ namespace ClusterApp {
         void extract_y(ClusterApp::modelSummary& summary, int i, int series);
         float max_y();
         float min_y();
+        bool updating = false;
+        int lower_int[2] = { 10,10 };
+        int upper_int[2] = { 40, 100 };
+        float upper_float[4] = { 0.25, 1.0, 1.0, 0.9 };
+        float lower_float[4] = { 0.01, 0.0, 0.0, 0.1 };
     };
 
     class modelChecker {
