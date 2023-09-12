@@ -263,7 +263,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.2.014");
+                    ImGui::Text("Version: 0.2.015");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -277,6 +277,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.2.015");
+                    ImGui::BulletText("Bug fixes and UI improvements.");
                     ImGui::Text("Version: 0.2.014");
                     ImGui::BulletText("Added plotting.");
                     ImGui::BulletText("Added set alpha value.");
@@ -389,21 +391,29 @@ namespace ClusterApp {
 
         ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
             "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
-        ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
-        ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
-        ImGui::Checkbox("Intervention status", &option.show_status_period);
-        ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
-        ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
         enum Mode
         {
             Mode_Copy,
             Mode_Move,
             Mode_Swap
         };
-        static int mode = 0;
-        if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
-        if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
-        if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
+        static int mode = 2;
+        if (ImGui::TreeNode("View options")) {
+            ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
+            ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
+            ImGui::Checkbox("Intervention status", &option.show_status_period);
+            ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
+            ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
+
+            if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
+            if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
+            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
+            ImGui::TreePop();
+        }
+        
+        
+        
+        
         ImGui::Spacing();
 
         //ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align + 30);
@@ -491,8 +501,19 @@ namespace ClusterApp {
                 std::string label_j = std::to_string(*designs.n_clusters(n));
                 char* char_array_j = new char[label_j.length() + 1];
                 strcpy(char_array_j, label_j.c_str());
-                ImGui::Button(char_array_j, ImVec2(small_dim * 1.5, small_dim)); ImGui::SameLine();
+                ImGui::PushID(20000 + n);
+                ImGui::Button(char_array_j, ImVec2(small_dim * 1.5, small_dim)); 
+                if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft)) {
+                    ImGui::Text("Number of clusters");
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::InputScalar("N", ImGuiDataType_S16, designs.n_clusters(n), &s16_one, NULL, "%d");
+                    ImGui::EndPopup();
+                }
+                ImGui::PopID();
+                ImGui::SameLine();
             }
+
+            
 
             ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
@@ -1111,7 +1132,7 @@ namespace ClusterApp {
                                     model.beta_pars[l] = control_mean;
                                 }
                             }
-                            model.te_pars[0] = treatment_mean;
+                            model.te_pars[0] = treatment_mean - control_mean;
                             break;
                         }
                         case ClusterApp::Link::log:
@@ -1536,7 +1557,7 @@ namespace ClusterApp {
         ImGui::End();
     }
 
-    void RenderPlotter(ClusterApp::plotData& plot) {
+    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option) {
         ImGui::Begin("Plotter");
         ImGui::Text("Plot settings");
 
@@ -1924,9 +1945,12 @@ namespace ClusterApp {
             ImGui::Text("Calculating...");
         }
 
-        ImGui::Text("X-axis limits:");
-        ImGui::Text("%.3f", plot.x_axis_limits.first);
-        ImGui::Text("%.3f", plot.x_axis_limits.second);
+        if (option.debug_info) {
+            ImGui::Text("X-axis limits:");
+            ImGui::Text("%.3f", plot.x_axis_limits.first);
+            ImGui::Text("%.3f", plot.x_axis_limits.second);
+        }
+        
 
         ImGui::End();
     }

@@ -29,6 +29,6 @@ namespace ClusterApp {
 
     void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option);
 
-    void RenderPlotter(ClusterApp::plotData& plot);
+    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option);
 }
 

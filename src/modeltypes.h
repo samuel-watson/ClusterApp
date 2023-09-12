@@ -31,7 +31,7 @@ namespace ClusterApp {
         bool two_treatments = false;
         bool model = true;
         bool results = true;
-        bool optimiser = true;
+        bool optimiser = false;
         bool light_mode = true;
         bool dockspace = true;
         bool plotter = false;

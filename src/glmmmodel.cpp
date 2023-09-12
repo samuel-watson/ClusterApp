@@ -311,7 +311,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         double tval, tcutoff;
         if (!isnan(bvar) && bvar > 0) {
             tval = abs(statmodel.te_pars[0] / sqrt(bvar));
-            tcutoff = boost::math::quantile(dist, 0.975);
+            tcutoff = boost::math::quantile(dist, 1 - statmodel.alpha / 2);
             summary.power_kr = res.dof(idx) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
             summary.dof_kr = res.dof(idx);
             summary.se_kr = sqrt(bvar);

@@ -43,7 +43,7 @@ namespace ClusterApp {
     class design {
         std::vector<std::vector<ClusterApp::sequencePeriod > > periods;
         std::vector<int> n_per_sequence;
-        int default_clusters = 1;
+        int default_clusters = 10;
         void initialise_data();
     public:
         int sequences = 2;
@@ -249,6 +249,7 @@ namespace ClusterApp {
         ClusterApp::statisticalModel& model;
         ClusterApp::modelUpdater& updater;
         ClusterApp::plotData& plot;
+        ClusterApp::options& option;
         double update_interval = 1000;
         std::chrono::steady_clock clock;
         std::chrono::time_point< std::chrono::steady_clock> t0;
@@ -256,6 +257,7 @@ namespace ClusterApp {
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
             ClusterApp::plotData& plot_,
+            ClusterApp::options& option_,
             double interval = 1000);
         void check();
         void check_time();

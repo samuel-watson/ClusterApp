@@ -73,7 +73,7 @@ void loop()
   static ClusterApp::glmmModel glmm(model, windows, designs);
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::plotData plotdata(glmm,updater);
-  static ClusterApp::modelChecker checker(designs, model, updater, plotdata);
+  static ClusterApp::modelChecker checker(designs, model, updater, plotdata, windows);
   
 
   //ImGui::PushFont(main_font);
@@ -122,7 +122,7 @@ void loop()
   }
 
   if (windows.plotter) {
-      ClusterApp::RenderPlotter(plotdata);
+      ClusterApp::RenderPlotter(plotdata, windows);
   }
       
    
