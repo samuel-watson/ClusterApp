@@ -5,8 +5,6 @@
 #include <memory>
 #include <type_traits>
 #include <chrono>
-//#include <thread>
-//#include <functional>
 #include <numeric>
 #include <random>
 #include "modeltypes.h"
@@ -81,6 +79,7 @@ namespace ClusterApp {
         void swap_cells(int source, int target);
         void copy_cells(int source, int target);
         void move_cells(int source, int target);
+        float randomisation_ratio(int intervention_arm = 1, bool cluster=true);
     };
 
     class statisticalModel {
@@ -182,8 +181,9 @@ namespace ClusterApp {
         void optimum(int N);
         float individual_n();
         double design_effect();
-        void power_de(ClusterApp::modelSummary& summary);
+        void power_de(ClusterApp::modelSummary& summary, int type);
         double mean_individual_variance(bool weighted = true);
+        std::pair<double,double> mean_outcome();
         std::vector<int> round_weights(std::vector<float> w, int n);
     };
 
@@ -195,6 +195,7 @@ namespace ClusterApp {
         ClusterApp::glmmModel& glmm;
         bool update = false;
         bool manual_n_optim = false;
+        int de_mode = 0;
         Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
         std::vector<std::vector<double> > optimum_data = { {0.5},{0.5} };
         std::vector<std::vector<int> > optimum_n = { {10},{10} };

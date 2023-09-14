@@ -394,7 +394,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::power_de:
 	{
-		glmm.power_de(summary);
+		glmm.power_de(summary,updater.de_mode);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.power_de;
@@ -410,7 +410,7 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 	}
 	case ClusterApp::YAxis::ci_width_de:
 	{
-		glmm.power_de(summary);
+		glmm.power_de(summary, updater.de_mode);
 		switch (s) {
 		case 0:
 			y_data_1[i] = summary.ci_width_de;

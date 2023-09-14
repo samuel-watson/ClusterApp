@@ -1,6 +1,6 @@
 #include "clusterclasses.h"
-#include <boost/math/distributions/students_t.hpp>
 #include "glmmr/maths.h"
+
 
 void ClusterApp::glmmModel::update_formula() {
     std::string new_formula = "int";
@@ -108,6 +108,15 @@ double ClusterApp::glmmModel::mean_individual_variance(bool weighted) {
     }
         
     return var;
+}
+
+std::pair<double, double> ClusterApp::glmmModel::mean_outcome() {   
+    Eigen::Vector2d xb;
+    xb(0) = statmodel.beta_pars[0];
+    xb(1) = statmodel.beta_pars[0] + statmodel.te_pars[0];
+    Eigen::Vector2d ymean = glmmr::maths::mod_inv_func(xb, (*model).model.family.link);
+    std::pair<double, double> result = { ymean(0), ymean(1) };
+    return result;
 }
 
 void ClusterApp::glmmModel::update_parameters() {
@@ -496,30 +505,77 @@ double ClusterApp::glmmModel::design_effect() {
     return deffc * deffr;
 }
 
-void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary) {
+void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary, int type) {
+    //TYPES: 1 = glm model variance
+    //TYPES: 2 = chi-squared (applicable to binary outcome)
+    //TYPES: 3 = Fisher's exact test
+    //TYPES: 4 = t-test difference in means - not needed as equivalent to linear model
+    // also investigate count data and others.
+    summary.individual_n = individual_n();
+    summary.individual_n *= (1.0 / designs.time);
+    summary.design_effect = design_effect();
+
+    if (type == 0) {
+        double individual_var = mean_individual_variance(false);
+        if (!isnan(individual_var) && individual_var > 0) {
+            zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
+            summary.individual_var = mean_individual_variance(false);
+            summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
+            summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n);
+            double zval = abs(statmodel.te_pars[0] / summary.se_de);
+            summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
+            summary.ci_width_de = zcutoff * summary.se_de;
+        }
+        else {
+            summary.individual_var = 0;
+            summary.individual_n = 0;
+            summary.design_effect = design_effect();
+            summary.individual_se = 0;
+            summary.se_de = 0;
+            summary.power_de = 909;
+            summary.ci_width_de = 0;
+        }
+    }
+    else if(type == 1) {
+        // chi-squared
+        std::pair<double, double> ymean = mean_outcome();
+        float ratio = designs.randomisation_ratio(1, false);
+        if (ymean.first <= 0 || ymean.first >= 1 || ymean.second <= 0 || ymean.second >= 1 || ratio == 0 || ratio == 1) {
+            summary.individual_var = 0;
+            summary.individual_n = 0;
+            summary.design_effect = design_effect();
+            summary.individual_se = ratio;
+            summary.se_de = ymean.first;
+            summary.power_de = 909;
+            summary.ci_width_de = ymean.second;
+        }
+        else {
+            double n = summary.individual_n * summary.design_effect;
+            double del = ymean.second - ymean.first;
+            //double non_central_param = del * del * n * ratio * (1-ratio) * (1 / (ymean.first * (1-ymean.first)));
+            // for test of independence above
+            double non_central_param = del * del * n / ymean.first;
+            boost::math::non_central_chi_squared dist(1, non_central_param);
+            boost::math::chi_squared chi_dist(1);
+            double k = boost::math::quantile(chi_dist, 1 - statmodel.alpha / 2);                        
+            summary.power_de = (1 - boost::math::cdf(dist, k)) * 100;
+        }       
+        
+    }
+
+    
+    //case 3:
+    //{
+    //    // fishers exact test to add another time - 
+    //    // proposed strategy is to define the hypergeometric distribution under the null,
+    //    // and then calculate probabilities for possible y counts under alternative and 
+    //    // take weighted average using binomial probablities, but likely very slow for 
+    //    // larger sample sizes. Put a cap on sample sizes.
+    //}
+    
+
     // get sample sizes and design effects - also update summary to include new variables
-    double individual_var = mean_individual_variance(false);
-    if (!isnan(individual_var) && individual_var > 0) {
-        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
-        summary.individual_var = mean_individual_variance(false);
-        summary.individual_n = individual_n();
-        summary.individual_n *= (1.0 / designs.time);
-        summary.design_effect = design_effect();
-        summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
-        summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n);
-        double zval = abs(statmodel.te_pars[0] / summary.se_de);
-        summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
-        summary.ci_width_de = zcutoff * summary.se_de;
-    }
-    else {
-        summary.individual_var = 0;
-        summary.individual_n = 0;
-        summary.design_effect = design_effect();
-        summary.individual_se = 0;
-        summary.se_de = 0;
-        summary.power_de = 909;
-        summary.ci_width_de = 0;
-    }
+    
 
     
 }

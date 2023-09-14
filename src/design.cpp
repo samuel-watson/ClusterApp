@@ -376,3 +376,31 @@ void ClusterApp::design::move_cells(int source, int target) {
     periods[i_target][t_target].copy_properties(periods[i_source][t_source]);
     *active(i_source, t_source) = false;
 }
+
+float ClusterApp::design::randomisation_ratio(int intervention_arm, bool cluster) {
+    int n0 = 0;
+    int n1 = 0;
+    for (int i = 0; i < sequences; i++) {
+        for (int t = 0; t < time; t++) {
+            if (*active(i, t)) {
+                if (intervention_arm == 1) {
+                    if (*intervention(i, t)) {
+                        n1 += cluster ? n_per_sequence[i] : *n(i, t);
+                    }
+                    else {
+                        n0 += cluster ? n_per_sequence[i] : *n(i, t);
+                    }
+                }
+                else {
+                    if (*intervention_2(i, t)) {
+                        n1 += cluster ? n_per_sequence[i] : *n(i, t);
+                    }
+                    else {
+                        n0 += cluster ? n_per_sequence[i] : *n(i, t);
+                    }
+                }
+            }
+        }
+    }
+    return (float)n1 / (float)(n1+n0);
+}

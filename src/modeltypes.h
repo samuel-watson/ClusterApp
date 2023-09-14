@@ -4,6 +4,9 @@
 #include<cstring>
 #include<boost/crc.hpp>
 #include "imgui.h"
+#include <boost/math/distributions/students_t.hpp>
+#include <boost/math/distributions/non_central_chi_squared.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
 
 namespace ClusterApp {
 
