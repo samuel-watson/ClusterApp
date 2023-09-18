@@ -554,7 +554,7 @@ void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary, int type
             double del = ymean.second - ymean.first;
             //double non_central_param = del * del * n * ratio * (1-ratio) * (1 / (ymean.first * (1-ymean.first)));
             // for test of independence above
-            double non_central_param = del * del * n / ymean.first;
+            double non_central_param = del * del * n / (2 * ymean.first);
             boost::math::non_central_chi_squared dist(1, non_central_param);
             boost::math::chi_squared chi_dist(1);
             double k = boost::math::quantile(chi_dist, 1 - statmodel.alpha / 2);                        

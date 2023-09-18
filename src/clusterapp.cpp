@@ -263,7 +263,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {                    
                     ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.2.015");
+                    ImGui::Text("Version: 0.2.016");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -277,7 +277,7 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
-                    ImGui::Text("Version: 0.2.015");
+                    ImGui::Text("Version: 0.2.015/2.016");
                     ImGui::BulletText("Bug fixes and UI improvements.");
                     ImGui::Text("Version: 0.2.014");
                     ImGui::BulletText("Added plotting.");
