@@ -550,7 +550,7 @@ void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary, int type
             summary.ci_width_de = ymean.second;
         }
         else {
-            double n = summary.individual_n * summary.design_effect;
+            double n = summary.individual_n / summary.design_effect;
             double del = ymean.second - ymean.first;
             //double non_central_param = del * del * n * ratio * (1-ratio) * (1 / (ymean.first * (1-ymean.first)));
             // for test of independence above
