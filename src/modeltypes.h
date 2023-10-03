@@ -85,7 +85,8 @@ namespace ClusterApp {
 
     enum class Sampling {
         cross_sectional = 1,
-        cohort = 2
+        cohort = 2,
+        open_cohort = 3
     };
 
     enum class XAxis {

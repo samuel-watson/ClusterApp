@@ -175,6 +175,7 @@ namespace ClusterApp {
         void update_formula();
         void update_parameters();
         void update_model_data(const Eigen::ArrayXXd& data);
+        std::vector<double> sim_data();
         void power(ClusterApp::modelSummary& summary);
         void power_kr(ClusterApp::modelSummary& summary);
         void power_bw(ClusterApp::modelSummary& summary);

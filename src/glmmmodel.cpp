@@ -51,6 +51,9 @@ void ClusterApp::glmmModel::update_formula() {
             break;
         }
     }
+    else if (statmodel.sampling == ClusterApp::Sampling::open_cohort) {
+        new_formula += "+(1|gr(cl)*ar0(t))";
+    }
     formula = new_formula;
     switch (statmodel.family) {
     case ClusterApp::Family::gaussian:
@@ -154,10 +157,15 @@ void ClusterApp::glmmModel::update_parameters() {
             if (statmodel.ind_covariance != ClusterApp::IndividualCovariance::exchangeable) {
                 theta.push_back(statmodel.cov_pars[4]);
             }
+        } else if (statmodel.sampling == ClusterApp::Sampling::open_cohort) {
+            double tau3 = statmodel.ixx_pars[2] * (1 - statmodel.ixx_pars[0]);
+            tau3 = tau3 / mean_n;
+            theta.push_back(tau3);
+            theta.push_back(1-statmodel.cov_pars[4]);
         }
 
         if (statmodel.link == ClusterApp::Link::identity) {
-            if (statmodel.sampling == ClusterApp::Sampling::cohort) {
+            if (statmodel.sampling == ClusterApp::Sampling::cohort || statmodel.sampling == ClusterApp::Sampling::open_cohort) {
                 double tau4 = (1 - statmodel.ixx_pars[0]) * (1 - statmodel.ixx_pars[2]);
                 (*model).model.data.set_var_par(tau4);
             }
@@ -218,6 +226,11 @@ void ClusterApp::glmmModel::update_parameters() {
             if (statmodel.ind_covariance != ClusterApp::IndividualCovariance::exchangeable) {
                 theta.push_back(statmodel.cov_pars[4]);
             }
+        } else if (statmodel.sampling == ClusterApp::Sampling::open_cohort) {
+            double tau3 = statmodel.cov_pars[3];
+            tau3 = tau3 / mean_n;
+            theta.push_back(tau3);
+            theta.push_back(1 - statmodel.cov_pars[4]);
         }
         if (statmodel.family == ClusterApp::Family::beta || statmodel.family == ClusterApp::Family::gamma) {
             (*model).model.data.set_var_par(1 - statmodel.cov_pars[2]);
@@ -425,12 +438,17 @@ void ClusterApp::glmmModel::optimum(int N) {
     if (model) {
         Eigen::VectorXd C = Eigen::VectorXd::Zero((*model).model.linear_predictor.P());
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        C(idx) = statmodel.c_vals[0];
+        C(idx) = 1; //statmodel.c_vals[0];
         if (option.two_treatments) {
             C(idx+1) = statmodel.c_vals[1];
             C(idx + 2) = statmodel.c_vals[2];
         }
-        Eigen::ArrayXd weights = (*model).optim.optimum_weights(N,C);
+        Eigen::ArrayXd fix_weights = model->model.data.weights;
+        model->model.data.set_weights(fix_weights.size()); // set weights to 1
+        model->matrix.W.update();
+        Eigen::ArrayXd weights = (*model).optim.optimum_weights(N,C,1e-6);
+        model->model.data.set_weights(fix_weights);
+        model->matrix.W.update();
         if (weights.size() != optimal_weights.size()) optimal_weights.resize(weights.size());
         for (int i = 0; i < weights.size(); i++) optimal_weights[i] = weights(i);
     }
@@ -601,4 +619,13 @@ std::vector<int> ClusterApp::glmmModel::round_weights(std::vector<float> w, int 
     std::vector<int> result(total);
     for (int i = 0; i < total; i++)result[i] = (int)totals[i];
     return result;
+}
+
+std::vector<double> ClusterApp::glmmModel::sim_data() {
+    Eigen::VectorXd re = model->model.covariance.sim_re();
+    Eigen::ArrayXd xb = model->model.xb();
+    re += xb.matrix();
+    Eigen::VectorXd mu = glmmr::maths::mod_inv_func(re, model->model.family.link);
+    std::vector<double> sim_data(mu.data(), mu.data()+mu.size());
+    return sim_data;
 }
