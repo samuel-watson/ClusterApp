@@ -38,6 +38,8 @@ namespace ClusterApp {
         bool light_mode = true;
         bool dockspace = true;
         bool plotter = false;
+        bool krigger = false;
+        bool simulate = false;
         bool show_n_period = true;
         bool show_status_period = false;
         bool show_J_seq = true;

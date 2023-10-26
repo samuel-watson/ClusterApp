@@ -73,7 +73,8 @@ void loop()
   static ClusterApp::glmmModel glmm(model, windows, designs);
   static ClusterApp::modelUpdater updater(designs, model, results, glmm);
   static ClusterApp::plotData plotdata(glmm,updater);
-  static ClusterApp::modelChecker checker(designs, model, updater, plotdata, windows);
+  static ClusterApp::krigingData krigdata(glmm, updater);
+  static ClusterApp::modelChecker checker(designs, model, updater, plotdata, krigdata, windows);
   
 
   //ImGui::PushFont(main_font);
@@ -123,6 +124,12 @@ void loop()
 
   if (windows.plotter) {
       ClusterApp::RenderPlotter(plotdata, windows);
+  }
+  if (windows.krigger) {
+      ClusterApp::RenderKriging(krigdata, windows);
+  }
+  if (windows.simulate) {
+      ClusterApp::RenderDataSim(glmm, windows);
   }
       
    

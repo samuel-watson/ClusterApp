@@ -253,6 +253,8 @@ namespace ClusterApp {
                 ImGui::Checkbox("Results", &windows.results);
                 ImGui::Checkbox("Optimal design", &windows.optimiser);
                 ImGui::Checkbox("Plotting", &windows.plotter);
+                ImGui::Checkbox("Sample minimiser", &windows.krigger);
+                ImGui::Checkbox("Data simulate", &windows.simulate);
                 ImGui::Checkbox("Dockspace", &windows.dockspace);
                 ImGui::Checkbox("Debug Info", &windows.debug_info);
                 ImGui::EndMenu();
@@ -262,8 +264,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("About");
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
-                    ImGui::Text("(c) Sam Watson 2023.");
-                    ImGui::Text("Version: 0.3.1");
+                    ImGui::Text("(c) Sam Watson 2023");
+                    ImGui::Text("Version: 0.3.2");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -277,6 +279,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.3.2");
+                    ImGui::BulletText("Added sample minimiser (experimental).");
                     ImGui::Text("Version: 0.3.1");
                     ImGui::BulletText("Added open cohort designs.");
                     ImGui::BulletText("Added data simulator.");

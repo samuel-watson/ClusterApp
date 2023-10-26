@@ -7,6 +7,10 @@
 #include <chrono>
 #include <numeric>
 #include <random>
+#include <ctime>
+#include <cstdint>
+#include <format>
+#include <boost/random.hpp>
 #include "modeltypes.h"
 #include "glmmr.h"
 
@@ -245,6 +249,39 @@ namespace ClusterApp {
         float lower_float[4] = { 0.01, 0.0, 0.0, 0.1 };
     };
 
+    class krigingData {
+    public: 
+        ClusterApp::glmmModel& glmm;
+        ClusterApp::modelUpdater& updater;
+        std::vector<int> n_ind;
+        std::vector<int> n_cl;
+        std::vector<float> power;
+        void new_sample(int n = 25);
+        void generate_data();
+        void update(bool resample = true);
+        int lower_int[2] = { 10,10 };
+        int upper_int[2] = { 40, 100 };
+        float bandwidth = 1;
+        float threshold_power = 0.8;
+        krigingData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) { 
+            generate_grid();
+            new_sample();
+        };
+        bool initialised = false;
+        bool surface_initialised = false;
+        bool updating = false;
+        bool start = false;
+        float surface[400];
+        float n_ind_grid[20];
+        float n_cl_grid[20];
+        char* n_ind_grid_label[20];
+        char* n_cl_grid_label[20];
+        float mu;
+    private:
+        void generate_grid();
+        int resample_total = 20;              
+    };
+
     class modelChecker {
     public:
         ClusterApp::design& designs;
@@ -252,6 +289,7 @@ namespace ClusterApp {
         ClusterApp::modelUpdater& updater;
         ClusterApp::plotData& plot;
         ClusterApp::options& option;
+        ClusterApp::krigingData& krig;
         double update_interval = 1000;
         std::chrono::steady_clock clock;
         std::chrono::time_point< std::chrono::steady_clock> t0;
@@ -259,6 +297,7 @@ namespace ClusterApp {
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
             ClusterApp::plotData& plot_,
+            ClusterApp::krigingData& krig_,
             ClusterApp::options& option_,
             double interval = 1000);
         void check();

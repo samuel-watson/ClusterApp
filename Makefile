@@ -12,13 +12,13 @@ SOURCES += ./src/mainmenu.cpp ./src/designer.cpp ./src/samplesize.cpp ./src/mode
 SOURCES += ./src/results.cpp ./src/optimiser.cpp ./src/plotter.cpp
 SOURCES += ./src/sequenceperiod.cpp ./src/multiColorButton.cpp  ./src/design.cpp
 SOURCES += ./src/statisticalmodel.cpp ./src/glmmmodel.cpp ./src/modelupdater.cpp ./src/plotdata.cpp 
-SOURCES += ./src/modelchecker.cpp
+SOURCES += ./src/modelchecker.cpp ./src/krigingdata.cpp ./src/krigger.cpp ./src/datasimulate.cpp
 SOURCES += $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_items.cpp
 
 LIBS = -lGL
 WEBGL_VER = -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1 
 USE_WASM = -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=15MB 
-CPPFLAGS += -I$(BOOST_DIR) -I$(EIGEN_DIR) 
+CPPFLAGS += -I$(BOOST_DIR) -I$(EIGEN_DIR) -fexperimental-library
 LDFLAGS += --shell-file shell_full.html
 
 # for debigging add: -s NO_DISABLE_EXCEPTION_CATCHING and remove optimisation flag -Os -g2
@@ -26,7 +26,7 @@ LDFLAGS += --shell-file shell_full.html
 all: $(SOURCES) $(OUTPUT)
 
 $(OUTPUT): $(SOURCES) 
-	$(CXX)  $(SOURCES) -std=c++17 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os -g2 --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS)
+	$(CXX)  $(SOURCES) -std=c++20 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os -g2 --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS)
 clean:
 	rm -f $(OUTPUT)
 

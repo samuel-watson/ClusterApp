@@ -6,6 +6,7 @@
 #include "clusterclasses.h"
 #include <iomanip>
 #include <sstream>
+#include <format>
 #include "implot.h"
 
 namespace ClusterApp {
@@ -30,5 +31,9 @@ namespace ClusterApp {
     void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option);
 
     void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option);
+
+    void RenderKriging(ClusterApp::krigingData& krig, ClusterApp::options& option);
+
+    void RenderDataSim(ClusterApp::glmmModel& glmm, ClusterApp::options& option);
 }
 
