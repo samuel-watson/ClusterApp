@@ -91,20 +91,21 @@ namespace ClusterApp {
         open_cohort = 3
     };
 
+    // Need to add the other options below to the plotdata class
     enum class XAxis {
         clusters = 1,
         individual_n = 2,
-        cov_par_1 = 3,
+        /*cov_par_1 = 3,
         cov_par_2 = 4,
         cov_par_3 = 5,
         cov_par_4 = 6,
-        cov_par_5 = 7,
+        cov_par_5 = 7,*/
         treatment_effect = 8,
         baseline = 9,
         icc = 10,
-        cac = 11,
-        iac = 12,
-        total_n = 13
+        cac = 11
+        //iac = 12,
+        //total_n = 13
     };
 
     enum class YAxis {

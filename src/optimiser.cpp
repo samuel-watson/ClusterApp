@@ -43,13 +43,13 @@ namespace ClusterApp {
 
         ImGui::Dummy(ImVec2(dim * 0.4, dim * 0.4)); ImGui::SameLine(horizontal_align);
         for (int t = 0; t < T; t++) {
-            ImGui::Text(int_to_char(t + 1));
+            ImGui::Text("%i", t + 1);
             if (t < T - 1)ImGui::SameLine(horizontal_align + (t + 1) * (dim + style.ItemSpacing[0]));
         }
 
         for (int i = 0; i < N; i++) {
             int seq = updater.designs.seq_by_cluster(i);
-            ImGui::Text(int_to_char(i + 1)); ImGui::SameLine(horizontal_align);
+            ImGui::Text("%i", i + 1); ImGui::SameLine(horizontal_align);
             for (int t = 0; t < T; t++) {
                 float w = updater.optimum_data[i][t];
                 ImVec4 newcol;

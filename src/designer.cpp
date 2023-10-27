@@ -99,6 +99,9 @@ namespace ClusterApp {
                 if (ImGui::SmallButton("Activate all")) {
                     for (int s = 0; s < designs.sequences; s++)*designs.active(s, t) = true;
                 }
+                if (ImGui::SmallButton("De-activate all")) {
+                    for (int s = 0; s < designs.sequences; s++)*designs.active(s, t) = false;
+                }
                 if (ImGui::SmallButton("Set all intervention")) {
                     for (int s = 0; s < designs.sequences; s++) {
                         *designs.intervention(s, t) = true;
@@ -143,9 +146,13 @@ namespace ClusterApp {
                 ImGui::PushID(20000 + n);
                 ImGui::Button(char_array_j, ImVec2(small_dim * 1.5, small_dim));
                 if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft)) {
+                    static int n_clusters = 10;
                     ImGui::Text("Number of clusters");
                     ImGui::SetNextItemWidth(100);
-                    ImGui::InputScalar("N", ImGuiDataType_S16, designs.n_clusters(n), &s16_one, NULL, "%d");
+                    ImGui::InputScalar("N", ImGuiDataType_S16, &n_clusters, &s16_one, NULL, "%d");
+                    if (ImGui::Button("Set")) {
+                        *(designs.n_clusters(n)) = n_clusters;
+                    }
                     ImGui::EndPopup();
                 }
                 ImGui::PopID();
@@ -169,12 +176,19 @@ namespace ClusterApp {
             ImGui::Button(int_to_char(n + 1), ImVec2(small_dim, large_dim)); ImGui::SameLine();
             if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft))
             {
+                static int seq_n = 10;
                 ImGui::Text("Number of clusters");
                 ImGui::SetNextItemWidth(100);
-                ImGui::InputScalar("N", ImGuiDataType_S16, designs.n_clusters(n), &s16_one, NULL, "%d");
+                ImGui::InputScalar("N", ImGuiDataType_S16, &seq_n, &s16_one, NULL, "%d"); ImGui::SameLine();
+                if (ImGui::Button("Set")) {
+                    *(designs.n_clusters(n)) = seq_n;
+                }
                 ImGui::Text("OPTIONS");
                 if (ImGui::SmallButton("Activate all")) {
                     for (int s = 0; s < designs.time; s++)*designs.active(n, s) = true;
+                }
+                if (ImGui::SmallButton("De-activate all")) {
+                    for (int s = 0; s < designs.time; s++)*designs.active(n, s) = false;
                 }
                 if (ImGui::SmallButton("Set all intervention")) {
                     for (int s = 0; s < designs.time; s++) {
@@ -267,11 +281,15 @@ namespace ClusterApp {
                     // popup context menu for cluster-period cells
                     if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft))
                     {
+                        static int cell_n = 10;
                         ImGui::Checkbox("Active", designs.active(n, t));
                         ImGui::Checkbox("Intervention", designs.intervention(n, t));
                         if (option.two_treatments)ImGui::Checkbox("Intervention 2", designs.intervention_2(n, t));
                         ImGui::SetNextItemWidth(100);
-                        ImGui::InputScalar("N", ImGuiDataType_S16, designs.n(n, t), &s16_one, NULL, "%d");
+                        ImGui::InputScalar("N", ImGuiDataType_S16, &cell_n, &s16_one, NULL, "%d"); ImGui::SameLine();
+                        if (ImGui::Button("Set")) {
+                            *(designs.n(n, t)) = cell_n;
+                        }
                         ImGui::EndPopup();
                     }
                 }

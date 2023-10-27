@@ -14,6 +14,7 @@
 #include "modeltypes.h"
 #include "glmmr.h"
 
+#define DIV_ROUND_CLOSEST(n, d) ((((n) < 0) == ((d) < 0)) ? (((n) + (d)/2)/(d)) : (((n) - (d)/2)/(d)))
 
 namespace ClusterApp {
 
@@ -277,9 +278,8 @@ namespace ClusterApp {
         char* n_ind_grid_label[20];
         char* n_cl_grid_label[20];
         float mu;
-    private:
         void generate_grid();
-        int resample_total = 20;              
+        int resample_total = 20;
     };
 
     class modelChecker {

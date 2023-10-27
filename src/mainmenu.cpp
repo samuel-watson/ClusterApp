@@ -130,6 +130,7 @@ namespace ClusterApp {
                         static int total_t;
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("Sequences", &total_t, 1, 10, 0);
+                        ImGui::PushID(2000);
                         if (ImGui::Button("Set")) {
                             if (total_t < designs.sequences && total_t > 0) {
                                 int difft = designs.sequences - total_t;
@@ -144,6 +145,7 @@ namespace ClusterApp {
                                 }
                             }
                         }
+                        ImGui::PopID();
                         if (ImGui::MenuItem("Split sequences into clusters")) {
                             designs.split_sequences();
                         }
@@ -157,14 +159,17 @@ namespace ClusterApp {
                         static int total_n = 10;
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
+                        ImGui::PushID(2001);
                         if (ImGui::Button("Set")) {
                             if (total_t > 0) {
                                 for (int j = 0; j < designs.sequences; j++)  *(designs.n_clusters(j)) = total_t;
                             }
                         }
+                        ImGui::PopID();
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
-                        if (ImGui::Button("Set")) {
+                        ImGui::PushID(2002);
+                        if (ImGui::Button("Set n")) {
                             if (total_n > 0) {
                                 for (int j = 0; j < designs.sequences; j++) {
                                     for (int t = 0; t < designs.time; t++) {
@@ -172,8 +177,8 @@ namespace ClusterApp {
                                     }
                                 }
                             }
-                            ImGui::EndMenu();
                         }
+                        ImGui::PopID();
                         ImGui::EndMenu();
                     }
                     if (ImGui::MenuItem("Activate all")) {
@@ -265,7 +270,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.3.2");
+                    ImGui::Text("Version: 0.3.3");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -279,6 +284,10 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version: 0.3.3");
+                    ImGui::BulletText("Fixed integer rounding in calculating plot increments");
+                    ImGui::BulletText("Improved designer UI for modifying sample sizes");
+                    ImGui::BulletText("Tidied up some compiler warnings");
                     ImGui::Text("Version: 0.3.2");
                     ImGui::BulletText("Added sample minimiser (experimental).");
                     ImGui::Text("Version: 0.3.1");

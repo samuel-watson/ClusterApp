@@ -140,7 +140,7 @@ namespace ClusterApp {
                 ImGui::Combo("Individual-level", &ind_cov_item_current, individual_covariance_items, IM_ARRAYSIZE(individual_covariance_items));
             }
             else if (structure_sampling == 2) {
-                ind_cov_item_current == 0;
+                ind_cov_item_current = 0;
                 ImGui::SetNextItemWidth(200);
                 ImGui::DragFloat("Individual replacement rate", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                     "This is the proportion of individuals that dropout each time period and are replaced in the cohort. A value of 1 is a closed cohort and a value of 0 is a cross-sectional study.");
@@ -408,6 +408,19 @@ namespace ClusterApp {
                                 }
                             }
                             model.te_pars[0] = boost::math::quantile(norm, treatment_mean) - model.beta_pars[0];
+                            break;
+                        }
+                        case ClusterApp::Link::inverse:
+                        {
+                            if (model.include_intercept == 1) {
+                                model.beta_pars[0] = 1/control_mean;
+                            }
+                            else {
+                                for (int l = 0; l < model.beta_pars.size(); l++) {
+                                    model.beta_pars[l] = 1/control_mean;
+                                }
+                            }
+                            model.te_pars[0] = 1/(treatment_mean - control_mean);
                             break;
                         }
 

@@ -19,9 +19,9 @@ namespace ClusterApp {
             ImGui::TableNextColumn();
             int total_total_n = 0;
             for (int i = 0; i < designs.sequences; i++) {
-                ImGui::Text(int_to_char(i + 1));
+                ImGui::Text("%i",i + 1);
                 ImGui::TableNextColumn();
-                ImGui::Text(int_to_char(*designs.n_clusters(i)));
+                ImGui::Text("%i", *designs.n_clusters(i));
                 ImGui::TableNextColumn();
                 int total_n = 0;
                 if (ImGui::BeginTable("summaryn", designs.time, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable)) {
@@ -34,7 +34,7 @@ namespace ClusterApp {
                         for (int t = 0; t < designs.time; t++) {
                             int nper = 0;
                             if (*designs.active(i, t))nper = *designs.n(i, t);
-                            ImGui::Text(int_to_char(nper));
+                            ImGui::Text("%i", nper);
                             total_n += nper;
                             ImGui::TableNextColumn();
                         }
@@ -42,15 +42,15 @@ namespace ClusterApp {
                     ImGui::EndTable();
                 }
                 ImGui::TableNextColumn();
-                ImGui::Text(int_to_char(total_n));
+                ImGui::Text("%i", total_n);
                 total_total_n += total_n;
                 ImGui::TableNextColumn();
             }
             ImGui::Text("TOTAL");
             ImGui::TableNextColumn();
-            ImGui::Text(int_to_char(designs.total_clusters()));
+            ImGui::Text("%i", designs.total_clusters());
             ImGui::TableNextColumn(); ImGui::TableNextColumn();
-            ImGui::Text(int_to_char(total_total_n));
+            ImGui::Text("%i", total_total_n);
             ImGui::EndTable();
         }
 

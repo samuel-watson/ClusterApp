@@ -16,7 +16,7 @@ namespace ClusterApp {
 
 		if (data.size() > 0) {
 			if (ImPlot::BeginPlot("Data histogram")) {
-				ImPlot::SetupAxes("Cluster means", nullptr, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+				ImPlot::SetupAxes("Cluster-period means", nullptr, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
 				ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
 				ImPlot::PlotHistogram("Empirical", data.data(), data.size());
 				ImPlot::EndPlot();

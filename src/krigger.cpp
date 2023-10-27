@@ -6,6 +6,7 @@ namespace ClusterApp {
         ImGui::Begin("Kriging");
         ImGui::Text("Estimates the power across the sample size space");
         ImGui::TextWrapped("This feature is experimental. The power surface is estimated using a kriging approach and estimates will improve by sampling more points. The number of clusters is divided according to the proportions given by the main trial design. Individuals are the number of individuals per cluster-period.");
+        ImGui::TextWrapped("The power plot may not meet exactly the specified plot limits due to rounding of the increments in the plot.");
 
         // plot of sampled points
         const short  s16_zero = 0, s16_one = 1;
@@ -25,10 +26,11 @@ namespace ClusterApp {
         ImGui::SetNextItemWidth(150);
         ImGui::InputScalar("Individual max.", ImGuiDataType_S16, &krig.upper_int[1], &s16_one, NULL, "%d");
         if (ImGui::Button("Generate new sample")) {
+            krig.generate_grid();
             krig.new_sample(new_sample_size);
         }
 
-        ImGui::Text("Sample size = %u", krig.n_ind.size());
+        ImGui::Text("Sample size = %lu", krig.n_ind.size());
         if(option.debug_info)ImGui::Text("Mu = %.3f", krig.mu);
 ;       ImGui::Text("Sampled points");
 

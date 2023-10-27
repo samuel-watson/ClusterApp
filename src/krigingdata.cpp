@@ -4,8 +4,8 @@
 void ClusterApp::krigingData::generate_grid() {
 	int n_cl_range = upper_int[0] - lower_int[0];
 	int n_ind_range = upper_int[1] - lower_int[1];
-	int n_cl_step = n_cl_range / 20;
-	int n_ind_step = n_ind_range / 20;
+	int n_cl_step = DIV_ROUND_CLOSEST(n_cl_range, 20);
+	int n_ind_step = DIV_ROUND_CLOSEST(n_ind_range, 20);
 	for (int i = 0; i < 20; i++) {
 		n_cl_grid[i] = lower_int[0] + i * n_cl_step;
 		n_ind_grid[i] = lower_int[1] + i * n_ind_step;
@@ -20,8 +20,8 @@ void ClusterApp::krigingData::generate_grid() {
 			strcpy(n_ind_grid_label[i], label2.c_str());
 		}
 		else {
-			n_cl_grid_label[i] = "";
-			n_ind_grid_label[i] = "";
+			n_cl_grid_label[i] = (char*)"";
+			n_ind_grid_label[i] = (char*)"";
 		}		
 	}
 }
@@ -164,4 +164,5 @@ void ClusterApp::krigingData::update(bool resample) {
 		surface_initialised = true;
 	}
 	updating = false;
+	start = true;
 }
