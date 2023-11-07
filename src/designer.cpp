@@ -41,13 +41,8 @@ namespace ClusterApp {
         static int mode = 2;
 
         // View options for the designer
-        if (ImGui::TreeNode("View options")) {
-            ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
-            ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
-            ImGui::Checkbox("Intervention status", &option.show_status_period); ImGui::SameLine(); HelpMarker("This will show a 1/0 for intervention control or the dose for a dose response design.");
-            ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
+        if (ImGui::TreeNode("Drag and drop mode")) {            
             ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
-
             if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
             if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
             if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }

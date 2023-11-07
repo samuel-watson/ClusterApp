@@ -258,16 +258,25 @@ namespace ClusterApp {
 
             if (ImGui::BeginMenu("View"))
             {
-                ImGui::Checkbox("Light mode", &windows.light_mode);
-                ImGui::Checkbox("Sample size", &windows.sample_size);
-                ImGui::Checkbox("Statistical model", &windows.model);
-                ImGui::Checkbox("Results", &windows.results);
-                ImGui::Checkbox("Optimal design", &windows.optimiser);
-                ImGui::Checkbox("Plotting", &windows.plotter);
-                ImGui::Checkbox("Sample minimiser", &windows.krigger);
-                ImGui::Checkbox("Data simulate", &windows.simulate);
-                ImGui::Checkbox("Dockspace", &windows.dockspace);
-                ImGui::Checkbox("Debug Info", &windows.debug_info);
+                if (ImGui::BeginMenu("Windows")) {
+                    ImGui::Checkbox("Light mode", &windows.light_mode);
+                    ImGui::Checkbox("Sample size", &windows.sample_size);
+                    ImGui::Checkbox("Statistical model", &windows.model);
+                    ImGui::Checkbox("Results", &windows.results);
+                    ImGui::Checkbox("Optimal design", &windows.optimiser);
+                    ImGui::Checkbox("Plotting", &windows.plotter);
+                    ImGui::Checkbox("Sample minimiser", &windows.krigger);
+                    ImGui::Checkbox("Data simulate", &windows.simulate);
+                    ImGui::Checkbox("Dockspace", &windows.dockspace);
+                    ImGui::Checkbox("Debug Info", &windows.debug_info);
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Designer")) {
+                    ImGui::Checkbox("Show cluster-period count (n)", &windows.show_n_period); 
+                    ImGui::Checkbox("Show intervention status", &windows.show_status_period); ImGui::SameLine(); HelpMarker("This will show a 1/0 for intervention control or the dose for a dose response design.");
+                    ImGui::Checkbox("Show number of clusters per sequence", &windows.show_J_seq);
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -276,7 +285,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.3.3");
+                    ImGui::Text("Version: 0.3.5");
                     ImGui::Text("glmmrBase Version: 0.4.6");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -290,6 +299,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.3.5");
+                    ImGui::BulletText("Moved design view options to menu bar");
                     ImGui::Text("Version 0.3.4");
                     ImGui::BulletText("Added dose response model");
                     ImGui::Text("Version: 0.3.3");
