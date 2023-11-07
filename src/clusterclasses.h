@@ -24,6 +24,7 @@ namespace ClusterApp {
         int n = 10;
         bool intervention = false;
         bool intervention_2 = false;
+        float dose = 1.0;
         sequencePeriod() {};
         sequencePeriod(bool active_) : active(active_) {};
         sequencePeriod(bool active_, int n_, bool intervention_) : active(active_), n(n_), intervention(intervention_) {};
@@ -64,6 +65,7 @@ namespace ClusterApp {
         bool* intervention_2(int i, int t);
         int* n(int i, int t);
         int* n_clusters(int i);
+        float* dose(int i, int t);
         int seq_by_cluster(int i);
         int total_clusters();
         int total_cluster_periods();

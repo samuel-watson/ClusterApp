@@ -4,6 +4,8 @@ namespace ClusterApp {
 
     void RenderDesigner(ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::options& option) {
         ImGui::Begin("Trial Designer");
+
+        // Variables and other setup for the designer
         ImGuiStyle& style = ImGui::GetStyle();
         colourPicker colours;
         int horiztonal_align = 70;
@@ -37,10 +39,12 @@ namespace ClusterApp {
             Mode_Swap
         };
         static int mode = 2;
+
+        // View options for the designer
         if (ImGui::TreeNode("View options")) {
             ImGui::Text("For cluster-periods show:"); ImGui::SameLine();
             ImGui::Checkbox("Count (n)", &option.show_n_period); ImGui::SameLine();
-            ImGui::Checkbox("Intervention status", &option.show_status_period);
+            ImGui::Checkbox("Intervention status", &option.show_status_period); ImGui::SameLine(); HelpMarker("This will show a 1/0 for intervention control or the dose for a dose response design.");
             ImGui::Checkbox("Show number of cluster per sequence", &option.show_J_seq);
             ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
 
@@ -50,15 +54,9 @@ namespace ClusterApp {
             ImGui::TreePop();
         }
 
-
-
-
         ImGui::Spacing();
 
-        //ImGui::Dummy(ImVec2(large_dim, small_dim)); ImGui::SameLine(horiztonal_align + 30);
-        //ImGui::Text("TIME");
-
-        //ImGui::Text("SEQUENCE"); ImGui::SameLine(horiztonal_align);
+        // The designer 
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         ImGui::Dummy(ImVec2(small_dim, small_dim)); ImGui::SameLine();
         if (option.show_J_seq) {
@@ -69,6 +67,7 @@ namespace ClusterApp {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
         ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
 
+        // First iterate over the time periods to add the + buttons to extend the columns
         for (int t = 0; t <= designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + t);
             if (ImGui::Button("+", ImVec2(small_dim, small_dim))) {
@@ -90,6 +89,8 @@ namespace ClusterApp {
         if (option.show_J_seq) {
             ImGui::Dummy(ImVec2(small_dim * 1.5, small_dim)); ImGui::SameLine();
         }
+
+        // now iterate again to create the column heads
         for (int t = 0; t < designs.time; t++) {
             ImGui::PushID(designs.time * designs.sequences + designs.time + 2 + designs.sequences + t);
             ImGui::Button(int_to_char(t + 1), ImVec2(large_dim, small_dim));
@@ -106,6 +107,16 @@ namespace ClusterApp {
                     for (int s = 0; s < designs.sequences; s++) {
                         *designs.intervention(s, t) = true;
                         *designs.intervention_2(s, t) = false;
+                    }
+                }
+                if (option.dose_effect) {
+                    static float dose_seq = 1.0;
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::DragFloat("Dose", &dose_seq, 0.1f, 0.0, +FLT_MAX, "%.1f", ImGuiSliderFlags_None); ImGui::SameLine();
+                    if (ImGui::SmallButton("Set dose")) {
+                        for (int s = 0; s < designs.sequences; s++) {
+                            *designs.dose(s, t) = dose_seq;
+                        }
                     }
                 }
                 if (option.two_treatments) {
@@ -136,6 +147,8 @@ namespace ClusterApp {
             if (t < (designs.time - 1))ImGui::SameLine();
         }
         ImGui::PopStyleColor(4);
+
+        // iterate over the sequences to produce the row heads and main buttons
 
         for (int n = 0; n < designs.sequences; n++)
         {
@@ -172,11 +185,13 @@ namespace ClusterApp {
             }
             ImGui::SameLine();
             ImGui::PopID();
+            // Row heads
             ImGui::PushID(designs.time * (designs.sequences + 1) + designs.time + designs.sequences + 2 + n);
             ImGui::Button(int_to_char(n + 1), ImVec2(small_dim, large_dim)); ImGui::SameLine();
             if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft))
             {
                 static int seq_n = 10;
+                static float dose = 1.0;
                 ImGui::Text("Number of clusters");
                 ImGui::SetNextItemWidth(100);
                 ImGui::InputScalar("N", ImGuiDataType_S16, &seq_n, &s16_one, NULL, "%d"); ImGui::SameLine();
@@ -194,6 +209,15 @@ namespace ClusterApp {
                     for (int s = 0; s < designs.time; s++) {
                         *designs.intervention(n, s) = true;
                         *designs.intervention_2(n, s) = false;
+                    }
+                }
+                if (option.dose_effect) {
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::DragFloat("Dose", &dose, 0.1f, 0.0, +FLT_MAX, "%.1f", ImGuiSliderFlags_None); ImGui::SameLine();
+                    if (ImGui::SmallButton("Set dose")) {
+                        for (int s = 0; s < designs.time; s++) {
+                            *designs.dose(n, s) = dose;
+                        }
                     }
                 }
                 if (option.two_treatments) {
@@ -229,6 +253,8 @@ namespace ClusterApp {
             }
             ImGui::PopID();
             ImGui::PopStyleColor(4);
+            
+            // cluster-period buttons
             for (int t = 0; t < designs.time; t++) {
                 int id = t + n * designs.time;
                 ImGui::PushID(id);
@@ -237,10 +263,10 @@ namespace ClusterApp {
                     if (option.show_n_period) {
                         label += "n=";
                         label += std::to_string(*designs.n(n, t));
-                        if (option.show_status_period) label += " | ";
+                        if (option.show_status_period) label += "\n"; //replace with | for single line
                     }
-                    if (option.show_status_period) {
-                        label += std::to_string(*designs.intervention(n, t));
+                    if (option.show_status_period) {                        
+                        label += option.dose_effect ? std::format("{:.2f}", (*designs.intervention(n, t)) * (*designs.dose(n, t))) : std::to_string(*designs.intervention(n, t));
                         if (option.two_treatments)label += "/" + std::to_string(*designs.intervention_2(n, t));
                     }
 
@@ -282,13 +308,19 @@ namespace ClusterApp {
                     if (ImGui::BeginPopupContextItem(NULL, ImGuiPopupFlags_MouseButtonLeft))
                     {
                         static int cell_n = 10;
+                        static float dose_n = 1.0;
                         ImGui::Checkbox("Active", designs.active(n, t));
                         ImGui::Checkbox("Intervention", designs.intervention(n, t));
                         if (option.two_treatments)ImGui::Checkbox("Intervention 2", designs.intervention_2(n, t));
+                        if (option.dose_effect && *designs.intervention(n, t)) {
+                            ImGui::SetNextItemWidth(100);
+                            ImGui::DragFloat("Dose", &dose_n, 0.1f, 0.0, +FLT_MAX, "%.1f", ImGuiSliderFlags_None);
+                        }
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputScalar("N", ImGuiDataType_S16, &cell_n, &s16_one, NULL, "%d"); ImGui::SameLine();
                         if (ImGui::Button("Set")) {
                             *(designs.n(n, t)) = cell_n;
+                            if (option.dose_effect && *designs.intervention(n, t)) *designs.dose(n, t) = dose_n;
                         }
                         ImGui::EndPopup();
                     }

@@ -83,6 +83,10 @@ int* ClusterApp::design::n_clusters(int i) {
     return &n_per_sequence[i];
 }
 
+float* ClusterApp::design::dose(int i, int t) {
+    return &periods[i][t].dose;
+}
+
 int ClusterApp::design::seq_by_cluster(int i) {
     int count = 0;
     int seq = 0;
@@ -312,6 +316,7 @@ bool ClusterApp::design::check(bool update_if_changed) {
             crc(*intervention(i, t));
             crc(*intervention_2(i, t));
             crc(*n(i, t));
+            crc(*dose(i, t));
         }
         crc(n_per_sequence[i]);
     }

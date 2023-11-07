@@ -27,7 +27,7 @@ Eigen::ArrayXXd ClusterApp::modelUpdater::generate_data() {
                     newdata(row_number, 0) = cl_number;
                     newdata(row_number, 1) = t + 1;
                     newdata(row_number, 2) = *designs.n(i, t);
-                    newdata(row_number, 3) = *designs.intervention(i, t);
+                    newdata(row_number, 3) = glmm.option.dose_effect ? (* designs.intervention(i, t)) * (*designs.dose(i,t)) : *designs.intervention(i,t);
                     newdata(row_number, 4) = *designs.intervention_2(i, t);
                     newdata(row_number, 5) = newdata(row_number, 3) * newdata(row_number, 4);
                     row_number++;
@@ -60,7 +60,7 @@ void ClusterApp::modelUpdater::update_data() {
                     data(row_number, 0) = cl_number;
                     data(row_number, 1) = t + 1;
                     data(row_number, 2) = *designs.n(i, t);
-                    data(row_number, 3) = *designs.intervention(i, t);
+                    data(row_number, 3) = glmm.option.dose_effect ? (*designs.intervention(i, t)) * (*designs.dose(i, t)) : *designs.intervention(i, t);
                     data(row_number, 4) = *designs.intervention_2(i, t);
                     data(row_number, 5) = data(row_number, 3) * data(row_number, 4);
                     row_number++;

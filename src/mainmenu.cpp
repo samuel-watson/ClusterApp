@@ -109,11 +109,11 @@ namespace ClusterApp {
                         }
                     }
                     else {
-                        ImGui::Text("To enable this option, set two treatments below.");
+                        ImGui::Text("To enable this option, set two treatments.");
                     }
                     ImGui::EndMenu();
                 }
-                ImGui::Checkbox("Two treatments", &windows.two_treatments);
+                
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Edit")) {
@@ -220,6 +220,12 @@ namespace ClusterApp {
                     ImGui::EndMenu();
                 }
 
+                if (ImGui::BeginMenu("Treatment effect")) {
+                    if(!windows.dose_effect)ImGui::Checkbox("Two treatments", &windows.two_treatments);
+                    if(!windows.two_treatments)ImGui::Checkbox("Dose effect", &windows.dose_effect);
+                    ImGui::EndMenu();
+                }
+
                 if (ImGui::BeginMenu("Optimiser")) {
                     if (ImGui::BeginMenu("Sample size")) {
                         static int optim_total_n = designs.total_n();
@@ -284,6 +290,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.3.4");
+                    ImGui::BulletText("Added dose response model");
                     ImGui::Text("Version: 0.3.3");
                     ImGui::BulletText("Fixed integer rounding in calculating plot increments");
                     ImGui::BulletText("Improved designer UI for modifying sample sizes");

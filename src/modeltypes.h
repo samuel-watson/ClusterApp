@@ -32,6 +32,7 @@ namespace ClusterApp {
     struct options {
         bool sample_size = false;
         bool two_treatments = false;
+        bool dose_effect = false;
         bool model = true;
         bool results = true;
         bool optimiser = false;
