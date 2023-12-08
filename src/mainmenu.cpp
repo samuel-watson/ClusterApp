@@ -269,6 +269,7 @@ namespace ClusterApp {
                     ImGui::Checkbox("Data simulate", &windows.simulate);
                     ImGui::Checkbox("Dockspace", &windows.dockspace);
                     ImGui::Checkbox("Debug Info", &windows.debug_info);
+                    ImGui::Checkbox("Show Box Correction", &windows.show_box);
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Designer")) {
@@ -285,9 +286,10 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.3.5");
-                    ImGui::Text("glmmrBase Version: 0.4.6");
+                    ImGui::Text("Version: 0.4.1");
+                    ImGui::Text("glmmrBase Version: 0.5.4");
                     ImGui::Text("glmmrOptim Version: 0.3.1");
+                    ImGui::Text("SparseChol Version: 0.2.2");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
 
                     if (ImGui::Button("Close"))
@@ -299,6 +301,9 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.4.1");
+                    ImGui::BulletText("Updated to glmmrBase version 0.5.4");
+                    ImGui::BulletText("Added Satterthwaite, KR Improved, and Box corrections");
                     ImGui::Text("Version 0.3.5");
                     ImGui::BulletText("Moved design view options to menu bar");
                     ImGui::Text("Version 0.3.4");

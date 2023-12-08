@@ -5,195 +5,205 @@
 
 namespace glmmr {
 
-inline intvec interpret_re(const std::string& fn,
-                           const intvec& A){
-  intvec B;
-  switch(string_to_case.at(fn)){
-  case 1:
-    B = {2}; //var par here
+inline std::vector<Do> interpret_re(const CovFunc& fn){
+  using instructs = std::vector<Do>;
+  instructs B;
+  switch(fn){
+  case CovFunc::gr:
+    B = {Do::PushParameter}; 
     break;
-  case 2:
-    B.push_back(2);
-    B.insert(B.end(), A.begin(), A.end());
-    B.push_back(2);
-    B.push_back(8);
-    B.push_back(5);
+  case CovFunc::ar:
+    B.push_back(Do::PushParameter);
+    B.push_back(Do::PushCovData);
+    B.push_back(Do::PushParameter);
+    B.push_back(Do::Power);
+    B.push_back(Do::Multiply);
     break;
-  case 3:
+  case CovFunc::fexp0:
      {
-      const intvec C = {6,10,9};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Do::Divide,Do::Negate,Do::Exp};
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
      }
-  case 4:
+  case CovFunc::fexp:
     {
-       const intvec C = {6,10,9,2,5};  //var par here
-       B.push_back(2);
-       B.insert(B.end(), A.begin(), A.end());
+       const instructs C = {Do::Divide,Do::Negate,Do::Exp,Do::PushParameter,Do::Multiply};  //var par here
+       B.push_back(Do::PushParameter);
+       B.push_back(Do::PushCovData);
        B.insert(B.end(), C.begin(), C.end());
        break;
     }
-  case 5:
+  case CovFunc::sqexp0:
     {
-      const intvec C1 = {2,2,5};
-      const intvec C2 = {5,6,10,9};
+      const instructs C1 = {Do::PushParameter,Do::Square,Do::PushCovData,
+                            Do::Square,Do::Divide,Do::Negate,Do::Exp};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      break;
+    }
+  case CovFunc::sqexp:
+    {
+      const instructs C1 = {Do::PushParameter,Do::Square};
+      const instructs C2 = {Do::PushCovData,Do::Square,Do::Divide,Do::Negate,Do::Exp,
+                            Do::PushParameter,Do::Multiply};
+      B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), C2.begin(), C2.end());
       break;
     }
-  case 6:
+  case CovFunc::bessel:
     {
-      const intvec C1 = {2,2,5};
-      const intvec C2 = {5,6,10,9,2,5};//var par here
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), C2.begin(), C2.end());
-      break;
-    }
-  case 7:
-    {
-      const intvec C = {6,11};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Do::Divide,Do::Bessel};
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
-  case 8:
+  case CovFunc::matern:
     {
-      const intvec C1 = {2,12,2,21,4,22,8,6,22,2,5,7,2};
-      const intvec C2 = {6,5,2,8,5,2,22,2,5,7,2};
-      const intvec C3 = {6,5,15,5};
+      const instructs C1 = {Do::PushParameter,Do::Gamma,Do::PushParameter,Do::Int1,
+                            Do::Subtract,Do::Int2,Do::Power,Do::Divide,
+                            Do::Int2,Do::PushParameter,Do::Multiply,Do::Sqrt,Do::PushParameter};
+      const instructs C2 = {Do::Divide,Do::Multiply,Do::PushParameter,Do::Power,Do::Multiply,
+                            Do::PushParameter,Do::Int2,Do::PushParameter,
+                            Do::Multiply,Do::Sqrt,Do::PushParameter};
+      const instructs C3 = {Do::Divide,Do::Multiply,Do::BesselK,Do::Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
-  case 9:
+  case CovFunc::wend0:
     {
-      const intvec C = {21,4,8,5};
-      B.push_back(2);
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
-  case 10:
+  case CovFunc::wend1:
     {
-      const intvec C1 = {2,2,21,3};
-      const intvec C2 = {5,21,3,5,2,21,3};
-      const intvec C3 = {21,4,8,5};
+      const instructs C1 = {Do::PushParameter,Do::PushParameter,Do::Int1,Do::Add};
+      const instructs C2 = {Do::Multiply,Do::Int1,Do::Add,Do::Multiply,Do::PushParameter,Do::Int1,Do::Add};
+      const instructs C3 = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
-  case 11:
+  case CovFunc::wend2:
     {
-      const intvec C1 = {2,21};
-      const intvec C2 = {22,2,3,5,3,23,21,4,21,2,22,3,2,22,3,5,4,5};
-      const intvec C3 = {5,5,3,5,2,22,3};
-      const intvec C4 = {21,4,8,5};
+      const instructs C1 = {Do::PushParameter,Do::Int1};
+      const instructs C2 = {Do::Int2,Do::PushParameter,Do::Add,Do::Multiply,Do::Add,Do::Int3,
+                            Do::Int1,Do::Subtract,Do::Int1,
+                            Do::PushParameter,Do::Int2,Do::Add,Do::PushParameter,Do::Int2,
+                            Do::Add,Do::Multiply,Do::Subtract,Do::Multiply};
+      const instructs C3 = {Do::Multiply,Do::Multiply,Do::Add,Do::Multiply,Do::PushParameter,
+                            Do::Int2,Do::Add};
+      const instructs C4 = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
       break;
     }
-  case 12:
+  case CovFunc::prodwm:
     {
-      const intvec C1 = {2,2,12,2,21,4,22,8,6,5,2};
-      const intvec C2 = {8,5,2};
-      const intvec C3 = {15,5};
-      const intvec C4 = {5,20,20,5,20,27,3,3,4,5,22,20,21,3,6};
-      const intvec C5 = {5,3,21,3,5};
-      const intvec C6 = {21,4,5};
+      const instructs C1 = {Do::PushParameter,Do::PushParameter,Do::Gamma,Do::PushParameter,
+                            Do::Int1,Do::Subtract,Do::Int2,Do::Power,Do::Divide,
+                            Do::Multiply,Do::PushParameter};
+      const instructs C2 = {Do::Power,Do::Multiply,Do::PushParameter};
+      const instructs C3 = {Do::BesselK,Do::Multiply};
+      const instructs C4 = {Do::Multiply,Do::Int10,Do::Int10,Do::Multiply,Do::Int10,Do::Int7,
+                            Do::Add,Do::Add,Do::Subtract,
+                            Do::Multiply,Do::Int2,Do::Int10,Do::Int1,Do::Add,Do::Divide};
+      const instructs C5 = {Do::Multiply,Do::Add,Do::Int1,Do::Add,Do::Multiply};
+      const instructs C6 = {Do::Int1,Do::Subtract,Do::Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C5.begin(), C5.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
-  case 13:
+  case CovFunc::prodcb:
     {
-      const intvec C1 = {8,21,4,23,10,8,2,5};
-      const intvec C2 = {30,5,14};
-      const intvec C3 = {21,4,5};
-      const intvec C4 = {30,13,30,21,6,5,3,5};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C1 = {Do::Power,Do::Int1,Do::Subtract,Do::Int3,Do::Negate,Do::Power,
+                            Do::PushParameter,Do::Multiply};
+      const instructs C2 = {Do::Pi,Do::Multiply,Do::Cos};
+      const instructs C3 = {Do::Int1,Do::Subtract,Do::Multiply};
+      const instructs C4 = {Do::Pi,Do::Sin,Do::Pi,Do::Int1,Do::Divide,Do::Multiply,Do::Add,
+                            Do::Multiply};
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       break;
     }
-  case 14:
+  case CovFunc::prodek:
     {
-      const intvec C1 = {8,10,9,2,22,30};
-      const intvec C2 = {5,5,22,30};
-      const intvec C3 = {5,5,13,6};
-      const intvec C4 = {21,4,5,22,30};
-      const intvec C5 = {5,5,22,30};
-      const intvec C6 = {5,5,14,21,4,6,30,21,6,5,3,5};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C1 = {Do::Power,Do::Negate,Do::Exp,Do::PushParameter,Do::Int2,Do::Pi};
+      const instructs C2 = {Do::Multiply,Do::Multiply,Do::Int2,Do::Pi};
+      const instructs C3 = {Do::Multiply,Do::Multiply,Do::Sin,Do::Divide};
+      const instructs C4 = {Do::Int1,Do::Subtract,Do::Multiply,Do::Int2,Do::Pi};
+      const instructs C6 = {Do::Multiply,Do::Multiply,Do::Cos,Do::Int1,Do::Subtract,
+                            Do::Divide,Do::Pi,Do::Int1,Do::Divide,Do::Multiply,Do::Add,
+                            Do::Multiply};
+      B.push_back(Do::PushParameter);
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), C5.begin(), C5.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(Do::PushCovData);
+      B.insert(B.end(), C2.begin(), C2.end());
+      B.push_back(Do::PushCovData);
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
-  case 15: case 16:
-    B.insert(B.end(), A.begin(), A.end());
-    B.push_back(2);
-    B.push_back(8);
+  case CovFunc::ar1: case CovFunc::ar0:
+    B.push_back(Do::PushCovData);
+    B.push_back(Do::PushParameter);
+    B.push_back(Do::Power);
+    break;
+  case CovFunc::dist:
+    B.push_back(Do::PushCovData);
     break;
   }
   return B;
 }
 
 //add in the indexes for each function
-inline intvec interpret_re_par(const std::string& fn,
-                               const intvec& col_idx,
+inline intvec interpret_re_par(const CovFunc& fn,
+                               const int col_idx,
                                const intvec& par_idx){
   intvec B;
-  
-  
+
   auto addA = [&] (){
-    for(int i = 0; i<col_idx.size();i++){
-      B.push_back(col_idx[i]);
-      B.push_back(col_idx[i]);
-    }
+    B.push_back(col_idx);
   };
   
   auto addPar2 = [&] (int i){
@@ -202,59 +212,56 @@ inline intvec interpret_re_par(const std::string& fn,
   };
   
   
-  switch(string_to_case.at(fn)){
-  case 1:
-    //addPar2(0);
+  switch(fn){
+  case CovFunc::gr:
     B.push_back(par_idx[0]);
     break;
-  case 2: 
+  case CovFunc::ar: 
     B.push_back(par_idx[0]);
     addA();
     B.push_back(par_idx[1]);
     break;
-  case 3: case 7:
+  case CovFunc::fexp0: case CovFunc::bessel:
     B.push_back(par_idx[0]);
     addA();
     break;
-  case 4:
+  case CovFunc::fexp:
     B.push_back(par_idx[1]);
     addA();
-    //addPar2(0);
     B.push_back(par_idx[0]);
     break;
-  case 5:
+  case CovFunc::sqexp0:
     addPar2(0);
     addA();
     addA();
     break;
-  case 6:
+  case CovFunc::sqexp:
     addPar2(1);
     addA();
     addA();
-    //addPar2(0);
     B.push_back(par_idx[0]);
     break;
-  case 8:
+  case CovFunc::matern:
     addPar2(0);
     addPar2(0);
     B.push_back(par_idx[1]);
     addA();
     addPar2(0);
-    B.push_back(par_idx[0]);
-    B.push_back(par_idx[1]);
-    addA();
-    break;
-  case 9:
     B.push_back(par_idx[0]);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 10:
+  case CovFunc::wend0:
+    B.push_back(par_idx[0]);
+    B.push_back(par_idx[1]);
+    addA();
+    break;
+  case CovFunc::wend1:
     addPar2(0);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 11:
+  case CovFunc::wend2:
     B.push_back(par_idx[0]);
     addA();
     addPar2(1);
@@ -263,7 +270,7 @@ inline intvec interpret_re_par(const std::string& fn,
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 12:
+  case CovFunc::prodwm:
     B.push_back(par_idx[0]);
     addPar2(1);
     addPar2(0);
@@ -274,7 +281,7 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 13:
+  case CovFunc::prodcb:
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
@@ -282,7 +289,7 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 14:
+  case CovFunc::prodek:
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
@@ -292,107 +299,105 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 15: case 16:
+  case CovFunc::ar1: case CovFunc::ar0:
     addA();
     B.push_back(par_idx[0]);
+    break;
+  case CovFunc::dist:
+    addA();
     break;
   }
   return B;
 }
 
 inline void re_linear_predictor(glmmr::calculator& calc,
-                                const int& Q){
+                                const int Q){
+  using instructs = std::vector<Do>;
   
-  intvec re_instruct;
-  intvec re_seq = {0,2,5,3};
+  instructs re_seq = {Do::PushData,Do::PushParameter,Do::Multiply,Do::Add};
   for(int i = 0; i < Q; i++){
-    re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
+    calc.instructions.insert(calc.instructions.end(),re_seq.begin(),re_seq.end());
     calc.parameter_names.push_back("v_"+std::to_string(i));
-    calc.indexes.push_back(i+calc.data_count);
-    calc.indexes.push_back(i+calc.data_count);
+    calc.data_names.push_back("z_"+std::to_string(i));
+    calc.indexes.push_back(calc.data_count);
+    calc.indexes.push_back(calc.parameter_count);
+    calc.parameter_count++;
+    calc.data_count++;
   }
-  calc.parameter_count += Q;
-  calc.instructions.insert(calc.instructions.end(),re_instruct.begin(),re_instruct.end());
-  calc.data_count += Q;
 }
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,
-                                     const str& link){
-  intvec out;
-  intvec addzu = {18,3};
+                                     const Link link){
+  using instructs = std::vector<Do>;
+  instructs out;
+  instructs addzu = {Do::PushExtraData,Do::Add};
   calc.instructions.insert(calc.instructions.end(),addzu.begin(),addzu.end());
-  const static std::unordered_map<std::string, int> link_to_case{
-    {"logit",1},
-    {"log",2},
-    {"probit",3},
-    {"identity",4},
-    {"inverse",5}
-  };
-  switch (link_to_case.at(link)) {
-  case 1:
+  
+  switch (link) {
+  case Link::logit:
     {
       out = calc.instructions;
-      intvec logit_instruct = {10,9,21,3,21,6};
+      instructs logit_instruct = {Do::Negate,Do::Exp,Do::Int1,Do::Add,Do::Int1,Do::Divide};
       out.insert(out.end(),logit_instruct.begin(),logit_instruct.end());
       break;
     }
-  case 2:
+  case Link::loglink:
     {
       out = calc.instructions;
-      out.push_back(9);
+      out.push_back(Do::Exp);
       break;
     }
-  case 3:
+  case Link::probit:
     {
-      // probit is a pain in the ass because of the error function!
+      // probit is a pain because of the error function!
       // this uses Abramowitz and Stegun approximation.
-      intvec iStar = {22,7};
+      instructs iStar = {Do::Int2,Do::Sqrt};
       iStar.insert(iStar.end(),calc.instructions.begin(),calc.instructions.end());
-      iStar.push_back(6);
-      intvec M = iStar;
-      intvec MStar = {31,5,21,3,21,6};
+      iStar.push_back(Do::Divide);
+      instructs M = iStar;
+      instructs MStar = {Do::Constant1,Do::Multiply,Do::Int1,Do::Add,Do::Int1,Do::Divide};
       M.insert(M.end(),MStar.begin(),MStar.end());
-      intvec Ltail = {8,5,3};
-      intvec L1 = {32};
+      instructs Ltail = {Do::Power,Do::Multiply,Do::Add};
+      instructs L1 = {Do::Constant2};
       L1.insert(L1.end(),M.begin(),M.end());
-      L1.push_back(5);
-      intvec L2 = {33,22};
+      L1.push_back(Do::Multiply);
+      instructs L2 = {Do::Constant3,Do::Int2};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {34,23};
+      L2 = {Do::Constant4,Do::Int3};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {35,24};
+      L2 = {Do::Constant5,Do::Int4};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {36,25};
+      L2 = {Do::Constant6,Do::Int5};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
-      L1.push_back(8);
-      L1.push_back(5);
-      intvec L3 = {22};
+      L1.push_back(Do::Power);
+      L1.push_back(Do::Multiply);
+      instructs L3 = {Do::Int2};
       L3.insert(L3.end(),iStar.begin(),iStar.end());
-      intvec L4 = {6,10,8};
+      instructs L4 = {Do::Divide,Do::Negate,Do::Power};
       L3.insert(L3.end(),L4.begin(),L4.end());
       out = L1;
       out.insert(out.end(),L3.begin(),L3.end());
-      out.push_back(5);
-      out.push_back(21);
-      out.push_back(4);
+      out.push_back(Do::Multiply);
+      out.push_back(Do::Int1);
+      out.push_back(Do::Subtract);
       break;
     }
-  case 4:
+  case Link::identity:
     {
       out = calc.instructions;
       break;
     }
-  case 5:
+  case Link::inverse:
     {
       out = calc.instructions;
-      intvec inverse_instruct = {21,6};
+      instructs inverse_instruct = {Do::Int1,Do::Divide};
       out.insert(out.end(),inverse_instruct.begin(),inverse_instruct.end());
       break;
     }
@@ -402,35 +407,30 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
 }
 
 inline void link_to_likelihood(glmmr::calculator& calc,
-                               const str& family){
-  
-  intvec out;
+                               const Fam family){
+  using instructs = std::vector<Do>;
+  instructs out;
   intvec idx;
-  const static std::unordered_map<std::string, int> family_to_case{
-    {"gaussian",1},
-    {"bernoulli",2},
-    {"poisson",3},
-    {"gamma",4},
-    {"beta",5},
-    {"binomial",6}
-  };
   
-  
-  switch (family_to_case.at(family)){
-    case 1:
+  switch (family){
+    case Fam::gaussian:
       {
-        intvec gaus_instruct = {19,4,17,6,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,22,21,6,5,3,10};
-        out.push_back(41);
+        instructs gaus_instruct = {Do::PushY,Do::Subtract,Do::Square,Do::Divide,Do::Int2,Do::Int1,
+                                   Do::Divide,Do::Multiply,Do::Int2,Do::Pi,Do::Multiply,
+                                   Do::Log,Do::Int2,Do::Int1,Do::Divide,Do::Multiply,Do::Add,
+                                   Do::PushVariance,Do::Log,Do::Int2,Do::Int1,Do::Divide,
+                                   Do::Multiply,Do::Add,Do::Negate};
+        out.push_back(Do::PushVariance);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
         break;
       }
-    case 2:
+    case Fam::bernoulli:
       {
-        intvec binom_instruct = {16,5,19,21,4};
-        intvec binom_instruct2 = {21,4,16,5,3};
-        out.push_back(19);
+        instructs binom_instruct = {Do::Log,Do::Multiply,Do::PushY,Do::Int1,Do::Subtract};
+        instructs binom_instruct2 = {Do::Int1,Do::Subtract,Do::Log,Do::Multiply,Do::Add};
+        out.push_back(Do::PushY);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
@@ -439,10 +439,10 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
         break;
       }
-    case 3:
+    case Fam::poisson:
       {
-        intvec poisson_instruct = {19,40,3,19};
-        intvec poisson_instruct2 = {16,5,4};
+        instructs poisson_instruct = {Do::PushY,Do::LogFactorialApprox,Do::Add,Do::PushY};
+        instructs poisson_instruct2 = {Do::Log,Do::Multiply,Do::Subtract};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct.begin(),poisson_instruct.end());
@@ -451,10 +451,13 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),poisson_instruct2.begin(),poisson_instruct2.end());
         break;
       }
-    case 4:
+    case Fam::gamma:
       {
-        intvec gamma_instruct = {41,19,5,6};
-        intvec gamma_instruct2 = {41,19,5,6,16,41,5,4,41,12,19,5,21,6,1,6,3};
+        instructs gamma_instruct = {Do::PushVariance,Do::PushY,Do::Multiply,Do::Divide};
+        instructs gamma_instruct2 = {Do::Log,Do::PushVariance,Do::Log,Do::Subtract,
+                                     Do::PushVariance,Do::Multiply,Do::PushY,Do::Log,
+                                     Do::Int1,Do::PushVariance,
+                                     Do::Subtract,Do::Multiply,Do::Add,Do::Subtract};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
@@ -463,13 +466,18 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
         break;
       }
-    case 5:
+    case Fam::beta:
       {
-        intvec beta_instruct = {41,4,19,16,5,21};
-        intvec beta_instruct2 = {21,4,41,5,4,19,21,4,16,5,3};
-        intvec beta_instruct3 = {41,5,12,16,10,3};
-        intvec beta_instruct4 = {21,4,41,5,12,16,10,3,41,12,16,3};
-        out.push_back(21);
+        instructs beta_instruct = {Do::PushVariance,Do::Subtract,Do::PushY,Do::Log,Do::Multiply,
+                                   Do::Int1};
+        instructs beta_instruct2 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Subtract,
+                                    Do::PushY,Do::Int1,Do::Subtract,Do::Log,
+                                    Do::Multiply,Do::Add};
+        instructs beta_instruct3 = {Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,Do::Negate,Do::Add};
+        instructs beta_instruct4 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,
+                                    Do::Negate,Do::Add,Do::PushVariance,
+                                    Do::Gamma,Do::Log,Do::Add};
+        out.push_back(Do::Int1);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
@@ -484,11 +492,14 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),beta_instruct4.begin(),beta_instruct4.end());
         break;
       }
-    case 6:
+    case Fam::binomial:
       {
-        intvec binom_instruct = {19,40,19,41,4,3,41,40,3};
-        intvec binom_instruct2 = {16,19,5,3};
-        intvec binom_instruct3 = {21,4,16,19,41,4,5,3};
+        instructs binom_instruct = {Do::PushY,Do::LogFactorialApprox,Do::PushY,Do::PushVariance,
+                                    Do::Subtract,Do::Add,Do::PushVariance,
+                                    Do::LogFactorialApprox,Do::Add};
+        instructs binom_instruct2 = {Do::Log,Do::PushY,Do::Multiply,Do::Add};
+        instructs binom_instruct3 = {Do::Int1,Do::Subtract,Do::Log,Do::PushY,Do::PushVariance,
+                                     Do::Subtract,Do::Multiply,Do::Add};
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());

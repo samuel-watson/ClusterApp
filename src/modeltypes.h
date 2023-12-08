@@ -46,6 +46,7 @@ namespace ClusterApp {
         bool show_J_seq = true;
         bool use_icc_for_non_gaussian = true;
         bool debug_info = false;
+        bool show_box = false;
         options() {};
         ~options() = default;
     };
@@ -110,14 +111,16 @@ namespace ClusterApp {
     };
 
     enum class YAxis {
-        power = 1,
-        ci_width = 2,
-        power_bw = 3,
-        ci_width_bw = 4,
-        power_kr = 5,
-        ci_width_kr = 6,
-        power_de = 7,
-        ci_width_de = 8
+        power = 0,
+        ci_width = 1,
+        power_bw = 2,
+        ci_width_bw = 3,
+        power_sat = 4,
+        ci_width_sat = 5,
+        power_kr = 6,
+        ci_width_kr = 7,
+        power_de = 8,
+        ci_width_de = 9
     };
 
     struct CRC {

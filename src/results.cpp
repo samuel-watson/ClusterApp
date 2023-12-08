@@ -6,18 +6,27 @@ namespace ClusterApp {
         ImGui::Begin("Results");
         ImGui::Text("RESULTS");
 
+        ImGui::TextWrapped("The tables below show the estimated power, confidence interval widths, and other statistics from a mixed model with various standard error estimators, \
+including Kenward-Roger. For covariance functions non-linear in parameters, the improved Kenward-Roger correction is also provided. The second tab provides the design effect and \
+resulting power estimates, currently only t-test and Chi-squared test bases for these calculations are available");
+        ImGui::TextWrapped("Note that the Kenward-Roger correction (and its improved variant) can provide a poor approximation in very small sample sizes, including both small numbers of \
+clusters, and small numbers of time periods with temporal covariance functions, especially exponential decay functions.");
+
         if (updater.update) {
             ImGui::SameLine(); ImGui::Text("Recalculating...");
         }
         static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_NoHostExtendX;
 
         if (ImGui::TreeNode("Model-based results")) {
-            if (ImGui::BeginTable("results", 4, flags))
+            if (ImGui::BeginTable("results", 6, flags))
             {
                 ImGui::TableSetupColumn("Statistic");
                 ImGui::TableSetupColumn("GLS");
-                ImGui::TableSetupColumn("GLS (between-within)");
+                ImGui::TableSetupColumn("GLS (B-W)");
+                ImGui::TableSetupColumn("Satterthwaite");
                 ImGui::TableSetupColumn("Kenward-Roger");
+                ImGui::TableSetupColumn("Kenward-Roger (improved)");
+                //if(option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
                 ImGui::TableHeadersRow();
                 ImGui::TableNextColumn();
 
@@ -27,6 +36,13 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.power_bw);
                 ImGui::TableNextColumn();
+                if (updater.summary.power_sat == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.power_sat);
+                }
+                ImGui::TableNextColumn();
                 if (updater.summary.power_kr == 909) {
                     ImGui::Text("ERR");
                 }
@@ -34,20 +50,60 @@ namespace ClusterApp {
                     ImGui::Text("%.1f", updater.summary.power_kr);
                 }
                 ImGui::TableNextColumn();
+                if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                    if (updater.summary.power_kr2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.power_kr2);
+                    }
+                    
+                }
+                else {
+                    ImGui::Text("N/A");
+                }
+                ImGui::TableNextColumn();
+                /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                    ImGui::Text("N/A");
+                    ImGui::TableNextColumn();
+                }*/
 
-                ImGui::Text("Confidence interval half-width");
+                ImGui::Text("95%% CI half-width");
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width);
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.ci_width_bw);
                 ImGui::TableNextColumn();
+                if (updater.summary.ci_width_sat == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", updater.summary.ci_width_sat);
+                }
+                ImGui::TableNextColumn();
                 if (updater.summary.power_kr == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
-                    ImGui::Text("%.1f", updater.summary.ci_width_kr);
+                    ImGui::Text("%.3f", updater.summary.ci_width_kr);
                 }
                 ImGui::TableNextColumn();
+                if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                    if (updater.summary.power_kr2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", updater.summary.ci_width_kr2);
+                    }
+                }
+                else {
+                    ImGui::Text("N/A");
+                }
+                ImGui::TableNextColumn();
+                /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                    ImGui::Text("N/A");
+                    ImGui::TableNextColumn();
+                }*/
 
                 ImGui::Text("Standard error");
                 ImGui::TableNextColumn();
@@ -55,15 +111,33 @@ namespace ClusterApp {
                 ImGui::TableNextColumn();
                 ImGui::Text("%.3f", updater.summary.se);
                 ImGui::TableNextColumn();
+                ImGui::Text("%.3f", updater.summary.se);
+                ImGui::TableNextColumn();
                 if (updater.summary.power_kr == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
-                    ImGui::Text("%.1f", updater.summary.se_kr);
+                    ImGui::Text("%.3f", updater.summary.se_kr);
                 }
                 ImGui::TableNextColumn();
+                if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                    if (updater.summary.power_kr2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", updater.summary.se_kr2);
+                    }
+                }
+                else {
+                    ImGui::Text("N/A");
+                }
+                ImGui::TableNextColumn();
+                /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                    ImGui::Text("N/A");
+                    ImGui::TableNextColumn();
+                }*/
 
-                ImGui::Text("Degrees of freedom");
+                ImGui::Text("DoF");
                 ImGui::TableNextColumn();
                 ImGui::Text("%.1f", updater.summary.dof);
                 ImGui::TableNextColumn();
@@ -76,6 +150,29 @@ namespace ClusterApp {
                     ImGui::Text("%.1f", updater.summary.dof_kr);
                 }
                 ImGui::TableNextColumn();
+                if (updater.summary.power_kr == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", updater.summary.dof_kr);
+                }
+                ImGui::TableNextColumn();
+                if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                    if (updater.summary.power_kr2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.dof_kr);
+                    }
+                }
+                else {
+                    ImGui::Text("N/A");
+                }
+                ImGui::TableNextColumn();
+                /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                    ImGui::Text("%.3f", updater.summary.dof_box);
+                    ImGui::TableNextColumn();
+                }*/
 
                 ImGui::EndTable();
             }
@@ -84,12 +181,15 @@ namespace ClusterApp {
 
             if (option.two_treatments) {
                 ImGui::Text("Treatment 2");
-                if (ImGui::BeginTable("results 2", 4, flags))
+                if (ImGui::BeginTable("results 2", 6, flags))
                 {
                     ImGui::TableSetupColumn("Statistic");
                     ImGui::TableSetupColumn("GLS");
-                    ImGui::TableSetupColumn("GLS (between-within)");
+                    ImGui::TableSetupColumn("GLS (B-W)");
+                    ImGui::TableSetupColumn("Satterthwaite");
                     ImGui::TableSetupColumn("Kenward-Roger");
+                    ImGui::TableSetupColumn("Kenward-Roger (improved)");
+                    //if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
                     ImGui::TableHeadersRow();
                     ImGui::TableNextColumn();
 
@@ -99,6 +199,13 @@ namespace ClusterApp {
                     ImGui::TableNextColumn();
                     ImGui::Text("%.1f", updater.summary.power_bw_2);
                     ImGui::TableNextColumn();
+                    if (updater.summary.power_sat_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.power_sat_2);
+                    }
+                    ImGui::TableNextColumn();
                     if (updater.summary.power_kr_2 == 909) {
                         ImGui::Text("ERR");
                     }
@@ -106,20 +213,59 @@ namespace ClusterApp {
                         ImGui::Text("%.1f", updater.summary.power_kr_2);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_2 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.1f", updater.summary.power_kr2_2);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
-                    ImGui::Text("Confidence interval half-width");
+                    ImGui::Text("95%% half-width");
                     ImGui::TableNextColumn();
                     ImGui::Text("%.3f", updater.summary.ci_width_2);
                     ImGui::TableNextColumn();
                     ImGui::Text("%.3f", updater.summary.ci_width_bw_2);
                     ImGui::TableNextColumn();
+                    if (updater.summary.ci_width_sat_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", updater.summary.ci_width_sat_2);
+                    }
+                    ImGui::TableNextColumn();
                     if (updater.summary.power_kr_2 == 909) {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", updater.summary.ci_width_kr_2);
+                        ImGui::Text("%.3f", updater.summary.ci_width_kr_2);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_2 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.ci_width_kr2_2);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::Text("Standard error");
                     ImGui::TableNextColumn();
@@ -131,9 +277,25 @@ namespace ClusterApp {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", updater.summary.se_kr_2);
+                        ImGui::Text("%.3f", updater.summary.se_kr_2);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_2 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.se_kr2_2);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::Text("Degrees of freedom");
                     ImGui::TableNextColumn();
@@ -148,17 +310,43 @@ namespace ClusterApp {
                         ImGui::Text("%.1f", updater.summary.dof_kr_2);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.summary.power_kr_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.dof_kr_2);
+                    }
+                    ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_2 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.dof_kr_2);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("%.3f", updater.summary.dof_box_2);
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::EndTable();
                 }
 
                 ImGui::Text("Interaction");
-                if (ImGui::BeginTable("results interaction", 4, flags))
+                if (ImGui::BeginTable("results interaction", 6, flags))
                 {
                     ImGui::TableSetupColumn("Statistic");
                     ImGui::TableSetupColumn("GLS");
-                    ImGui::TableSetupColumn("GLS (between-within)");
+                    ImGui::TableSetupColumn("GLS (B-W)");
+                    ImGui::TableSetupColumn("Satterthwaite");
                     ImGui::TableSetupColumn("Kenward-Roger");
+                    ImGui::TableSetupColumn("Kenward-Roger (improved)");
+                    //if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
                     ImGui::TableHeadersRow();
                     ImGui::TableNextColumn();
 
@@ -168,6 +356,13 @@ namespace ClusterApp {
                     ImGui::TableNextColumn();
                     ImGui::Text("%.1f", updater.summary.power_bw_12);
                     ImGui::TableNextColumn();
+                    if (updater.summary.power_sat_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.power_sat_12);
+                    }
+                    ImGui::TableNextColumn();
                     if (updater.summary.power_kr_12 == 909) {
                         ImGui::Text("ERR");
                     }
@@ -175,20 +370,59 @@ namespace ClusterApp {
                         ImGui::Text("%.1f", updater.summary.power_kr_12);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_12 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.1f", updater.summary.power_kr2_12);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
-                    ImGui::Text("Confidence interval half-width");
+                    ImGui::Text("95%% half-width");
                     ImGui::TableNextColumn();
                     ImGui::Text("%.3f", updater.summary.ci_width_12);
                     ImGui::TableNextColumn();
                     ImGui::Text("%.3f", updater.summary.ci_width_bw_12);
                     ImGui::TableNextColumn();
+                    if (updater.summary.ci_width_sat_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", updater.summary.ci_width_sat_12);
+                    }
+                    ImGui::TableNextColumn();
                     if (updater.summary.power_kr_12 == 909) {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", updater.summary.ci_width_kr_12);
+                        ImGui::Text("%.3f", updater.summary.ci_width_kr_12);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_12 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.ci_width_kr2_12);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::Text("Standard error");
                     ImGui::TableNextColumn();
@@ -200,9 +434,25 @@ namespace ClusterApp {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", updater.summary.se_kr_12);
+                        ImGui::Text("%.3f", updater.summary.se_kr_12);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_12 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.se_kr2_12);
+                        }
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                   /* if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("N/A");
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::Text("Degrees of freedom");
                     ImGui::TableNextColumn();
@@ -217,6 +467,30 @@ namespace ClusterApp {
                         ImGui::Text("%.1f", updater.summary.dof_kr_12);
                     }
                     ImGui::TableNextColumn();
+                    if (updater.summary.power_kr_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", updater.summary.dof_kr_12);
+                    }
+                    ImGui::TableNextColumn();
+                    if (updater.model.covariance != Covariance::exchangeable && updater.model.covariance != Covariance::nested_exchangeable) {
+                        if (updater.summary.power_kr2_12 == 909) {
+                            ImGui::Text("ERR");
+                        }
+                        else {
+                            ImGui::Text("%.3f", updater.summary.dof_kr_12);
+                        }
+                        ImGui::TableNextColumn();
+                    }
+                    else {
+                        ImGui::Text("N/A");
+                    }
+                    ImGui::TableNextColumn();
+                    /*if (option.show_box && updater.model.family == Family::gaussian && updater.model.link == Link::identity) {
+                        ImGui::Text("%.3f", updater.summary.dof_box_12);
+                        ImGui::TableNextColumn();
+                    }*/
 
                     ImGui::EndTable();
                 }

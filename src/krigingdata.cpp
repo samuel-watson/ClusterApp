@@ -22,7 +22,7 @@ void ClusterApp::krigingData::generate_grid() {
 		else {
 			n_cl_grid_label[i] = (char*)"";
 			n_ind_grid_label[i] = (char*)"";
-		}		
+		}
 	}
 }
 
@@ -72,7 +72,7 @@ void ClusterApp::krigingData::generate_data() {
 				for (int t = 0; t < glmm.designs.time; t++) {
 					*glmm.designs.n(k, t) = n_ind[i + start];
 				}
-			} 
+			}
 			glmm.update_model_data(updater.generate_data());
 			glmm.power(summary);
 			power.push_back(summary.power);
@@ -84,16 +84,16 @@ void ClusterApp::krigingData::generate_data() {
 				*glmm.designs.n(i, t) = ind_vector[counter];
 				counter++;
 			}
-		} 
+		}
 		initialised = true;
 	}
-	
+
 
 }
 
 void ClusterApp::krigingData::update(bool resample) {
 	updating = true;
-	Eigen::MatrixXf C(n_ind.size(),n_ind.size());
+	Eigen::MatrixXf C(n_ind.size(), n_ind.size());
 	Eigen::VectorXf Cx(n_ind.size());
 	int n_cl_range = upper_int[0] - lower_int[0];
 	int n_ind_range = upper_int[1] - lower_int[1];
@@ -101,16 +101,17 @@ void ClusterApp::krigingData::update(bool resample) {
 	for (int i = 0; i < n_ind.size(); i++) {
 		C(i, i) = 1.0f;
 	}
-	for (int i = 0; i < n_ind.size()-1; i++) {
+	for (int i = 0; i < n_ind.size() - 1; i++) {
 		for (int j = i; j < n_ind.size(); j++) {
 			dif0 = (n_ind[i] - n_ind[j]) / (float)n_ind_range;
 			dif1 = (n_cl[i] - n_cl[j]) / (float)n_cl_range;
-			dif2 = exp(-1.0*sqrt(dif0 * dif0 + dif1 * dif1)/bandwidth);
+			dif2 = exp(-1.0 * sqrt(dif0 * dif0 + dif1 * dif1) / bandwidth);
 			C(i, j) = dif2;
 			C(j, i) = dif2;
-;		}
+			;
+		}
 	}
-	
+
 	Eigen::VectorXf ones = Eigen::VectorXf::Ones(n_ind.size());
 	Eigen::MatrixXf Cinv = C.llt().solve(Eigen::MatrixXf::Identity(n_ind.size(), n_ind.size()));
 	float v = ones.transpose() * Cinv * ones;
@@ -149,7 +150,7 @@ void ClusterApp::krigingData::update(bool resample) {
 		n_ind.push_back(keep_n.second);
 		generate_data();
 	}
-	else {		
+	else {
 		for (int i = 0; i < 20; i++) {
 			for (int j = 0; j < 20; j++) {
 				for (int k = 0; k < n_ind.size(); k++) {
@@ -158,8 +159,8 @@ void ClusterApp::krigingData::update(bool resample) {
 					dif2 = exp(-1.0 * sqrt(dif0 * dif0 + dif1 * dif1) / bandwidth);
 					Cx(k) = dif2;
 				}
-				surface[j + (19-i) * 20] = (mu + Cx.transpose() * Cinv * y) * 100; // need to include in row major order from the bottom for the plot
-			}			
+				surface[j + (19 - i) * 20] = (mu + Cx.transpose() * Cinv * y) * 100; // need to include in row major order from the bottom for the plot
+			}
 		}
 		surface_initialised = true;
 	}

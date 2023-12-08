@@ -296,7 +296,7 @@ void ClusterApp::plotData::update_data() {
 
 void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, int s) {
 	switch (yaxis) {
-	case ClusterApp::YAxis::power:
+	case ClusterApp::YAxis::power: default:
 	{
 		glmm.power(summary);
 		switch (s) {
@@ -356,6 +356,38 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 			break;
 		case 2:
 			y_data_3[i] = summary.ci_width_bw;
+			break;
+		}
+		break;
+	}
+	case ClusterApp::YAxis::power_sat:
+	{
+		glmm.power_kr(summary);
+		switch (s) {
+		case 0:
+			y_data_1[i] = summary.power_sat;
+			break;
+		case 1:
+			y_data_2[i] = summary.power_sat;
+			break;
+		case 2:
+			y_data_3[i] = summary.power_sat;
+			break;
+		}
+		break;
+	}
+	case ClusterApp::YAxis::ci_width_sat:
+	{
+		glmm.power_kr(summary);
+		switch (s) {
+		case 0:
+			y_data_1[i] = summary.ci_width_sat;
+			break;
+		case 1:
+			y_data_2[i] = summary.ci_width_sat;
+			break;
+		case 2:
+			y_data_3[i] = summary.ci_width_sat;
 			break;
 		}
 		break;

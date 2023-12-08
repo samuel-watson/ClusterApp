@@ -18,6 +18,15 @@
 
 namespace ClusterApp {
 
+    enum class PowerType {
+        GLS = 0,
+        BW = 1,
+        Sat = 2,
+        KR = 3,
+        DesignEff = 4,
+        KR2 = 5
+    };
+
     class sequencePeriod {
     public:
         bool active = true;
@@ -117,40 +126,61 @@ namespace ClusterApp {
     public:
         double power = 0;
         double power_kr = 0;
+        double power_kr2 = 0;
         double power_bw = 0;
+        double power_box = 0;
+        double power_sat = 0;
         double ci_width = 0;
         double ci_width_kr = 0;
+        double ci_width_kr2 = 0;
         double ci_width_bw = 0;
+        double ci_width_sat = 0;
         double se = 1;
         double se_kr = 1;
+        double se_kr2 = 1;
         double dof = 1;
         double dof_kr = 1;
         double dof_bw = 1;
+        double dof_box = 1;
         int total_n = 20;
 
         double power_2 = 0;
         double power_kr_2 = 0;
+        double power_kr2_2 = 0;
         double power_bw_2 = 0;
+        double power_box_2 = 0;
+        double power_sat_2 = 0;
         double ci_width_2 = 0;
         double ci_width_kr_2 = 0;
+        double ci_width_kr2_2 = 0;
         double ci_width_bw_2 = 0;
+        double ci_width_sat_2 = 0;
         double se_2 = 1;
         double se_kr_2 = 1;
+        double se_kr2_2 = 1;
         double dof_2 = 1;
         double dof_kr_2 = 1;
         double dof_bw_2 = 1;
+        double dof_box_2 = 1;
 
         double power_12 = 0;
         double power_kr_12 = 0;
+        double power_kr2_12 = 0;
         double power_bw_12 = 0;
+        double power_box_12 = 0;
+        double power_sat_12 = 0;
         double ci_width_12 = 0;
         double ci_width_kr_12 = 0;
+        double ci_width_kr2_12 = 0;
         double ci_width_bw_12 = 0;
+        double ci_width_sat_12 = 0;
         double se_12 = 1;
         double se_kr_12 = 1;
+        double se_kr2_12 = 1;
         double dof_12 = 1;
         double dof_kr_12 = 1;
         double dof_bw_12 = 1;
+        double dof_box_12 = 1;
 
         double design_effect = 0;
         double individual_se = 0;
@@ -185,6 +215,7 @@ namespace ClusterApp {
         std::vector<double> sim_data();
         void power(ClusterApp::modelSummary& summary);
         void power_kr(ClusterApp::modelSummary& summary);
+        void power_box(ClusterApp::modelSummary& summary);
         void power_bw(ClusterApp::modelSummary& summary);
         void optimum(int N);
         float individual_n();
@@ -282,6 +313,9 @@ namespace ClusterApp {
         float mu;
         void generate_grid();
         int resample_total = 20;
+        void set_power_type(PowerType type_);
+    private:
+        PowerType type = PowerType::GLS;
     };
 
     class modelChecker {

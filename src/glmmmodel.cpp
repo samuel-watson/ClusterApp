@@ -322,59 +322,170 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
     }
 }
 
+void ClusterApp::glmmModel::power_box(ClusterApp::modelSummary& summary) {
+    if (statmodel.family == Family::gaussian && statmodel.link == Link::identity) {
+        BoxResults res = model->matrix.box();
+        int idx = statmodel.include_intercept == 1 ? 1 : 0;
+        boost::math::fisher_f fdist(1.0, res.dof[idx]);
+        double fcutoff = boost::math::quantile(fdist, 1 - statmodel.alpha);
+        double fval = res.test_stat[idx] / res.scale[idx];
+        summary.power_box = res.dof[idx] > 1 ? boost::math::cdf(fdist, fval - fcutoff) * 100 : 0.0;
+        summary.dof_box = res.dof[idx];
+
+        if (option.two_treatments) {
+            boost::math::fisher_f fdist2(1.0, res.dof[idx+1]);
+            fcutoff = boost::math::quantile(fdist2, 1 - statmodel.alpha);
+            fval = res.test_stat[idx+1] / res.scale[idx+1];
+            summary.power_box_2 = res.dof[idx+1] > 1 ? boost::math::cdf(fdist2, fval - fcutoff) * 100 : 0.0;
+            summary.dof_box_2 = res.dof[idx+1];
+
+            boost::math::fisher_f fdist3(1.0, res.dof[idx + 2]);
+            fcutoff = boost::math::quantile(fdist3, 1 - statmodel.alpha);
+            fval = res.test_stat[idx + 2] / res.scale[idx + 2];
+            summary.power_box_12 = res.dof[idx + 2] > 1 ? boost::math::cdf(fdist3, fval - fcutoff) * 100 : 0.0;
+            summary.dof_box_12 = res.dof[idx + 2];
+        }
+    }
+}
+
 void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
     if (model) {
         zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
-        kenward_data res = (*model).matrix.kenward_roger();
+        int valsize = option.two_treatments ? 3 : 1;
+        dblvec dofkr(valsize);
+        dblvec bvar(valsize);
+        dblvec bvar2(valsize);
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double dofkr = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
-        boost::math::students_t dist(dofkr);
-        double bvar = res.vcov_beta(idx, idx);
-        double tval, tcutoff;
-        if (!isnan(bvar) && bvar > 0) {
-            tval = abs(statmodel.te_pars[0] / sqrt(bvar));
+        bool with_improved = false;
+        if (statmodel.covariance != Covariance::exchangeable && statmodel.covariance != Covariance::nested_exchangeable) {
+            with_improved = true;
+            CorrectionData<glmmr::SE::KRBoth> res = (*model).matrix.small_sample_correction<glmmr::SE::KRBoth>();
+            dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
+            bvar[0] = res.vcov_beta(idx, idx);
+            bvar2[0] = res.vcov_beta_second(idx, idx);
+            if (option.two_treatments) {
+                dofkr[1] = res.dof(idx+1) > 1 ? res.dof(idx + 1) : 1.0;
+                bvar[1] = res.vcov_beta(idx + 1, idx + 1);
+                bvar2[1] = res.vcov_beta_second(idx + 1, idx + 1);
+                dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
+                bvar[2] = res.vcov_beta(idx + 2, idx + 2);
+                bvar2[2] = res.vcov_beta_second(idx + 2, idx + 2);
+            }
+        }
+        else {
+            CorrectionData<glmmr::SE::KR> res = (*model).matrix.small_sample_correction<glmmr::SE::KR>();
+            dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
+            bvar[0] = res.vcov_beta(idx, idx);
+            bvar2[0] = 0;
+            if (option.two_treatments) {
+                dofkr[1] = res.dof(idx + 1) > 1 ? res.dof(idx + 1) : 1.0;
+                bvar[1] = res.vcov_beta(idx + 1, idx + 1);
+                bvar2[1] = 0;
+                dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
+                bvar[2] = res.vcov_beta(idx + 2, idx + 2);
+                bvar2[2] = 0;
+            }
+        }        
+        boost::math::students_t dist(dofkr[0]);
+        double tval, tcutoff, tval_sat, tval2;
+        if (!isnan(bvar[0]) && bvar[0] > 0) {
+            tval = abs(statmodel.te_pars[0] / sqrt(bvar[0]));
+            tval_sat = abs(statmodel.te_pars[0] / summary.se);
             tcutoff = boost::math::quantile(dist, 1 - statmodel.alpha / 2);
-            summary.power_kr = res.dof(idx) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-            summary.dof_kr = res.dof(idx);
-            summary.se_kr = sqrt(bvar);
+            summary.power_kr = dofkr[0] > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+            summary.dof_kr = dofkr[0];
+            summary.se_kr = sqrt(bvar[0]);
             summary.ci_width_kr = tcutoff * summary.se_kr;            
+            summary.power_sat = dofkr[0] > 1 ? boost::math::cdf(dist, tval_sat - tcutoff) * 100 : 0.0;
+            summary.ci_width_sat = tcutoff * summary.se;
+            if (with_improved) {
+                if (!isnan(bvar2[0]) && bvar2[0] > 0) {
+                    tval2 = abs(statmodel.te_pars[0] / sqrt(bvar2[0]));
+                    summary.power_kr2 = dofkr[0] > 1 ? boost::math::cdf(dist, tval2 - tcutoff) * 100 : 0.0;
+                    summary.se_kr2 = sqrt(bvar2[0]);
+                    summary.ci_width_kr2 = tcutoff * summary.se_kr2;
+                }
+                else {
+                    summary.power_kr2 = 909;
+                    summary.se_kr2 = 0;
+                    summary.ci_width_kr2 = 0;
+                }
+            }
         }
         else {
             summary.power_kr = 909;
             summary.dof_kr = 0;
             summary.se_kr = 0;
             summary.ci_width_kr = 0;
+            summary.power_sat = 909;
+            summary.ci_width_sat = 0;
         }
 
         if (option.two_treatments) {
-            bvar = res.vcov_beta(idx + 1, idx + 1);
-            if (!isnan(bvar) && bvar >= 0) {
-                tval = abs(statmodel.te_pars[1] / sqrt(bvar));
-                summary.power_kr_2 = res.dof(idx + 1) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-                summary.dof_kr_2 = res.dof(idx + 1);
-                summary.se_kr_2 = sqrt(bvar);
-                summary.ci_width_kr_2 = tcutoff * summary.se_2;
+            boost::math::students_t dist2(dofkr[1]);
+            if (!isnan(bvar[1]) && bvar[1] >= 0) {
+                tval = abs(statmodel.te_pars[1] / sqrt(bvar[1]));
+                tval_sat = abs(statmodel.te_pars[0] / summary.se_2);
+                summary.power_kr_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_2 = dofkr[1];
+                summary.se_kr_2 = sqrt(bvar[1]);
+                summary.ci_width_kr_2 = tcutoff * summary.se_kr_2;
+                summary.power_sat_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval_sat - tcutoff) * 100 : 0.0;
+                summary.ci_width_sat_2 = tcutoff * summary.se_2;
+                if (with_improved) {
+                    if (!isnan(bvar2[1]) && bvar2[1] > 0) {
+                        tval2 = abs(statmodel.te_pars[1] / sqrt(bvar2[1]));
+                        summary.power_kr2_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval2 - tcutoff) * 100 : 0.0;
+                        summary.se_kr2_2 = sqrt(bvar2[1]);
+                        summary.ci_width_kr2_2 = tcutoff * summary.se_kr2_2;
+                    }
+                    else {
+                        summary.power_kr2_2 = 909;
+                        summary.se_kr2_2 = 0;
+                        summary.ci_width_kr2_2 = 0;
+                    }
+                }
             }
             else {
                 summary.power_kr_2 = 909;
                 summary.dof_kr_2 = 0;
                 summary.se_kr_2 = 0;
                 summary.ci_width_kr_2 = 0;
+                summary.power_sat_2 = 909;
+                summary.ci_width_sat_2 = 0;
             }
-            
-            bvar = res.vcov_beta(idx + 2, idx + 2);
-            if (!isnan(bvar) && bvar >= 0) {
-                tval = abs(statmodel.te_pars[2] / sqrt(bvar));
-                summary.power_kr_12 = res.dof(idx + 2) > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-                summary.dof_kr_12 = res.dof(idx + 2);
-                summary.se_kr_12 = sqrt(bvar);
-                summary.ci_width_kr_12 = tcutoff * summary.se_12;
+
+            boost::math::students_t dist3(dofkr[2]);
+            if (!isnan(bvar[2]) && bvar[2] >= 0) {
+                tval = abs(statmodel.te_pars[2] / sqrt(bvar[2]));
+                tval_sat = abs(statmodel.te_pars[2] / summary.se_12);
+                summary.power_kr_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval - tcutoff) * 100 : 0.0;
+                summary.dof_kr_12 = dofkr[2];
+                summary.se_kr_12 = sqrt(bvar[2]);
+                summary.ci_width_kr_12 = tcutoff * summary.se_kr_12;
+                summary.power_sat_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval_sat - tcutoff) * 100 : 0.0;
+                summary.ci_width_sat_12 = tcutoff * summary.se_12;
+                if (with_improved) {
+                    if (!isnan(bvar2[2]) && bvar2[2] > 0) {
+                        tval2 = abs(statmodel.te_pars[2] / sqrt(bvar2[2]));
+                        summary.power_kr2_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval2 - tcutoff) * 100 : 0.0;
+                        summary.se_kr2_12 = sqrt(bvar2[2]);
+                        summary.ci_width_kr2_12 = tcutoff * summary.se_kr2_12;
+                    }
+                    else {
+                        summary.power_kr2_12 = 909;
+                        summary.se_kr2_12 = 0;
+                        summary.ci_width_kr2_12 = 0;
+                    }
+                }
             }
             else {
                 summary.power_kr_12 = 909;
                 summary.dof_kr_12 = 0;
                 summary.se_kr_12 = 0;
                 summary.ci_width_kr_12 = 0;
+                summary.power_sat_12 = 909;
+                summary.ci_width_sat_12 = 0;
             }
             
         }

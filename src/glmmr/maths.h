@@ -1,25 +1,20 @@
 #pragma once
 
-#include <cmath> 
-#include <unordered_map>
-#include <Eigen/Core>
-#include <Eigen/LU>
-#include <boost/math/distributions/normal.hpp>
-#include "algo.h"
 #include "general.h"
+#include "algo.h"
 #include "family.hpp"
 
 namespace glmmr {
 
-    template<class T>
-    T randomGaussian(T generator,
-        VectorXd& res)
-    {
-        for (size_t i = 0; i < res.size(); ++i)
-            res(i) = generator();
-        // Note the generator is returned back
-        return  generator;
-    }
+template<class T>
+T randomGaussian(T generator,
+                 VectorXd& res)
+{
+  for (size_t i = 0; i < res.size(); ++i)
+    res(i) = generator();
+  // Note the generator is returned back
+  return  generator;
+}
 
 namespace maths {
 
@@ -61,143 +56,159 @@ inline Eigen::VectorXd exp_vec(const Eigen::VectorXd& x,
   return z;
 }
 
-inline Eigen::VectorXd mod_inv_func(Eigen::VectorXd mu,
-                                    std::string link)
+inline VectorXd mod_inv_func(const VectorXd& muin,
+                                    Link link)
 {
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"logit",1},
-    {"log",2},
-    {"probit",3},
-    {"identity",4},
-    {"inverse",5}
-  };
-  switch (string_to_case.at(link)) {
-  case 1:
+  VectorXd mu(muin);
+  switch (link) {
+  case Link::logit:
     mu = exp_vec(mu, true);
     break;
-  case 2:
+  case Link::loglink:
     mu = exp_vec(mu);
     break;
-  case 3:
+  case Link::probit:
     mu = gaussian_cdf_vec(mu);
     break;
-  case 4:
+  case Link::identity:
     break;
-  case 5:
+  case Link::inverse:
     mu = mu.array().inverse().matrix();
     break;
   }
   return mu;
 }
 
+
+
 inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
                              const glmmr::Family& family) {
-  
   Eigen::VectorXd wdiag(xb.size());
   Eigen::ArrayXd p(xb.size());
   
-  switch (family.flink) {
-  case 1:
-    wdiag = exp_vec(-1.0 * xb);
-    break;
-  case 2:
-    wdiag = exp_vec(xb);
-    break;
-  case 3: case 13:
-    p = mod_inv_func(xb, "logit");
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1/(p(i)*(1.0 - p(i)));
-    }
-    break;
-  case 4: case 14:
-    p = mod_inv_func(xb, "log");
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = (1.0 - p(i))/p(i);
-    }
-    break;
-  case 5: case 15:
-    p = mod_inv_func(xb, "identity");
-    wdiag = (p * (1 - p)).matrix();
-    break;
-  case 6: case 16:
-    {
-      p = mod_inv_func(xb, "probit");
-      Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
-      for(int i =0; i< xb.size(); i++){
-        wdiag(i) = (p(i) * (1-p(i)))/pinv(i);
-      }
+  switch(family.family){
+    case Fam::poisson:
+      {
+        switch(family.link){
+          case Link::identity:
+            wdiag = exp_vec(xb);
+            break;
+          default:
+            wdiag = exp_vec(-1.0 * xb);
+            break;
+          }
       break;
-    }
-  case 7:
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1.0;
-    }
-    break;
-  case 8:
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1/exp(xb(i));
-    }
-    break;
-  case 9:
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1.0;
-    }
-    break;
-  case 10:
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1/(xb(i)*xb(i));
-    }
-    break;
-  case 11:
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = (xb(i)*xb(i));
-    }
-    break;
-  case 12:
-    p = mod_inv_func(xb, "logit");
-    for(int i =0; i< xb.size(); i++){
-      wdiag(i) = 1/(p(i)*(1.0 - p(i)));
-    }
-    break;
+      }
+    case Fam::bernoulli: case Fam::binomial:
+      {
+        switch(family.link){
+          case Link::loglink:
+            p = mod_inv_func(xb, family.link);
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = (1.0 - p(i))/p(i);
+            }
+            break;
+          case Link::identity:
+            p = mod_inv_func(xb, family.link);
+            wdiag = (p * (1 - p)).matrix();
+            break;
+          case Link::probit:
+          {
+            p = mod_inv_func(xb, family.link);
+            Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = (p(i) * (1-p(i)))/pinv(i);
+            }
+            break;
+          }
+          default:
+            p = mod_inv_func(xb, family.link);
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = 1/(p(i)*(1.0 - p(i)));
+            }
+            break;
+        }
+      break;
+      }
+    case Fam::gaussian:
+      {
+        switch(family.link){
+          case Link::loglink:
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = 1/exp(xb(i));
+            }
+            break;
+          default:
+            //identity
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = 1.0;
+            }
+            break;
+        }
+      break;
+      }
+    case Fam::gamma:
+      {
+        switch(family.link){
+          case Link::inverse:
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = 1/(xb(i)*xb(i));
+            }
+            break;
+          case Link::identity:
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = (xb(i)*xb(i));
+            }
+            break;
+          default:
+            //log
+            for(int i =0; i< xb.size(); i++){
+              wdiag(i) = 1.0;
+            }
+            break;
+        }
+      break;
+      }
+    case Fam::beta:
+      {
+        //only logit currently
+        p = mod_inv_func(xb, family.link);
+        for(int i =0; i< xb.size(); i++){
+          wdiag(i) = 1/(p(i)*(1.0 - p(i)));
+        }
+        break;
+      }
   }
   return wdiag;
 }
 
 inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
-                               std::string link) {
-  
+                               const Link link) {
   Eigen::VectorXd wdiag(xb.size());
   Eigen::VectorXd p(xb.size());
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"log",1},
-    {"identity",2},
-    {"logit",3},
-    {"probit",4},
-    {"inverse",5}
-  };
   
-  switch (string_to_case.at(link)) {
-  case 1:
+  switch (link) {
+  case Link::loglink:
     wdiag = glmmr::maths::exp_vec(-1.0 * xb);
     break;
-  case 2:
+  case Link::identity:
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1.0;
     }
     break;
-  case 3:
-    p = glmmr::maths::mod_inv_func(xb, "logit");
+  case Link::logit:
+    p = glmmr::maths::mod_inv_func(xb, link);
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1/(p(i)*(1.0 - p(i)));
     }
     break;
-  case 4:
+  case Link::probit:
     {
       Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
       wdiag = (pinv.inverse()).matrix();
       break;
     }
-  case 5:
+  case Link::inverse:
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = -1.0 * xb(i) * xb(i);
     }
@@ -211,14 +222,14 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
 inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
                                     const Eigen::MatrixXd& Z,
                                     const Eigen::MatrixXd& D,
-                                    const std::string& link){
+                                    const Link link){
   Eigen::ArrayXd xbnew(xb.array());
   int n = xb.size();
-  if(link=="log"){
+  if(link==Link::loglink){
     for(int i=0; i<n; i++){
       xbnew(i) += (Z.row(i)*D*Z.row(i).transpose())(0)/2;
     }
-  } else if(link=="probit"){
+  } else if(link==Link::probit){
     Eigen::ArrayXd zprod(n);
     Eigen::MatrixXd Dzz(D.rows(),D.cols());
     Eigen::PartialPivLU<Eigen::MatrixXd> pluDzz;
@@ -229,7 +240,7 @@ inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
     }
     zprod = zprod.inverse().sqrt();
     xbnew *= zprod;
-  } else if(link=="logit"){
+  } else if(link==Link::logit){
     double c = 0.5880842;
     Eigen::ArrayXd zprod(n);
     Eigen::MatrixXd Dzz(D.rows(),D.cols());
@@ -246,32 +257,26 @@ inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
   return xbnew.matrix();
 }
 
+// is this function used anywhere? mark for deletion?
 inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
-                                    const std::string& family,
+                                    const Fam family,
                                     double var_par = 1.0){
   Eigen::ArrayXd wdiag(mu.size());
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"gaussian",1},
-    {"binomial",2},
-    {"poisson",3},
-    {"Gamma",4},
-    {"beta",5}
-  };
   
-  switch (string_to_case.at(family)) {
-  case 1:
+  switch (family) {
+  case Fam::gaussian:
     wdiag.setConstant(var_par);
     break;
-  case 2:
+  case Fam::bernoulli: case Fam::binomial:
     wdiag = mu.array()*(1-mu.array());
     break;
-  case 3:
+  case Fam::poisson:
     wdiag = mu.array();
     break;
-  case 4:
+  case Fam::gamma:
     wdiag = mu.array().square();
     break;
-  case 5:
+  case Fam::beta:
     wdiag = mu.array()*(1-mu.array())/(var_par+1);
     break;
   }
@@ -290,116 +295,152 @@ inline double log_factorial_approx(double n){
   return ans;
 }
 
-inline double log_likelihood(double y,
-                             double mu,
-                             double var_par,
-                             int flink) {
+inline double log_likelihood(const double y,
+                             const double mu,
+                             const double var_par,
+                             const Fam family,
+                             const Link link) {
   double logl = 0;
-  
-  switch (flink){
-  case 1:
+  switch(family){
+  case Fam::poisson:
   {
-    double lf1 = glmmr::maths::log_factorial_approx(y);
-    logl = y * mu - exp(mu) - lf1;
-    break;
-  }
-  case 2:
+    switch(link){
+  case Link::identity:
   {
     double lf1 = log_factorial_approx(y);
     logl = y*log(mu) - mu-lf1;
     break;
   }
-  case 3:
-    if(y==1){
-      logl = log(1/(1+exp(-1.0*mu)));
-    } else {
-      logl = log(1 - 1/(1+exp(-1.0*mu)));
+  default:
+    {
+      double lf1 = glmmr::maths::log_factorial_approx(y);
+      logl = y * mu - exp(mu) - lf1;
+      break;
     }
+  }
     break;
-  case 4:
+  }
+  case Fam::bernoulli:
+  {
+    switch(link){
+  case Link::loglink:
     if(y==1){
       logl = mu;
     } else {
       logl = log(1 - exp(mu));
     }
     break;
-  case 5:
+  case Link::identity:
     if(y==1){
       logl = log(mu);
     } else {
       logl = log(1 - mu);
     }
     break;
-  case 6:
+  case Link::probit:
   {
-      boost::math::normal norm(0,1);
-      if (y == 1) {
-          logl = (double)cdf(norm,mu);
-      }
-      else {
-          logl = log(1 - (double)cdf(norm, mu));
-      }
-      break;
-  }
-      
-  case 7:
-    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
-      0.5*(y - mu)*(y - mu)/var_par;
+    boost::math::normal norm(0,1);
+    if (y == 1) {
+      logl = (double)cdf(norm,mu);
+    }
+    else {
+      logl = log(1 - (double)cdf(norm, mu));
+    }
     break;
-  case 8:
+  }
+  default:
+    //logit
+    if(y==1){
+      logl = log(1/(1+exp(-1.0*mu)));
+    } else {
+      logl = log(1 - 1/(1+exp(-1.0*mu)));
+    }
+    break;
+  }
+    break;
+  }
+  case Fam::binomial:
+  {
+    switch(link){
+  case Link::loglink:
+  {
+    double lfk = glmmr::maths::log_factorial_approx(y);
+    double lfn = glmmr::maths::log_factorial_approx(var_par);
+    double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+    logl = lfn - lfk - lfnk + y*mu + (var_par - y)*log(1 - exp(mu));
+    break;
+  }
+  case Link::identity:
+  {
+    double lfk = glmmr::maths::log_factorial_approx(y);
+    double lfn = glmmr::maths::log_factorial_approx(var_par);
+    double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+    logl = lfn - lfk - lfnk + y*log(mu) + (var_par - y)*log(1 - mu);
+    break;
+  }
+  case Link::probit:
+  {
+    boost::math::normal norm(0, 1);
+    double lfk = glmmr::maths::log_factorial_approx(y);
+    double lfn = glmmr::maths::log_factorial_approx(var_par);
+    double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+    logl = lfn - lfk - lfnk + y*((double)cdf(norm,mu)) + (var_par - y)*log(1 - (double)cdf(norm,mu));
+    break;
+  }
+  default:
+  {
+    double lfk = glmmr::maths::log_factorial_approx(y);
+    double lfn = glmmr::maths::log_factorial_approx(var_par);
+    double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+    logl = lfn - lfk - lfnk + y*log(1/(1+exp(-1.0*mu))) + (var_par - y)*log(1 - 1/(1+exp(-1.0*mu)));
+    break;
+  }
+  }
+    break;
+  }
+  case Fam::gaussian:
+  {
+    switch(link){
+  case Link::loglink:
     logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
       0.5*(log(y) - mu)*(log(y) - mu)/var_par;
     break;
-  case 9:
-      {
-        double ymu = var_par*y/exp(mu);
-        logl = log(1/(tgamma(var_par)*y)) + var_par*log(ymu) - ymu;
-        break;
-      }
-  case 10:
-      {
-        double ymu = var_par*y*mu;
-        logl = log(1/(tgamma(var_par)*y)) + var_par*log(ymu) - ymu;
-        break;
-      }
-  case 11:
+  default:
+    //identity
+    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
+      0.5*(y - mu)*(y - mu)/var_par;
+    break;
+  }
+    break;
+  }
+  case Fam::gamma:
+  {
+    switch(link){
+  case Link::inverse:
+  {
+    double ymu = var_par*y*mu;
+    logl = log(1/(tgamma(var_par)*y)) + var_par*log(ymu) - ymu;
+    break;
+  }
+  case Link::identity:
     logl = log(1/(tgamma(var_par)*y)) + var_par*log(var_par*y/mu) - var_par*y/mu;
     break;
-  case 12:
+  default:
+    //log
+    {
+      double ymu = var_par*y/exp(mu);
+      logl = log(1/(tgamma(var_par)*y)) + var_par*log(ymu) - ymu;
+      break;
+    }
+  }
+    break;
+  }
+  case Fam::beta:
+  {
+    //only logit currently
     logl = (mu*var_par - 1)*log(y) + ((1-mu)*var_par - 1)*log(1-y) - lgamma(mu*var_par) - lgamma((1-mu)*var_par) + lgamma(var_par);
-  case 13:
-    {
-      double lfk = glmmr::maths::log_factorial_approx(y);
-      double lfn = glmmr::maths::log_factorial_approx(var_par);
-      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
-      logl = lfn - lfk - lfnk + y*log(1/(1+exp(-1.0*mu))) + (var_par - y)*log(1 - 1/(1+exp(-1.0*mu)));
-      break;
-    }
-  case 14:
-    {
-      double lfk = glmmr::maths::log_factorial_approx(y);
-      double lfn = glmmr::maths::log_factorial_approx(var_par);
-      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
-      logl = lfn - lfk - lfnk + y*mu + (var_par - y)*log(1 - exp(mu));
-      break;
-    }
-  case 15:
-    {
-      double lfk = glmmr::maths::log_factorial_approx(y);
-      double lfn = glmmr::maths::log_factorial_approx(var_par);
-      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
-      logl = lfn - lfk - lfnk + y*log(mu) + (var_par - y)*log(1 - mu);
-      break;
-    }
-  case 16:
-    {
-      boost::math::normal norm(0, 1);
-      double lfk = glmmr::maths::log_factorial_approx(y);
-      double lfn = glmmr::maths::log_factorial_approx(var_par);
-      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
-      logl = lfn - lfk - lfnk + y*((double)cdf(norm,mu)) + (var_par - y)*log(1 - (double)cdf(norm,mu));
-      break;
-    }
+    break;
+  }
   }
   return logl;
 }
@@ -414,21 +455,21 @@ inline double logdet(const Eigen::MatrixXd& M) {
   return ld;
 }
 
-inline MatrixXd sample_MVN(const vector_matrix& mu,
-                           int m){
-  int n = mu.vec.size();
-  MatrixXd L = mu.mat.llt().matrixL();
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-      generator(boost::mt19937(time(0)),
-          boost::normal_distribution<>());
-  VectorXd z(n);
-  MatrixXd samps(n,m);
-  for(int i = 0; i < m; i++){
-      randomGaussian(generator, z);
-    samps.col(i) = z;
-    samps.col(i) += mu.vec;
-  }
-  return samps;
+inline MatrixXd sample_MVN(const VectorMatrix& mu,
+    int m) {
+    int n = mu.vec.size();
+    MatrixXd L = mu.mat.llt().matrixL();
+    boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+        generator(boost::mt19937(time(0)),
+            boost::normal_distribution<>());
+    VectorXd z(n);
+    MatrixXd samps(n, m);
+    for (int i = 0; i < m; i++) {
+        randomGaussian(generator, z);
+        samps.col(i) = z;
+        samps.col(i) += mu.vec;
+    }
+    return samps;
 }
   
 }
@@ -443,4 +484,3 @@ inline std::vector<int> linseq(int start, int end) {
 }
 }
 }
-

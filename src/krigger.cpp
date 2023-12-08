@@ -5,16 +5,19 @@ namespace ClusterApp {
     void RenderKriging(ClusterApp::krigingData& krig, ClusterApp::options& option) {
         ImGui::Begin("Kriging");
         ImGui::Text("Estimates the power across the sample size space");
-        ImGui::TextWrapped("This feature is experimental. The power surface is estimated using a kriging approach and estimates will improve by sampling more points. The number of clusters is divided according to the proportions given by the main trial design. Individuals are the number of individuals per cluster-period.");
-        ImGui::TextWrapped("The power plot may not meet exactly the specified plot limits due to rounding of the increments in the plot.");
-
+        ImGui::TextWrapped("This feature is experimental. The power surface is estimated using a kriging approach and estimates will improve by sampling more points. The number of clusters is divided \
+according to the proportions given by the main trial design. Individuals are the number of individuals per cluster-period.");
+        ImGui::TextWrapped("The power plot may not meet exactly the specified plot limits due to rounding of the increments in the plot and currently only provides power for GLS estimators.");
+        //const char* power_items[] = { "GLS", "Between-within", "Satterthwaite", "Kenward-Roger", "Design effect"};
+        //static int power_item_current = 0;
         // plot of sampled points
         const short  s16_zero = 0, s16_one = 1;
         static int new_sample_size = 25;
         colourPicker colours;
 
         if(!krig.start)krig.update(false);
-
+        //ImGui::SetNextItemWidth(200);
+        //ImGui::Combo("Power: ", &power_item_current, power_items, IM_ARRAYSIZE(power_items));
         ImGui::SetNextItemWidth(150);
         ImGui::InputScalar("Sample size", ImGuiDataType_S16, &new_sample_size, &s16_one, NULL, "%d");
         ImGui::SetNextItemWidth(150);
@@ -26,6 +29,7 @@ namespace ClusterApp {
         ImGui::SetNextItemWidth(150);
         ImGui::InputScalar("Individual max.", ImGuiDataType_S16, &krig.upper_int[1], &s16_one, NULL, "%d");
         if (ImGui::Button("Generate new sample")) {
+            //krig.set_power_type(static_cast<PowerType>(power_item_current));
             krig.generate_grid();
             krig.new_sample(new_sample_size);
         }
