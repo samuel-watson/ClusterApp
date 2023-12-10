@@ -10,7 +10,8 @@ namespace ClusterApp {
 including Kenward-Roger. For covariance functions non-linear in parameters, the improved Kenward-Roger correction is also provided. The second tab provides the design effect and \
 resulting power estimates, currently only t-test and Chi-squared test bases for these calculations are available");
         ImGui::TextWrapped("Note that the Kenward-Roger correction (and its improved variant) can provide a poor approximation in very small sample sizes, including both small numbers of \
-clusters, and small numbers of time periods with temporal covariance functions, especially exponential decay functions.");
+clusters, and small numbers of time periods with temporal covariance functions, especially exponential decay functions. It may also display ERR if the calculation returns a non-positive definite \
+matrix, which can usually be resolved by fiddling with the parameter values and forcing it to rerun. See the log for more information.");
 
         if (updater.update) {
             ImGui::SameLine(); ImGui::Text("Recalculating...");
@@ -531,14 +532,15 @@ clusters, and small numbers of time periods with temporal covariance functions, 
                 }
                 if (updater.summary.power_de == 909) {
                     ImGui::TextWrapped("Error. Check parameter values. For example, if the model produces probabilities outside [0,1] or if there are cells with zero probability for 2x2 test then this error will appear.");
-                    if (option.debug_info) {
+                    updater.log.AddLog("[%05d] [%s] Design effect power error. Int group mean: %.3f, Control group mean: %.3f, ratio: %.3f \n", ImGui::GetFrameCount(), updater.log.cat[2], updater.summary.se_de, updater.summary.ci_width_de, updater.summary.individual_se);
+                    /*if (option.debug_info) {
                         ImGui::Text("Control group mean: "); ImGui::SameLine();
                         ImGui::Text("%.3f", updater.summary.se_de);
                         ImGui::Text("Intervention group mean: "); ImGui::SameLine();
                         ImGui::Text("%.3f", updater.summary.ci_width_de);
                         ImGui::Text("Ratio: "); ImGui::SameLine();
                         ImGui::Text("%.3f", updater.summary.individual_se);
-                    }
+                    }*/
                 }
                 else {
                     if (de_mode == Dmethod_glm) {

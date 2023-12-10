@@ -6,6 +6,9 @@ namespace ClusterApp {
     void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option) {
         ImGui::Begin("Statistical Model");
 
+        ImGui::TextWrapped("Set the statistical model using the two option trees below. The first sets the type of mixed model, including covariance function, the second specifies the parameter values, including \
+the treatment effect.");
+
         const char* family_items[] = { "Gaussian", "Binomial", "Poisson", "Beta", "Gamma" };
         const char* gaussian_link_items[] = { "Identity", "Log" };
         const char* binomial_link_items[] = { "Identity", "Log", "Logit", "Probit" };
@@ -205,16 +208,16 @@ namespace ClusterApp {
                         ImGui::DragFloat("Denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                     }
-                    if (structure_sampling == 1) {
+                    if (structure_sampling == 1 || structure_sampling == 2) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("IAC", &model.ixx_pars[2], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                             "Individual autocorrelation coefficient. For open cohorts, set this parameter as if it were a closed cohort.");
-                        if (ind_cov_item_current == 1) {
+                        if (ind_cov_item_current == 1 && structure_sampling != 2) {
                             ImGui::SetNextItemWidth(200);
                             ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
-                        if (ind_cov_item_current == 2 || ind_cov_item_current == 3) {
+                        if ((ind_cov_item_current == 2 || ind_cov_item_current == 3) && structure_sampling != 2) {
                             ImGui::SetNextItemWidth(200);
                             ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
@@ -240,16 +243,16 @@ namespace ClusterApp {
                         ImGui::DragFloat("Cluster-period denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
                     }
-                    if (structure_sampling == 1) {
+                    if (structure_sampling == 1 || structure_sampling == 2) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Individual-level variance", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                             "Individual-level variance term");
-                        if (ind_cov_item_current == 2) {
+                        if (ind_cov_item_current == 2 && structure_sampling != 2) {
                             ImGui::SetNextItemWidth(200);
                             ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
                                 "Individual autoregressive parameter.");
                         }
-                        if (ind_cov_item_current == 3 || ind_cov_item_current == 4) {
+                        if ((ind_cov_item_current == 3 || ind_cov_item_current == 4) && structure_sampling != 2) {
                             ImGui::SetNextItemWidth(200);
                             ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                                 "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
@@ -435,7 +438,7 @@ namespace ClusterApp {
 
             ImGui::TreePop();
         }
-        if (option.debug_info) {
+        /*if (option.debug_info) {
             if (ImGui::TreeNode("Model info")) {
                 ImGui::Text("Model checksum"); ImGui::SameLine();
                 ImGui::Text("%d", model.crc_val);
@@ -443,7 +446,7 @@ namespace ClusterApp {
                 ImGui::Text("%d", model.crc_val_pars);
                 ImGui::TreePop();
             }
-        }
+        }*/
 
 
         ImGui::End();

@@ -268,7 +268,8 @@ namespace ClusterApp {
                     ImGui::Checkbox("Sample minimiser", &windows.krigger);
                     ImGui::Checkbox("Data simulate", &windows.simulate);
                     ImGui::Checkbox("Dockspace", &windows.dockspace);
-                    ImGui::Checkbox("Debug Info", &windows.debug_info);
+                    ImGui::Checkbox("Console", &windows.log);
+                    //ImGui::Checkbox("Debug Info", &windows.debug_info);
                     ImGui::Checkbox("Show Box Correction", &windows.show_box);
                     ImGui::EndMenu();
                 }
@@ -303,7 +304,10 @@ namespace ClusterApp {
                 {
                     ImGui::Text("Version 0.4.1");
                     ImGui::BulletText("Updated to glmmrBase version 0.5.4");
-                    ImGui::BulletText("Added Satterthwaite, KR Improved, and Box corrections");
+                    ImGui::BulletText("Added Satterthwaite, KR Improved, and Box corrections (although Box not exposed)");
+                    ImGui::BulletText("Added logging of events and console (see View->Window->Console)");
+                    ImGui::BulletText("Added descriptive text to result and model windows");
+                    ImGui::BulletText("Fixed an error with open cohort covariance parameter specification");
                     ImGui::Text("Version 0.3.5");
                     ImGui::BulletText("Moved design view options to menu bar");
                     ImGui::Text("Version 0.3.4");

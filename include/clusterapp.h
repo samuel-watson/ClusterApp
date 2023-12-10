@@ -2,7 +2,6 @@
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 
-#include "imgui_internal.h"
 #include "clusterclasses.h"
 #include <iomanip>
 #include <sstream>
@@ -35,5 +34,9 @@ namespace ClusterApp {
     void RenderKriging(ClusterApp::krigingData& krig, ClusterApp::options& option);
 
     void RenderDataSim(ClusterApp::glmmModel& glmm, ClusterApp::options& option);
+
+    void RenderLog(ClusterApp::AppLog& log);
+
+
 }
 

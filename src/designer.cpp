@@ -396,10 +396,10 @@ namespace ClusterApp {
             remove_seq = false;
         }
 
-        if (option.debug_info) {
+        /*if (option.debug_info) {
             ImGui::Text("Design Checksum"); ImGui::SameLine();
             ImGui::Text("%d", designs.crc_val);
-        }
+        }*/
 
         ImGui::End();
     }

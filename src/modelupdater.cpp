@@ -3,8 +3,8 @@
 ClusterApp::modelUpdater::modelUpdater(ClusterApp::design& designs_,
     ClusterApp::statisticalModel& model_,
     ClusterApp::modelSummary& summary_,
-    ClusterApp::glmmModel& glmm_) : designs(designs_), model(model_),
-    summary(summary_), glmm(glmm_) {
+    ClusterApp::glmmModel& glmm_, ClusterApp::AppLog& log_) : designs(designs_), model(model_),
+    summary(summary_), glmm(glmm_), log(log_) {
     update_data();
 };
 
@@ -69,6 +69,10 @@ void ClusterApp::modelUpdater::update_data() {
             cl_number++;
         }
     }
+    log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: rows = " + std::to_string(data.rows())).c_str());
+    log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: time periods = " + std::to_string(designs.time)).c_str());
+    log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: sequences = " + std::to_string(designs.sequences)).c_str());
+    log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: dose effect = " + std::to_string(glmm.option.dose_effect)).c_str());
     glmm.update_formula();
     glmm.update_model_data(data);
     glmm.dof = designs.total_cluster_periods();
@@ -78,6 +82,7 @@ void ClusterApp::modelUpdater::update_data() {
 
 void ClusterApp::modelUpdater::update_formula() {
     glmm.update_formula();
+    log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Formula update: "+glmm.formula).c_str());
     if (glmm.option.results)update_summary_statistics();
     if(glmm.option.optimiser) update_optimum();
 }
@@ -94,7 +99,9 @@ void ClusterApp::modelUpdater::update_summary_statistics() {
     glmm.power_kr(summary);
     glmm.power_bw(summary);
     if(glmm.option.show_box) glmm.power_box(summary);
-    glmm.power_de(summary,de_mode);
+    if (model.covariance == Covariance::exchangeable || model.covariance == Covariance::nested_exchangeable) {
+        glmm.power_de(summary, de_mode);
+    }    
     summary.dof = (double)designs.total_n();
     if(!manual_n_optim) summary.total_n = designs.total_n();
 }

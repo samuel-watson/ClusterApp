@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <format>
 #include <boost/random.hpp>
+#include "imgui_internal.h"
 #include "modeltypes.h"
 #include "glmmr.h"
 
@@ -29,11 +30,11 @@ namespace ClusterApp {
 
     class sequencePeriod {
     public:
-        bool active = true;
-        int n = 10;
-        bool intervention = false;
-        bool intervention_2 = false;
-        float dose = 1.0;
+        bool    active = true;
+        int     n = 10;
+        bool    intervention = false;
+        bool    intervention_2 = false;
+        float   dose = 1.0;
         sequencePeriod() {};
         sequencePeriod(bool active_) : active(active_) {};
         sequencePeriod(bool active_, int n_, bool intervention_) : active(active_), n(n_), intervention(intervention_) {};
@@ -54,14 +55,14 @@ namespace ClusterApp {
     };
 
     class design {
-        std::vector<std::vector<ClusterApp::sequencePeriod > > periods;
-        std::vector<int> n_per_sequence;
-        int default_clusters = 10;
+        std::vector<std::vector<ClusterApp::sequencePeriod > >  periods;
+        std::vector<int>                                        n_per_sequence;
+        int                                                     default_clusters = 10;
         void initialise_data();
     public:
-        int sequences = 2;
-        int time = 1;
-        int crc_val = 0;
+        int     sequences = 2;
+        int     time = 1;
+        int     crc_val = 0;
         design();
         void add_sequence();
         void add_sequence(int i);
@@ -100,23 +101,23 @@ namespace ClusterApp {
 
     class statisticalModel {
     public:
-        Family family = Family::gaussian;
-        Link link = Link::identity;
-        Covariance covariance = Covariance::exchangeable;
-        IndividualCovariance ind_covariance = IndividualCovariance::exchangeable;
-        LinearPredictor linearpredictor = LinearPredictor::time_fixed_effects;
-        Sampling sampling = Sampling::cross_sectional;
-        int include_intercept = 1;
-        float sigma = 1;
-        std::vector<float> te_pars = { 0.5f,0.5f,0.5f };
-        std::vector<float> ixx_pars = { 0.05f,0.8f,0.5f };
-        std::vector<float> cov_pars = std::vector<float>(5, 0.5f);
-        std::vector<float> beta_pars = std::vector<float>(1, 0.0f);
-        std::vector<float> c_vals = { 1.0f,1.0f,1.0f };
-        statisticalModel() {};
-        int crc_val = 0;
-        int crc_val_pars = 0;
+        Family                  family = Family::gaussian;
+        Link                    link = Link::identity;
+        Covariance              covariance = Covariance::exchangeable;
+        IndividualCovariance    ind_covariance = IndividualCovariance::exchangeable;
+        LinearPredictor         linearpredictor = LinearPredictor::time_fixed_effects;
+        Sampling                sampling = Sampling::cross_sectional;
+        int                     include_intercept = 1;
+        float                   sigma = 1;
+        std::vector<float>      te_pars = { 0.5f,0.5f,0.5f };
+        std::vector<float>      ixx_pars = { 0.05f,0.8f,0.5f };
+        std::vector<float>      cov_pars = std::vector<float>(5, 0.5f);
+        std::vector<float>      beta_pars = std::vector<float>(1, 0.0f);
+        std::vector<float>      c_vals = { 1.0f,1.0f,1.0f };
+        int                     crc_val = 0;
+        int                     crc_val_pars = 0;
         std::pair<bool, bool> check();
+        statisticalModel() {};
         void update_beta(ClusterApp::design& design);
         void set_beta_random(const double m, const double s);
         float alpha = 0.05;
@@ -193,21 +194,37 @@ namespace ClusterApp {
         modelSummary(ClusterApp::design& design) : total_n(design.total_n()) {};
     };
 
+    struct AppLog
+    {
+    public:
+        ImGuiTextBuffer     Buf;
+        ImGuiTextFilter     Filter;
+        ImVector<int>       LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
+        bool                AutoScroll = true;  // Keep scrolling if already at the bottom.
+        bool                ShowMatrix = true;
+        const char* cat[3] = { "info", "warn", "error" };
+        AppLog(){};
+        void Clear();
+        void AddLog(const char* fmt, ...) IM_FMTARGS(2);
+        void Draw(const char* title, bool* p_open = NULL);
+    };
+
     class glmmModel {
     public:
-        std::unique_ptr<glmm> model;
-        ClusterApp::statisticalModel& statmodel;
-        ClusterApp::options& option;
-        ClusterApp::design& designs;
-        std::string formula = "int+(1|gr(cl))";
-        std::string family = "gaussian";
-        std::string link = "identity";
-        const std::vector<std::string> colnames = { "cl","t","n","int","int2","int12" };
-        boost::math::normal norm = boost::math::normal(0.0, 1.0);
-        double zcutoff = boost::math::quantile(norm, 0.975);
-        int dof = 1;
-        std::vector<double> optimal_weights = { 0.5, 0.5 };
-        glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_, ClusterApp::design& designs_) : statmodel(statmodel_), option(option_), designs(designs_) {};
+        std::unique_ptr<glmm>           model;
+        ClusterApp::statisticalModel&   statmodel;
+        ClusterApp::options&            option;
+        ClusterApp::design&             designs;
+        ClusterApp::AppLog&             logger;
+        std::string                     formula = "int+(1|gr(cl))";
+        std::string                     family = "gaussian";
+        std::string                     link = "identity";
+        const std::vector<std::string>  colnames = { "cl","t","n","int","int2","int12" };
+        boost::math::normal             norm = boost::math::normal(0.0, 1.0);
+        double                          zcutoff = boost::math::quantile(norm, 0.975);
+        int                             dof = 1;
+        std::vector<double>             optimal_weights = { 0.5, 0.5 };
+        glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_, ClusterApp::design& designs_, ClusterApp::AppLog& log_) : statmodel(statmodel_), option(option_), designs(designs_), logger(log_) {};
         ~glmmModel() = default;
         void update_formula();
         void update_parameters();
@@ -228,20 +245,22 @@ namespace ClusterApp {
 
     class modelUpdater {
     public:
-        ClusterApp::design& designs;
-        ClusterApp::statisticalModel& model;
-        ClusterApp::modelSummary& summary;
-        ClusterApp::glmmModel& glmm;
-        bool update = false;
-        bool manual_n_optim = false;
-        int de_mode = 0;
-        Eigen::ArrayXXd data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
-        std::vector<std::vector<double> > optimum_data = { {0.5},{0.5} };
-        std::vector<std::vector<int> > optimum_n = { {10},{10} };
+        ClusterApp::design&             designs;
+        ClusterApp::statisticalModel&   model;
+        ClusterApp::modelSummary&       summary;
+        ClusterApp::glmmModel&          glmm;
+        ClusterApp::AppLog&             log;
+        bool                            update = false;
+        bool                            manual_n_optim = false;
+        int                             de_mode = 0;
+        Eigen::ArrayXXd                 data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
+        std::vector<std::vector<double> >   optimum_data = { {0.5},{0.5} };
+        std::vector<std::vector<int> >      optimum_n = { {10},{10} };
         modelUpdater(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelSummary& summary_,
-            ClusterApp::glmmModel& glmm_);
+            ClusterApp::glmmModel& glmm_,
+            ClusterApp::AppLog& log_);
         ~modelUpdater() = default;
         Eigen::ArrayXXd generate_data();
         void update_data();
@@ -253,66 +272,66 @@ namespace ClusterApp {
 
     class plotData {
     public:
-        ClusterApp::glmmModel& glmm;
-        ClusterApp::modelUpdater& updater;
-        ClusterApp::XAxis xaxis = ClusterApp::XAxis::icc;
-        ClusterApp::YAxis yaxis = ClusterApp::YAxis::power;
-        ClusterApp::XAxis series = ClusterApp::XAxis::cac;
-        int n_series = 1;
-        bool multiple_series = false;
-        int n_data_points = 20;
+        ClusterApp::glmmModel&      glmm;
+        ClusterApp::modelUpdater&   updater;
+        ClusterApp::XAxis           xaxis = ClusterApp::XAxis::icc;
+        ClusterApp::YAxis           yaxis = ClusterApp::YAxis::power;
+        ClusterApp::XAxis           series = ClusterApp::XAxis::cac;
+        int                         n_series = 1;
+        bool                        multiple_series = false;
+        int                         n_data_points = 20;
+        std::pair<float, float>     x_axis_limits;
+        std::pair<float, float>     y_axis_limits;
+        float                       x_data[20];
+        float                       y_data_1[20];
+        float                       y_data_2[20];
+        float                       y_data_3[20];
+        float                       x_series[3];
+        bool                        initialised = false;
+        bool                        updating = false;
+        int                         lower_int[2] = { 10,10 };
+        int                         upper_int[2] = { 40, 100 };
+        float                       upper_float[4] = { 0.25, 1.0, 1.0, 0.9 };
+        float                       lower_float[4] = { 0.01, 0.0, 0.0, 0.1 };
+        int                         crc_val = 0;
         plotData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) {};
-        std::pair<float, float> x_axis_limits;
-        std::pair<float, float> y_axis_limits;
-        float x_data[20];
-        float y_data_1[20];
-        float y_data_2[20];
-        float y_data_3[20];
-        float x_series[3];
         void update_data();
-        bool initialised = false;
         bool check();
-        int crc_val = 0;
         void extract_y(ClusterApp::modelSummary& summary, int i, int series);
         float max_y();
         float min_y();
-        bool updating = false;
-        int lower_int[2] = { 10,10 };
-        int upper_int[2] = { 40, 100 };
-        float upper_float[4] = { 0.25, 1.0, 1.0, 0.9 };
-        float lower_float[4] = { 0.01, 0.0, 0.0, 0.1 };
     };
 
     class krigingData {
     public: 
-        ClusterApp::glmmModel& glmm;
-        ClusterApp::modelUpdater& updater;
-        std::vector<int> n_ind;
-        std::vector<int> n_cl;
-        std::vector<float> power;
+        ClusterApp::glmmModel&      glmm;
+        ClusterApp::modelUpdater&   updater;
+        std::vector<int>            n_ind;
+        std::vector<int>            n_cl;
+        std::vector<float>          power;
+        int                         lower_int[2] = { 10,10 };
+        int                         upper_int[2] = { 40, 100 };
+        float                       bandwidth = 1;
+        float                       threshold_power = 0.8;
+        bool                        initialised = false;
+        bool                        surface_initialised = false;
+        bool                        updating = false;
+        bool                        start = false;
+        float                       surface[400];
+        float                       n_ind_grid[20];
+        float                       n_cl_grid[20];
+        char*                       n_ind_grid_label[20];
+        char*                       n_cl_grid_label[20];
+        float                       mu;
+        int                         resample_total = 20;
         void new_sample(int n = 25);
         void generate_data();
         void update(bool resample = true);
-        int lower_int[2] = { 10,10 };
-        int upper_int[2] = { 40, 100 };
-        float bandwidth = 1;
-        float threshold_power = 0.8;
         krigingData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) { 
             generate_grid();
             new_sample();
         };
-        bool initialised = false;
-        bool surface_initialised = false;
-        bool updating = false;
-        bool start = false;
-        float surface[400];
-        float n_ind_grid[20];
-        float n_cl_grid[20];
-        char* n_ind_grid_label[20];
-        char* n_cl_grid_label[20];
-        float mu;
         void generate_grid();
-        int resample_total = 20;
         void set_power_type(PowerType type_);
     private:
         PowerType type = PowerType::GLS;
@@ -320,14 +339,14 @@ namespace ClusterApp {
 
     class modelChecker {
     public:
-        ClusterApp::design& designs;
-        ClusterApp::statisticalModel& model;
-        ClusterApp::modelUpdater& updater;
-        ClusterApp::plotData& plot;
-        ClusterApp::options& option;
-        ClusterApp::krigingData& krig;
-        double update_interval = 1000;
-        std::chrono::steady_clock clock;
+        ClusterApp::design&             designs;
+        ClusterApp::statisticalModel&   model;
+        ClusterApp::modelUpdater&       updater;
+        ClusterApp::plotData&           plot;
+        ClusterApp::options&            option;
+        ClusterApp::krigingData&        krig;
+        double                          update_interval = 1000;
+        std::chrono::steady_clock       clock;
         std::chrono::time_point< std::chrono::steady_clock> t0;
         modelChecker(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
@@ -339,6 +358,42 @@ namespace ClusterApp {
         void check();
         void check_time();
     };
+
+    // Prints a matrix to the log
+    inline void AddMatrixToLog(const Eigen::MatrixXd& mat, ClusterApp::AppLog& log) {
+        int rows = mat.rows();
+        int cols = mat.cols();
+        for (int i = 0; i < rows; i++) {
+            std::string out = "[";
+            for (int j = 0; j < cols; j++) {
+                out += std::format("{:.3f}", mat(i, j));
+                if (j < (cols - 1))out += " ";
+            }
+            out += "]";
+            log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], out.c_str());
+        }
+    }
+
+    template<typename T>
+    inline void AddVectorToLog(const std::vector<T>& vec, ClusterApp::AppLog& log, int max_print = 0) {
+        int size = vec.size();
+        int vals_to_print;
+        if (max_print == 0) {
+            vals_to_print = size;
+        }
+        else {
+            vals_to_print = max_print > size ? size : max_print;
+        }
+        std::string out = "[";
+        for (int j = 0; j < vals_to_print; j++) {
+            out += std::format("{:.3f}", vec[j]);
+            if (j < (size - 1))out += " ";
+        }
+        if (vals_to_print < size)out += " ...";
+        out += "]";
+        log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], out.c_str());
+    }
+
 
 
 }

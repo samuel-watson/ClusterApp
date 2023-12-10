@@ -14,7 +14,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <iostream>
-#include "src/clusterapp.h"
+#include "clusterapp.h"
 
 GLFWwindow* g_window;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -70,11 +70,13 @@ void loop()
   static ClusterApp::statisticalModel model;
   static ClusterApp::colourPicker colour;
   static ClusterApp::modelSummary results(designs);
-  static ClusterApp::glmmModel glmm(model, windows, designs);
-  static ClusterApp::modelUpdater updater(designs, model, results, glmm);
+  static ClusterApp::AppLog log;
+  static ClusterApp::glmmModel glmm(model, windows, designs, log);
+  static ClusterApp::modelUpdater updater(designs, model, results, glmm, log);
   static ClusterApp::plotData plotdata(glmm,updater);
   static ClusterApp::krigingData krigdata(glmm, updater);
   static ClusterApp::modelChecker checker(designs, model, updater, plotdata, krigdata, windows);
+
   
 
   //ImGui::PushFont(main_font);
@@ -130,6 +132,10 @@ void loop()
   }
   if (windows.simulate) {
       ClusterApp::RenderDataSim(glmm, windows);
+  }
+
+  if (windows.log) {
+      ClusterApp::RenderLog(log);
   }
       
    

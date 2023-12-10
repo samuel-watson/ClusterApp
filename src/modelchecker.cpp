@@ -16,6 +16,7 @@ void ClusterApp::modelChecker::check() {
         if (dcheck) model.update_beta(designs);
         std::pair<bool, bool> mcheck = model.check();
         if (dcheck || mcheck.first || mcheck.second) {
+            updater.log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), updater.log.cat[0], "Model change detected, updating model.");
             updater.update = true;
             if (dcheck || mcheck.first) {
                 updater.update_formula();
@@ -23,6 +24,9 @@ void ClusterApp::modelChecker::check() {
             }
             if (mcheck.second && !mcheck.first)updater.update_parameters();
             updater.update = false;
+            updater.log.AddLog("[%05d] [%s] GLMM checksum: %d \n", ImGui::GetFrameCount(), updater.log.cat[0], designs.crc_val);
+            updater.log.AddLog("[%05d] [%s] Model checksum: %d \n", ImGui::GetFrameCount(), updater.log.cat[0], model.crc_val);
+            updater.log.AddLog("[%05d] [%s] Parameter checksum: %d \n", ImGui::GetFrameCount(), updater.log.cat[0], model.crc_val_pars);
         }
         bool pcheck = plot.check();
         if ((pcheck || dcheck || mcheck.first || mcheck.second) && option.plotter) plot.update_data();

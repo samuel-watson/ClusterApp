@@ -1,6 +1,7 @@
 #include "clusterclasses.h"
 
 void ClusterApp::plotData::update_data() {
+	if (glmm.option.log)glmm.logger.AddLog("[%05d] [%s] Updating plot data \n", ImGui::GetFrameCount(), glmm.logger.cat[0]);
 	updating = true;
 	ClusterApp::modelSummary summary(glmm.designs);
 
@@ -42,6 +43,7 @@ void ClusterApp::plotData::update_data() {
 		break;
 	}
 	}
+	if (glmm.option.log)glmm.logger.AddLog("[%05d] [%s] X-axis limits = [%.3f, %.3f] \n", ImGui::GetFrameCount(), glmm.logger.cat[0], x_axis_limits.first, x_axis_limits.second);
 
 	float lower = x_axis_limits.first;
 	float upper = x_axis_limits.second;
