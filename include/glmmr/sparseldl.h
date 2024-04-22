@@ -32,7 +32,7 @@ class SparseChol {
   intvec Pattern;
   intvec LAp;
   public:
-    sparse A_;
+    sparse A_; // matrix to factorise
     sparse L;
     intvec Lnz;
     dblvec D;
@@ -68,16 +68,21 @@ class SparseChol {
     }
     
     void ldl_symbolic(){
-      int k, p, i;
+      int k, p, i, kk, p2;
       for (k = 0 ; k < n ; k++)
       {
         // L(k,:) pattern: all nodes reachable in etree from nz in A(0:k-1,k) */
         Parent[k] = -1 ; // parent of k is not yet known */
         Flag[k] = k ; // mark node k as visited */
         Lnz[k] = 0 ; // count of nonzeros in column k of L */
-        for (p = A_.Ap[k] ; p < A_.Ap[k+1] ; p++)
+#ifdef ENABLE_DEBUG_SCHOL
+      Rcpp::Rcout <<  "\nLDL Symbolic. Permuted: " << A_.use_permuted;  
+#endif
+        kk = A_.use_permuted ? A_.P[k] : k;
+        p2 = A_.Ap[kk+1];
+        for (p = A_.Ap[k] ; p < p2 ; p++)
         {
-          i = A_.Ai[p];
+          i = A_.use_permuted ? A_.Pinv[A_.Ai[p]] : A_.Ai[p];
           if (i < k)
           {
             // follow path from i to root of etree, stop at flagged node */
@@ -100,17 +105,21 @@ class SparseChol {
     }
     
     int ldl_numeric(){
-      int p, len;
+      int p, len, kk, p2, i;
       for (int k = 0 ; k < n ; k++){
         // compute nonzero Pattern of kth row of L, in topological order */
         Y[k] = 0.0 ; // Y(0:k) is now all zero */
         int top = n ; // stack for pattern is empty */
         Flag[k] = k ; // mark node k as visited */
         Lnz[k] = 0 ; // count of nonzeros in column k of L */
-        int p2 = A_.Ap[k+1];
+#ifdef ENABLE_DEBUG_SCHOL
+        Rcpp::Rcout << "\nLDL Numeric. Permuted: " << A_.use_permuted;  
+#endif
+        kk = A_.use_permuted ? A_.P[k] : k;
+        p2 = A_.Ap[kk+1];
         for (p = A_.Ap[k] ; p < p2 ; p++)
         {
-          int i = A_.Ai[p]; // get A(i,k) */
+          i = A_.use_permuted ? A_.Pinv[A_.Ai[p]] : A_.Ai[p];
           if (i <= k)
           {
             Y[i] += A_.Ax[p]; // scatter A(i,k) into Y (sum duplicates) */
@@ -191,8 +200,23 @@ class SparseChol {
       I += L;
       I.transpose();
       dblvec Dsq(D);
-      for(int i = 0; i < Dsq.size(); i++)Dsq[i] = sqrt(Dsq[i]);
+      for(auto& d: Dsq) d = sqrt(d);
       I %= Dsq;
+      I.n = L.n;
+      I.m = L.m;
       return I;
+    }
+    
+    
+    // variant to modify in place
+    void LD(sparse& mat){
+      mat = identity(L.n);
+      mat += L;
+      mat.transpose();
+      dblvec Dsq(D);
+      for(auto& d: Dsq) d = sqrt(d);
+      mat %= Dsq;
+      mat.n = L.n;
+      mat.m = L.m;
     }
 };

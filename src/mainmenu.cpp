@@ -256,7 +256,7 @@ namespace ClusterApp {
                 ImGui::EndMenu();
             }
 
-            if (ImGui::BeginMenu("View"))
+            if (ImGui::BeginMenu("Options"))
             {
                 if (ImGui::BeginMenu("Windows")) {
                     ImGui::Checkbox("Light mode", &windows.light_mode);
@@ -268,7 +268,7 @@ namespace ClusterApp {
                     ImGui::Checkbox("Sample minimiser", &windows.krigger);
                     ImGui::Checkbox("Data simulate", &windows.simulate);
                     ImGui::Checkbox("Dockspace", &windows.dockspace);
-                    ImGui::Checkbox("Console", &windows.log);
+                    
                     //ImGui::Checkbox("Debug Info", &windows.debug_info);
                     ImGui::Checkbox("Show Box Correction", &windows.show_box);
                     ImGui::EndMenu();
@@ -279,6 +279,11 @@ namespace ClusterApp {
                     ImGui::Checkbox("Show number of clusters per sequence", &windows.show_J_seq);
                     ImGui::EndMenu();
                 }
+                if (ImGui::BeginMenu("Settings")) {
+                    ImGui::Checkbox("Auto-update", &windows.auto_update);
+                    ImGui::Checkbox("Console", &windows.log);
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Help")) {
@@ -287,9 +292,8 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.4.1");
-                    ImGui::Text("glmmrBase Version: 0.5.4");
-                    ImGui::Text("glmmrOptim Version: 0.3.1");
+                    ImGui::Text("Version: 0.4.2");
+                    ImGui::Text("glmmrBase Version: 0.8.1");
                     ImGui::Text("SparseChol Version: 0.2.2");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
 
@@ -302,6 +306,10 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.4.2");
+                    ImGui::BulletText("Updated to glmmrBase version 0.8.1");
+                    ImGui::BulletText("Updating results is now manual by default, this provides significant improvement to performance when manipulating designs");
+                    ImGui::BulletText("Hidden some text behind a tree to make the UI cleaner");
                     ImGui::Text("Version 0.4.1");
                     ImGui::BulletText("Updated to glmmrBase version 0.5.4");
                     ImGui::BulletText("Added Satterthwaite, KR Improved, and Box corrections (although Box not exposed)");

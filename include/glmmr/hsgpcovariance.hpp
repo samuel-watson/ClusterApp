@@ -8,47 +8,54 @@ using namespace Eigen;
 
 class hsgpCovariance : public Covariance {
 public:
-  int dim;
-  intvec m;
-  ArrayXXd hsgp_data;
-  ArrayXd L_boundary;
+// data
+  int       dim;
+  intvec    m;
+  ArrayXXd  hsgp_data;
+  ArrayXd   L_boundary;
+  //constructors
   hsgpCovariance(const std::string& formula,const ArrayXXd& data,const strvec& colnames);
   hsgpCovariance(const glmmr::Formula& formula,const ArrayXXd& data,const strvec& colnames);
   hsgpCovariance(const std::string& formula,const ArrayXXd& data,const strvec& colnames,const dblvec& parameters);
   hsgpCovariance(const glmmr::Formula& formula,const ArrayXXd& data,const strvec& colnames,const dblvec& parameters);
   hsgpCovariance(const glmmr::hsgpCovariance& cov);
-  double spd_nD(int i);
-  ArrayXd phi_nD(int i);
-  MatrixXd ZL() override;
-  MatrixXd D(bool chol = true, bool upper = false) override;
-  MatrixXd LZWZL(const VectorXd& w) override;
-  MatrixXd ZLu(const MatrixXd& u) override;
-  MatrixXd Lu(const MatrixXd& u) override;
-  VectorXd sim_re() override;
-  sparse ZL_sparse() override;
-  int Q() const override;
-  double log_likelihood(const VectorXd &u) override;
-  double log_determinant() override;
-  void update_parameters(const dblvec& parameters) override;
-  void update_parameters(const ArrayXd& parameters) override;
-  void update_parameters_extern(const dblvec& parameters) override;
-  void set_function(bool squared_exp);
-  MatrixXd PhiSPD(bool lambda = true, bool inverse = false);
-  ArrayXd LambdaSPD();
-  void update_approx_parameters(intvec m_, ArrayXd L_);
-  void update_approx_parameters();
+  // functions
+  double      spd_nD(int i);
+  double      d_spd_nD(int i, int par, bool sqrt_lambda = true);
+  ArrayXd     phi_nD(int i);
+  MatrixXd    ZL() override;
+  MatrixXd    ZL_deriv(int par);
+  MatrixXd    D(bool chol = true, bool upper = false) override;
+  MatrixXd    LZWZL(const VectorXd& w) override;
+  MatrixXd    ZLu(const MatrixXd& u) override;
+  MatrixXd    Lu(const MatrixXd& u) override;
+  VectorXd    sim_re() override;
+  sparse      ZL_sparse() override;
+  int         Q() const override;
+  double      log_likelihood(const VectorXd &u) override;
+  double      log_determinant() override;
+  void        update_parameters(const dblvec& parameters) override;
+  void        update_parameters(const ArrayXd& parameters) override;
+  void        update_parameters_extern(const dblvec& parameters) override;
+  void        set_function(bool squared_exp);
+  MatrixXd    PhiSPD(bool lambda = true, bool inverse = false);
+  ArrayXd     LambdaSPD();
+  void        update_approx_parameters(intvec m_, ArrayXd L_);
+  void        update_approx_parameters();
 protected:
-  int total_m;
-  MatrixXd L; // Half-eigen decomposition of Lambda + PhiTPhi m^2 * m^2
-  ArrayXd Lambda;
-  ArrayXXi indices;
-  MatrixXd Phi;
-  MatrixXd PhiT;
-  bool sq_exp = false;
-  void parse_hsgp_data();
-  void gen_indices();
-  void gen_phi_prod();
-  void update_lambda();
+//data
+  int       total_m;
+  MatrixXd  L; // Half-eigen decomposition of Lambda + PhiTPhi m^2 * m^2
+  ArrayXd   Lambda;
+  ArrayXXi  indices;
+  MatrixXd  Phi;
+  MatrixXd  PhiT;
+  bool      sq_exp = false;
+  //functions
+  void      parse_hsgp_data();
+  void      gen_indices();
+  void      gen_phi_prod();
+  void      update_lambda();
 };
 
 }
@@ -204,6 +211,39 @@ inline double glmmr::hsgpCovariance::spd_nD(int i){
   return S;
 }
 
+inline double glmmr::hsgpCovariance::d_spd_nD(int i, int par, bool sqrt_lambda)
+{
+  Array2d w;
+  w(0) = (indices(i,0)*M_PI)/(2*L_boundary(0));
+  w(1) = (indices(i,1)*M_PI)/(2*L_boundary(1));
+  w(0) = w(0)*w(0);
+  w(1) = w(1)*w(1);
+  double S;
+  double phisq = parameters_[1] * parameters_[1];
+  if(sq_exp){
+    if(par == 0){
+      S = 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
+    } else {
+      S = -1.0 * (w(0) + w(1)) * parameters_[0] * 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
+    }
+  } else {
+    double S2 = 1 + phisq * (w(0) + w(1));
+    if(par == 0){
+      S = 4 * M_PI * phisq * pow(S2,-1.5);
+    } else {
+      S = parameters_[0] * 4 * M_PI * (2 * parameters_[1] * pow(S2,-1.5) - 3 * (w(0) + w(1)) * phisq *  parameters_[1] * pow(S2,-2.5));
+    }
+  }
+
+  if(sqrt_lambda)
+  {
+    double SS = spd_nD(i);
+    S *= 0.5 / sqrt(SS);
+  }
+
+  return S;
+}
+
 inline ArrayXd glmmr::hsgpCovariance::phi_nD(int i){
   ArrayXd fi1(hsgp_data.rows());
   ArrayXd fi2(hsgp_data.rows());
@@ -256,11 +296,11 @@ inline void glmmr::hsgpCovariance::update_parameters(const dblvec& parameters){
 
 inline void glmmr::hsgpCovariance::update_parameters(const ArrayXd& parameters){
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
   } else {
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
   }
@@ -270,6 +310,19 @@ inline void glmmr::hsgpCovariance::update_parameters(const ArrayXd& parameters){
 inline MatrixXd glmmr::hsgpCovariance::ZL(){
   MatrixXd ZL = PhiSPD();
   return ZL;
+}
+
+inline MatrixXd glmmr::hsgpCovariance::ZL_deriv(int par)
+{
+  ArrayXd Lambda_deriv(Lambda.size());
+  #pragma omp parallel for
+    for(int i = 0; i < total_m; i++)
+    {
+      Lambda_deriv(i) = d_spd_nD(i,par,true);
+    }
+    MatrixXd pnew = Phi;
+    pnew *= Lambda_deriv.matrix().asDiagonal();
+    return pnew; 
 }
 
 inline MatrixXd glmmr::hsgpCovariance::LZWZL(const VectorXd& w){
@@ -290,8 +343,8 @@ inline MatrixXd glmmr::hsgpCovariance::Lu(const MatrixXd& u){
 }
 
 inline sparse glmmr::hsgpCovariance::ZL_sparse(){
-  sparse dummy;
-  return dummy;
+  MatrixXd ZLmat = this->ZL();
+  return SparseOperators::dense_to_sparse(ZLmat);
 }
 
 inline int glmmr::hsgpCovariance::Q() const{
@@ -328,7 +381,7 @@ inline void glmmr::hsgpCovariance::gen_indices(){
     for(int k = 1; k <= m[i]; k++)linspaced[k-1] = k;
     linspace_vec.push_back(linspaced);
   }
-  for(unsigned int i = 0; i < linspace_vec[0].size(); i++){
+  for(int i = 0; i < linspace_vec[0].size(); i++){
     glmmr::algo::combinations(linspace_vec,0,i,ind_buffer,indices_vec);
   }
   // copy into array

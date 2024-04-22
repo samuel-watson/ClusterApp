@@ -256,6 +256,9 @@ namespace ClusterApp {
         Eigen::ArrayXXd                 data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
         std::vector<std::vector<double> >   optimum_data = { {0.5},{0.5} };
         std::vector<std::vector<int> >      optimum_n = { {10},{10} };
+        bool                            requires_update = false;
+        bool                            plot_requires_update = false;
+        bool                            initialized = false;
         modelUpdater(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelSummary& summary_,
@@ -348,6 +351,9 @@ namespace ClusterApp {
         double                          update_interval = 1000;
         std::chrono::steady_clock       clock;
         std::chrono::time_point< std::chrono::steady_clock> t0;
+        bool                            dcheck = false;
+        std::pair<bool, bool>           mcheck = {false, false};
+        bool                            pcheck = false;
         modelChecker(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
@@ -356,6 +362,7 @@ namespace ClusterApp {
             ClusterApp::options& option_,
             double interval = 1000);
         void check();
+        void update();
         void check_time();
     };
 

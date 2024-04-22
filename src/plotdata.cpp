@@ -483,7 +483,7 @@ bool ClusterApp::plotData::check() {
 		return has_changed;
 	}
 	else {
-		return true;
+		return false;
 	}	
 }
 

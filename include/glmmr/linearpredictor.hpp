@@ -9,56 +9,63 @@ namespace glmmr {
 
 class LinearPredictor {
 public:
-  dblvec parameters;
-  glmmr::calculator calc;
-  MatrixXd Xdata;
-  glmmr::Formula& form;
+  // data
+  dblvec              parameters;
+  glmmr::calculator   calc;
+  glmmr::Formula&     form;
+  // constructors
   LinearPredictor(glmmr::Formula& form_,const Eigen::ArrayXXd &data_,const strvec& colnames_);
   LinearPredictor(glmmr::Formula& form_,const Eigen::ArrayXXd &data_,const strvec& colnames_,const dblvec& parameters_);
   LinearPredictor(glmmr::Formula& form_,const Eigen::ArrayXXd &data_,const strvec& colnames_,const Eigen::ArrayXd& parameters_);
   LinearPredictor(const glmmr::LinearPredictor& linpred);
-  virtual void update_parameters(const dblvec& parameters_);
-  virtual void update_parameters(const Eigen::ArrayXd& parameters_);
-  int P() const;
-  int n() const;
-  strvec colnames() const;
-  virtual VectorXd xb();
-  virtual MatrixXd X();
-  strvec parameter_names() const;
-  VectorXd parameter_vector();
-  bool any_nonlinear() const;
-  virtual VectorXd predict_xb(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
+  // functions
+  virtual void      update_parameters(const dblvec& parameters_);
+  virtual void      update_parameters(const Eigen::ArrayXd& parameters_);
+  int               P() const;
+  int               n() const;
+  strvec            colnames() const;
+  virtual VectorXd  xb();
+  virtual MatrixXd  X();
+  strvec            parameter_names() const;
+  VectorXd          parameter_vector();
+  bool              any_nonlinear() const;
+  virtual VectorXd  predict_xb(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
 protected:
-  strvec colnames_vec;
-  int P_;
-  int n_;
-  intvec x_cols;
-  MatrixXd X_;
-  bool x_set = false;
+  // data
+  strvec    colnames_vec;
+  int       P_;
+  int       n_;
+  intvec    x_cols;
+  MatrixXd  X_;
+  bool      x_set = false;
 };
 }
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_) :
-  Xdata(data_.rows(),1),
   form(form_),
   colnames_vec(colnames_),  
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  calc.data.conservativeResize(data_.rows(),NoChange);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   parameters.resize(P_);
+  calc.parameters.resize(P_);
   if(!calc.any_nonlinear){
     std::fill(parameters.begin(),parameters.end(),0.0);
   } else {
-    // to avoid problems like dividing by zero
     std::fill(parameters.begin(),parameters.end(),1.0);
   }
+  calc.parameters = parameters;
   X_.conservativeResize(n_,P_);
   if(!calc.any_nonlinear){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
+  #ifdef R_BUILD
+    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+  #endif 
   } else {
     X_.setZero();
   }
@@ -68,51 +75,60 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const dblvec& parameters_) :
-  Xdata(data_.rows(),1),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  calc.data.conservativeResize(data_.rows(),NoChange);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const Eigen::ArrayXd& parameters_) :
-  Xdata(data_.rows(),1),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  calc.data.conservativeResize(data_.rows(),NoChange);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
-  Xdata(linpred.Xdata.rows(),1),
   form(linpred.form),
   colnames_vec(linpred.colnames_vec), 
-  n_(linpred.Xdata.rows()),
+  n_(linpred.calc.data.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,Xdata);
+  calc.data.conservativeResize(linpred.calc.data.rows(),NoChange);
+  form.calculate_linear_predictor(calc,linpred.calc.data.array(),linpred.colnames_vec,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(linpred.parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
@@ -124,15 +140,23 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
 #endif
   
   #ifdef R_BUILD
-  if(parameters_.size()!=(unsigned)P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
-  if(parameters_.size()!=(unsigned)calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
+  if(parameters_.size()!=P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(parameters_.size()!=calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   #endif
   
+  if(parameters.size()==0){
+    parameters.resize(P_);
+    calc.parameters.resize(P_);
+  }
   
   parameters = parameters_;
+  calc.parameters = parameters_;
   if(!x_set){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
     x_set = true;
+#ifdef R_BUILD
+    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
   }
 };
 
@@ -156,7 +180,7 @@ inline strvec glmmr::LinearPredictor::colnames() const{
 inline VectorXd glmmr::LinearPredictor::xb(){
   VectorXd xb(n());
   if(calc.any_nonlinear){
-    xb = calc.linear_predictor(parameters,Xdata);
+    xb = calc.linear_predictor();
   } else {
     Map<VectorXd> beta(parameters.data(),parameters.size());
     xb = X_ * beta;
@@ -166,7 +190,7 @@ inline VectorXd glmmr::LinearPredictor::xb(){
 
 inline MatrixXd glmmr::LinearPredictor::X(){
   if(calc.any_nonlinear){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
   }
   return X_;
 }

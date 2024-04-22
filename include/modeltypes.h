@@ -48,6 +48,7 @@ namespace ClusterApp {
         bool use_icc_for_non_gaussian = true;
         bool debug_info = false;
         bool show_box = false;
+        bool auto_update = false;
         options() {};
         ~options() = default;
     };

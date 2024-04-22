@@ -25,11 +25,11 @@ namespace ClusterApp {
 
     void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option);
 
-    void RenderResults(ClusterApp::modelUpdater& updater, ClusterApp::options& option);
+    void RenderResults(ClusterApp::modelChecker& checker, ClusterApp::options& option);
 
     void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option);
 
-    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option);
+    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option, ClusterApp::modelChecker& checker);
 
     void RenderKriging(ClusterApp::krigingData& krig, ClusterApp::options& option);
 

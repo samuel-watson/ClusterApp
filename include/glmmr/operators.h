@@ -2,8 +2,6 @@
 
 #include "sparsematrix.h"
 
-using namespace Eigen;
-
 // some operators
 inline sparse operator*(sparse A, const sparse& B){
   A *= B;
@@ -51,6 +49,14 @@ inline sparse identity(int n){
   A.Ax = dblvec(n,1);
   return A;
 }
+
+// had to wrap some of these in a namespace to prevent problems with
+// reverse compatibility on CRAN where the functions are defined in glmmrBase v0.4.6
+// I can't submit both at once as they have to both be compared to one another.
+// Will remove this namespace once glmmrBase is updated.
+namespace SparseOperators {
+
+using namespace Eigen;
 
 inline MatrixXd sparse_to_dense(const sparse& m,
                                 bool symmetric = true,
@@ -173,29 +179,4 @@ inline sparse operator%(const sparse& A, const VectorXd& x){
   return Ax;
 }
 
-
-
-inline ArrayXd operator*(const sparse& A, const ArrayXd& B) {
-    ArrayXd AB = ArrayXd::Zero(A.n);
-    for (int i = 0; i < A.n; i++) {
-        for (int j = A.Ap[i]; j < A.Ap[i + 1]; j++) {
-            AB(i) += A.Ax[j] * B(A.Ai[j]);
-        }
-    }
-    return AB;
-}
-
-inline sparse submat_sparse(const sparse& A, intvec rows) {
-    sparse B;
-    B.n = rows.size();
-    B.m = A.m;
-    for (unsigned int i = 0; i < rows.size(); i++) {
-        B.Ap.push_back(B.Ai.size());
-        for (int j = A.Ap[rows[i]]; j < A.Ap[rows[i] + 1]; j++) {
-            B.Ai.push_back(A.Ai[j]);
-            B.Ax.push_back(A.Ax[j]);
-        }
-    }
-    B.Ap.push_back(B.Ax.size());
-    return B;
 }

@@ -115,7 +115,7 @@ void loop()
   if (windows.results) {
       ImGui::SetNextWindowSize(ImVec2(750, 300), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowPos(ImVec2(0, 550), ImGuiCond_FirstUseEver);
-      ClusterApp::RenderResults(updater, windows);
+      ClusterApp::RenderResults(checker, windows);
   }
       
   if (windows.optimiser) {
@@ -125,7 +125,7 @@ void loop()
   }
 
   if (windows.plotter) {
-      ClusterApp::RenderPlotter(plotdata, windows);
+      ClusterApp::RenderPlotter(plotdata, windows, checker);
   }
   if (windows.krigger) {
       ClusterApp::RenderKriging(krigdata, windows);

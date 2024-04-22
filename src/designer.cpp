@@ -7,7 +7,7 @@ namespace ClusterApp {
 
         // Variables and other setup for the designer
         ImGuiStyle& style = ImGui::GetStyle();
-        colourPicker colours;
+        static colourPicker colours;
         int horiztonal_align = 70;
         const short   s16_zero = 0, s16_one = 1;
         static bool remove_seq = false;
@@ -30,8 +30,14 @@ namespace ClusterApp {
             large_dim = small_dim;
         }
 
-        ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
+        if (ImGui::TreeNode("How to use the designer")){
+            ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
             "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
+            ImGui::TreePop();
+        }
+        
+        
+        
         enum Mode
         {
             Mode_Copy,

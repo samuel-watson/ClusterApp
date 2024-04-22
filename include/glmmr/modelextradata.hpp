@@ -8,11 +8,12 @@ using namespace Eigen;
 
 class ModelExtraData{
 public:
-  VectorXd offset = VectorXd::Zero(1);
-  ArrayXd weights = ArrayXd::Constant(1,1.0);
-  ArrayXd variance = ArrayXd::Constant(1,1.0);
-  double var_par = 1;
-  VectorXd y = VectorXd::Constant(1,1.0);
+  VectorXd    offset = VectorXd::Zero(1);
+  ArrayXd     weights = ArrayXd::Constant(1,1.0);
+  ArrayXd     variance = ArrayXd::Constant(1,1.0);
+  double      var_par = 1;
+  VectorXd    y = VectorXd::Constant(1,1.0);
+  //constructors
   ModelExtraData(){};
   ModelExtraData(int n){
     offset.conservativeResize(n);

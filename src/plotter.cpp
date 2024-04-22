@@ -2,7 +2,7 @@
 
 namespace ClusterApp {
 
-    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option) {
+    void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option, ClusterApp::modelChecker& checker) {
         ImGui::Begin("Plotter");
         ImGui::Text("Plot settings");
 
@@ -371,38 +371,49 @@ namespace ClusterApp {
         static ImPlotAxisFlags xflags = ImPlotAxisFlags_AutoFit; //| ImPlotAxisFlags_RangeFit
         static ImPlotAxisFlags yflags = ImPlotAxisFlags_AutoFit;
 
-        if (!plot.updating) {
-            if (ImPlot::BeginPlot("Cluster trial plot")) {
-                ImPlot::SetupAxis(ImAxis_X1, x_char_array, xflags);
-                ImPlot::SetupAxis(ImAxis_Y1, y_char_array, yflags);
-                ImPlot::PushStyleColor(ImPlotCol_Line, colours.red());
-                ImPlot::PlotLine("Series 1", plot.x_data, plot.y_data_1, plot.n_data_points);
-                ImPlot::PopStyleColor();
-                if (plot.multiple_series) {
-                    if (plot.n_series > 1) {
-                        ImPlot::PushStyleColor(ImPlotCol_Line, colours.blue());
-                        ImPlot::PlotLine("Series 2", plot.x_data, plot.y_data_2, plot.n_data_points);
-                        ImPlot::PopStyleColor();
-                        if (plot.n_series == 3) {
-                            ImPlot::PushStyleColor(ImPlotCol_Line, colours.green());
-                            ImPlot::PlotLine("Series 3", plot.x_data, plot.y_data_3, plot.n_data_points);
+        if (!option.auto_update && (checker.updater.plot_requires_update || checker.updater.requires_update)){
+            ImGui::PushStyleColor(ImGuiCol_Button, colours.base1());
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colours.base1(1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, colours.base1(2));
+            ImGui::PushStyleColor(ImGuiCol_Text, colours.base02(2));
+
+            if (ImGui::Button("Refresh", ImVec2(80, 30))){
+                checker.update();
+            }
+            ImGui::PopStyleColor(4);
+        } else {
+            if (!plot.updating) {
+                if (ImPlot::BeginPlot("Cluster trial plot")) {
+                    ImPlot::SetupAxis(ImAxis_X1, x_char_array, xflags);
+                    ImPlot::SetupAxis(ImAxis_Y1, y_char_array, yflags);
+                    ImPlot::PushStyleColor(ImPlotCol_Line, colours.red());
+                    ImPlot::PlotLine("Series 1", plot.x_data, plot.y_data_1, plot.n_data_points);
+                    ImPlot::PopStyleColor();
+                    if (plot.multiple_series) {
+                        if (plot.n_series > 1) {
+                            ImPlot::PushStyleColor(ImPlotCol_Line, colours.blue());
+                            ImPlot::PlotLine("Series 2", plot.x_data, plot.y_data_2, plot.n_data_points);
                             ImPlot::PopStyleColor();
+                            if (plot.n_series == 3) {
+                                ImPlot::PushStyleColor(ImPlotCol_Line, colours.green());
+                                ImPlot::PlotLine("Series 3", plot.x_data, plot.y_data_3, plot.n_data_points);
+                                ImPlot::PopStyleColor();
+                            }
                         }
                     }
-                }
 
-                ImPlot::EndPlot();
-            }
+                    ImPlot::EndPlot();
+                }
         }
         else {
             ImGui::Text("Calculating...");
         }
-
-        if (option.debug_info) {
-            ImGui::Text("X-axis limits:");
-            ImGui::Text("%.3f", plot.x_axis_limits.first);
-            ImGui::Text("%.3f", plot.x_axis_limits.second);
         }
+        // if (option.debug_info) {
+        //     ImGui::Text("X-axis limits:");
+        //     ImGui::Text("%.3f", plot.x_axis_limits.first);
+        //     ImGui::Text("%.3f", plot.x_axis_limits.second);
+        // }
 
 
         ImGui::End();

@@ -16,48 +16,57 @@ namespace glmmr {
 
 class calculator {
 public:
-  std::vector<Do> instructions;
-  intvec indexes;
-  dblvec y;
-  std::array<double,10> numbers = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
-  strvec parameter_names;
-  strvec data_names;
-  ArrayXd variance = ArrayXd::Constant(1,1.0);
-  int data_count = 0;
-  int parameter_count = 0;
-  int user_number_count = 0;
-  bool any_nonlinear = false;
+  std::vector<Do>       instructions; // vector of insructions to execute
+  intvec                indexes; // indexes of data or parameter vectors
+  dblvec                y;  // outcome data
+  std::array<double,20> numbers = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  strvec                parameter_names; //vector of parameter names
+  strvec                data_names; // vector of data names
+  ArrayXd               variance = ArrayXd::Constant(1,1.0); // variance values
+  int                   data_count = 0; // number of data items
+  int                   parameter_count = 0; // number of parameters
+  int                   user_number_count = 0; // number of numbers in the function
+  int                   data_size = 0; // number of data items in the calculation
+  bool                  any_nonlinear = false; // for linear predictor - any non-linear functions?
+  MatrixXd              data = MatrixXd::Zero(1,1); // the data for the calculation
+  dblvec                parameters;
+  intvec                parameter_indexes;
   calculator() {};
   
   template<CalcDyDx dydx>
   dblvec calculate(const int i, 
-                   const dblvec& parameters, 
-                   const MatrixXd& data,
                    const int j = 0,
                    const int parameterIndex = 0,
-                   const double extraData = 0.0,
-                   const int n = 0) const;
+                   const double extraData = 0.0) const;
   
   calculator& operator= (const glmmr::calculator& calc);
-  VectorXd linear_predictor(const dblvec& parameters,const MatrixXd& data);
-  MatrixXd jacobian(const dblvec& parameters, const MatrixXd& data);
-  MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const VectorXd& extraData);
-  MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
-  MatrixMatrix jacobian_and_hessian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
-  VectorMatrix jacobian_and_hessian(const dblvec& parameters);
-  void print_instructions() const;
-  void print_names(bool data = true, bool parameters = false) const;
+  VectorXd      linear_predictor();
+  MatrixXd      jacobian();
+  MatrixXd      jacobian(const VectorXd& extraData);
+  MatrixXd      jacobian(const MatrixXd& extraData);
+  MatrixMatrix  jacobian_and_hessian(const MatrixXd& extraData);
+  VectorMatrix  jacobian_and_hessian();
+  void          update_parameters(const dblvec& parameters_in);
+  double        get_covariance_data(const int i, const int j, const int fn);
+  void          print_instructions() const;
+  void          print_names(bool print_data = true, bool print_parameters = false) const;
 };
 
 }
 
-inline VectorXd glmmr::calculator::linear_predictor(const dblvec& parameters, 
-                                                    const MatrixXd& data){
+inline void glmmr::calculator::update_parameters(const dblvec& parameters_in){
+#ifdef R_BUILD
+  if(parameters_in.size() < parameter_count)Rcpp::stop("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
+#endif
+  for(int i = 0; i < parameter_indexes.size(); i++)parameters[i] = parameters_in[parameter_indexes[i]];
+}
+
+inline VectorXd glmmr::calculator::linear_predictor(){
   int n = data.rows();
   VectorXd x(n);
 #pragma omp parallel for
   for(int i = 0; i < n; i++){
-    x(i) = calculate<CalcDyDx::None>(i,parameters,data)[0];
+    x(i) = calculate<CalcDyDx::None>(i)[0];
   }
   return x;
 };
@@ -72,11 +81,14 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   data_count = calc.data_count;
   parameter_count = calc.parameter_count;
   any_nonlinear = calc.any_nonlinear;
+  data.conservativeResize(calc.data.rows(),calc.data.cols());
+  data = calc.data;
+  parameters.resize(calc.parameters.size());
+  parameters = calc.parameters;
   return *this;
 };
 
-inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
-                                            const MatrixXd& data){
+inline MatrixXd glmmr::calculator::jacobian(){
   int n = data.rows();
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
   if(n==0)Rcpp::stop("No data initialised in calculator");
@@ -84,7 +96,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   MatrixXd J(n,parameter_count);
 #pragma omp parallel for
   for(int i = 0; i<n ; i++){
-    dblvec out = calculate<CalcDyDx::BetaFirst>(i,parameters,data);
+    dblvec out = calculate<CalcDyDx::BetaFirst>(i);
     for(int j = 0; j<parameter_count; j++){
       J(i,j) = out[j+1];
     }
@@ -92,9 +104,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   return J;
 };
 
-inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
-                                            const MatrixXd& data,
-                                            const VectorXd& extraData){
+inline MatrixXd glmmr::calculator::jacobian(const VectorXd& extraData){
   int n = data.rows();
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
   if(n==0)Rcpp::stop("No data initialised in calculator");
@@ -102,7 +112,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   MatrixXd J(n,parameter_count);
 #pragma omp parallel for
   for(int i = 0; i<n ; i++){
-    dblvec out = calculate<CalcDyDx::BetaFirst>(i,parameters,data,0,0,extraData(i));
+    dblvec out = calculate<CalcDyDx::BetaFirst>(i,0,0,extraData(i));
     for(int j = 0; j<parameter_count; j++){
       J(i,j) = out[j+1];
     }
@@ -110,9 +120,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   return J;
 };
 
-inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
-                                            const MatrixXd& data,
-                                            const MatrixXd& extraData){
+inline MatrixXd glmmr::calculator::jacobian(const MatrixXd& extraData){
   int n = data.rows();
   
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -126,7 +134,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   for(int i = 0; i<n ; i++){
     dblvec out;
     for(int k = 0; k < iter; k++){
-      out = calculate<CalcDyDx::BetaFirst>(i,parameters,data,0,0,extraData(i,k));
+      out = calculate<CalcDyDx::BetaFirst>(i,0,0,extraData(i,k));
       for(int j = 0; j < parameter_count; j++){
         J(j,i) += out[1+j]/iter;
       }
@@ -136,9 +144,7 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
 };
 
 
-inline MatrixMatrix glmmr::calculator::jacobian_and_hessian(const dblvec& parameters,
-                                                             const MatrixXd& data,
-                                                             const MatrixXd& extraData){
+inline MatrixMatrix glmmr::calculator::jacobian_and_hessian(const MatrixXd& extraData){
   int n = data.rows();
   MatrixMatrix result(parameter_count,parameter_count,parameter_count,n);
   
@@ -154,7 +160,7 @@ inline MatrixMatrix glmmr::calculator::jacobian_and_hessian(const dblvec& parame
 #pragma omp parallel for collapse(2)
   for(int i = 0; i<n ; i++){
     for(int k = 0; k < iter; k++){
-      dblvec out = calculate<CalcDyDx::BetaSecond>(i,parameters,data,0,0,extraData(i,k));
+      dblvec out = calculate<CalcDyDx::BetaSecond>(i,0,0,extraData(i,k));
       for(int j = 0; j < parameter_count; j++){
         J(j,i) += out[1+j]/iter;
       }
@@ -178,13 +184,13 @@ inline MatrixMatrix glmmr::calculator::jacobian_and_hessian(const dblvec& parame
   return result;
 };
 
-inline VectorMatrix glmmr::calculator::jacobian_and_hessian(const dblvec& parameters){
+inline VectorMatrix glmmr::calculator::jacobian_and_hessian(){
   VectorMatrix result(parameter_count);
   int n2d = parameter_count*(parameter_count + 1)/2;
   VectorXd H = VectorXd::Zero(n2d);
   VectorXd J = VectorXd::Zero(parameter_count);
   MatrixXd dat = MatrixXd::Zero(1,1);
-  dblvec out = calculate<CalcDyDx::BetaSecond>(0,parameters,dat,0,2,0);
+  dblvec out = calculate<CalcDyDx::BetaSecond>(0,0,2,0);
   for(int j = 0; j < parameter_count; j++){
     J(j,0) += out[1+j];
   }
@@ -205,14 +211,19 @@ inline VectorMatrix glmmr::calculator::jacobian_and_hessian(const dblvec& parame
   return result;
 };
 
+inline double glmmr::calculator::get_covariance_data(const int i, const int j, const int fn){
+  int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
+#endif
+  return data(i1,fn);
+}
+
 template<CalcDyDx dydx>
 inline dblvec glmmr::calculator::calculate(const int i, 
-                                           const dblvec& parameters, 
-                                           const MatrixXd& data,
                                            const int j,
                                            const int parameterIndex,
-                                           const double extraData,
-                                           const int n) const {
+                                           const double extraData) const {
   int idx_iter = 0;
   double a,b;
   std::stack<double> stack;
@@ -290,7 +301,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       if(i==j){
         stack.push(0.0);
       } else {
-        int i1 = i < j ? (n-1)*i - ((i-1)*i/2) + (j-i-1) : (n-1)*j - ((j-1)*j/2) + (i-j-1);
+        int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
         if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
 #endif
@@ -304,7 +315,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     case Do::PushParameter:
     {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if((unsigned)idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+      if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
       if(indexes[idx_iter] >= parameter_count)Rcpp::stop("Index out of range: case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameter_count));
       if(indexes[idx_iter] >= parameters.size())Rcpp::stop("Index out of range (pars): case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
 #endif
@@ -564,7 +575,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
           fstack.pop();
           b_top_dx.push_back(fstack.top());
           fstack.pop();
-          double result = pow(a,b)*b_top_dx.back()*log(a) + pow(a,b-1)*b*a_top_dx.back();
+          double result = 0;
+          if(a > 0) result += pow(a,b)*b_top_dx.back()*log(a) + pow(a,b-1)*b*a_top_dx.back(); 
 #ifdef R_BUILD
           // this can sometimes result in a crash if the values of the parameters aren't right
           if(result != result)Rcpp::stop("Exponent dydx fail: "+std::to_string(a)+"^"+std::to_string(b-1));
@@ -582,7 +594,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
               double result1 = first_dx[jdx].top()*b_top_dx[idx]*log(a) + stack.top()*(bdx2*log(a) + b_top_dx[idx]*(1/a)*a_top_dx[jdx]);
               double result2 = pow(a,b-1)*b_top_dx[jdx]*log(a) + pow(a,b-2)*(b-1)*a_top_dx[jdx];
               double result3 = result2*b*a_top_dx[idx] + pow(a,b-1)*(b*adx2+b_top_dx[jdx]*a_top_dx[idx]);
-              second_dx[index_count].push(result1 + result3);
+              double result4 = 0;
+              if(a > 0) result4 = result1 + result3;
+              #ifdef R_BUILD
+              // this can sometimes result in a crash if the values of the parameters aren't right
+              if(result4 != result4)Rcpp::stop("Exponent d2ydx2 fail: "+std::to_string(a)+"^"+std::to_string(b-2)+" (i,j) = ("+std::to_string(idx)+","+std::to_string(jdx)+")");
+              #endif
+              second_dx[index_count].push(result4);
               index_count++;
             }
           }
@@ -880,6 +898,48 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
+    case Do::ErrorFunc:
+        a = stack.top();
+        stack.pop();
+        stack.push(boost::math::erf(a));
+        if constexpr (dydx != CalcDyDx::None)
+        {
+          dblvec a_top_dx;
+          for(auto& fstack: first_dx)
+          {
+            a_top_dx.push_back(fstack.top());
+            fstack.pop();
+            double result = 1.12837916709551257390 * exp(-1.0 * a * a);
+            result *= a_top_dx.back();
+            fstack.push(result);
+          }
+          if constexpr (dydx == CalcDyDx::BetaSecond)
+          {
+            int index_count = 0;
+            for(int idx = 0; idx < parameter_count; idx++){
+              for(int jdx = idx; jdx < parameter_count; jdx++){
+                double adx2 = second_dx[index_count].top();
+                second_dx[index_count].pop();
+                double result = -2.0 * a * 1.12837916709551257390 * exp(-1.0 * a * a);
+                double result1 = 1.12837916709551257390 * exp(-1.0 * a * a);
+                double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
+                second_dx[index_count].push(result2);
+                index_count++;
+              }
+            }
+          }
+          if constexpr (dydx == CalcDyDx::XBeta){
+          for(int jdx = 0; jdx < parameter_count; jdx++){
+            double adx2 = second_dx[jdx].top();
+            second_dx[jdx].pop();
+            double result = -2.0 * a * 1.12837916709551257390 * exp(-1.0 * a * a);
+            double result1 = 1.12837916709551257390 * exp(-1.0 * a * a);
+            double result2 = result*a_top_dx[0]*a_top_dx[jdx+1]+result1*adx2;
+            second_dx[jdx].push(result2);
+          }
+        }
+        }        
+        break;
     case Do::Log:
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (16)");
@@ -965,6 +1025,32 @@ inline dblvec glmmr::calculator::calculate(const int i,
       allDyDxZero();
       break;
     }
+    case Do::Sign:
+    {
+      a = data(i,indexes[idx_iter]);
+      if(a > 0){
+        stack.push(1.0);
+      } else if(a< 0){
+        stack.push(-1.0);
+      } else {
+        stack.push(0.0);
+      }     
+      allDyDxZero();
+      idx_iter++;
+      break;
+    }
+    case Do::SignNoZero:
+    {
+      a = data(i,indexes[idx_iter]);
+      if(a >= 0){
+        stack.push(1.0);
+      } else {
+        stack.push(-1.0);
+      }    
+      allDyDxZero();
+      idx_iter++;
+      break;
+    }  
     case Do::PushY:
     {
       stack.push(y[i]);
@@ -1112,6 +1198,62 @@ inline dblvec glmmr::calculator::calculate(const int i,
       stack.push(numbers[9]);
       allDyDxZero();
       break;
+    case Do::PushUserNumber10:
+      stack.push(numbers[10]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber11:
+      stack.push(numbers[11]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber12:
+      stack.push(numbers[12]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber13:
+      stack.push(numbers[13]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber14:
+      stack.push(numbers[14]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber15:
+      stack.push(numbers[15]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber16:
+      stack.push(numbers[16]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber17:
+      stack.push(numbers[17]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber18:
+      stack.push(numbers[18]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber19:
+      stack.push(numbers[19]);
+      allDyDxZero();
+      break;
+    case Do::SqrtTwo:
+      stack.push(0.7071068);
+      allDyDxZero();
+      break;
+    case Do::Half:
+      stack.push(0.5);
+      allDyDxZero();
+      break;
+    case Do::Pi2:
+      stack.push(2*M_PI);
+      allDyDxZero();
+      break;  
+    case Do::HalfLog2Pi:
+      stack.push(0.9189385);
+      allDyDxZero();
+      break;    
     }
     
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -1187,15 +1329,38 @@ inline void glmmr::calculator::print_instructions() const {
       Rcpp::Rcout << " = " << numbers[9] << "\n";
       break;
     case Do::PushParameter:
-      Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "\n";
-      idx_iter++;
-      break;
-    case Do::PushData:
-      Rcpp::Rcout << "(column " << data_names[indexes[idx_iter]] << ")\n";
-      idx_iter++;
-      break;
+      {
+        if(indexes[idx_iter] >= parameter_names.size()){
+          Rcpp::Rcout << "\nError in instruction set";
+          Rcpp::Rcout << "\nIndex " << indexes[idx_iter] << " requested for parameter size " << parameter_names.size();
+          Rcpp::Rcout << "\nIndexes: ";
+          glmmr::print_vec_1d(indexes);
+          Rcpp::Rcout << "\nParameter names: ";
+          glmmr::print_vec_1d(parameter_names);
+          Rcpp::stop("Execution halted");
+        }
+        Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<"\n";
+        idx_iter++;
+        break;
+      }
+    case Do::PushData: case Do::Sign: case Do::SignNoZero:
+      {
+        if(indexes[idx_iter] >= data_names.size()){
+          Rcpp::Rcout << "\nError in instruction set";
+          Rcpp::Rcout << "\nIndex " << indexes[idx_iter] << " requested for data size " << data_names.size();
+          Rcpp::Rcout << "\nIndexes: ";
+          glmmr::print_vec_1d(indexes);
+          Rcpp::Rcout << "\nData names: ";
+          glmmr::print_vec_1d(data_names);
+          Rcpp::stop("Execution halted");
+        }
+        Rcpp::Rcout << " (column " << data_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<")\n";
+        idx_iter++;
+        break;
+      }
+      
     case Do::PushCovData:
-      Rcpp::Rcout << "(column " << indexes[idx_iter] << ")\n";
+      Rcpp::Rcout << " (column " << indexes[idx_iter] << ")\n";
       idx_iter++;
       break;
     default:
@@ -1203,18 +1368,30 @@ inline void glmmr::calculator::print_instructions() const {
     }
     counter++;
   }
+  Rcpp::Rcout << "\n";
 #endif
 }
 
-inline void glmmr::calculator::print_names(bool data, bool parameters) const{
+inline void glmmr::calculator::print_names(bool print_data, bool print_parameters) const {
 #ifdef R_BUILD
-  if(data){
-    Rcpp::Rcout << "\nData names: \n";
+  Rcpp::Rcout << "\nParameter count " << parameter_count << " vec size: " << parameters.size();
+  Rcpp::Rcout << "\nData count " << data_count << " mat size: " << data.rows() << " x " << data.cols();
+  Rcpp::Rcout << "\nIndexes: ";
+  glmmr::print_vec_1d(indexes);
+  Rcpp::Rcout << "\nAny nonlinear? " << any_nonlinear;
+  if(print_data)
+  {
+    Rcpp::Rcout << "\nData names: ";
     glmmr::print_vec_1d<strvec>(data_names);
   }
-  if(data){
-    Rcpp::Rcout << "\nParameter names: \n";
+  if(print_parameters)
+  {
+    Rcpp::Rcout << "\nParameter names: ";
     glmmr::print_vec_1d<strvec>(parameter_names);
   }
+  VectorXd x(10);
+  for(int i = 0; i < 10; i++) x(i) = calculate<CalcDyDx::None>(i)[0];
+  Rcpp::Rcout << "\nExample data: " << x.transpose() << "\n";
+  
 #endif
 }

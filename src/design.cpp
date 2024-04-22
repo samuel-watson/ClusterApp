@@ -321,7 +321,7 @@ bool ClusterApp::design::check(bool update_if_changed) {
         crc(n_per_sequence[i]);
     }
     bool has_changed = crc_val != crc.get();
-    if (has_changed && update_if_changed)crc_val = crc.get();
+    if (has_changed && update_if_changed) crc_val = crc.get();
     return has_changed;
 }
 

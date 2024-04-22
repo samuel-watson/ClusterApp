@@ -1,13 +1,12 @@
-#ifndef MATRIXFIELD_H
-#define MATRIXFIELD_H
+#pragma once
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <memory>
+#include "general.h"
 
 namespace glmmr {
 
-// create a class to store different sized matrices, not perfect but it'll do!
+// create a simple class to store different sized matrices of arbitrary number but trying to minimise 
+// copying with std vector as the vector grows.
+
 template<typename T>
 class MatrixField{
 public: 
@@ -25,6 +24,11 @@ public:
   
   void add(T matrix){
     data.push_back(std::make_unique<T>(matrix));
+  }
+
+  template<class... Args>
+  void add_new(Args&&... args){
+    data.push_back(std::unique_ptr<T>(new T(std::forward<Args>(args)...)));
   }
   
   T operator()(int i) const
@@ -68,4 +72,3 @@ public:
 
 }
 
-#endif

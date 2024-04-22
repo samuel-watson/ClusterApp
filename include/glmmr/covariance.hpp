@@ -4,6 +4,7 @@
 
 #include "openmpheader.h"
 #include "general.h"
+#include "maths.h"
 #include "algo.h"
 #include "interpreter.h"
 #include "formula.hpp"
@@ -16,11 +17,14 @@ namespace glmmr {
 
 class Covariance {
 public:
-  glmmr::Formula form_;
-  const ArrayXXd data_;
-  const strvec colnames_;
-  dblvec parameters_;
-  dblvec other_pars_;
+  // objects
+  glmmr::Formula  form_;
+  const ArrayXXd  data_;
+  const strvec    colnames_;
+  dblvec          parameters_;
+  dblvec          other_pars_;
+
+  // constructors
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames);
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames,const dblvec& parameters);
@@ -28,68 +32,71 @@ public:
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Covariance& cov);
-  virtual void update_parameters(const dblvec& parameters);
-  virtual void update_parameters_extern(const dblvec& parameters);
-  virtual void update_parameters(const ArrayXd& parameters);
-  virtual int parse();
-  virtual double get_val(int b, int i, int j) const;
-  virtual MatrixXd Z();
-  virtual MatrixXd D(bool chol = false, bool upper = false);
-  virtual VectorXd sim_re();
-  virtual double log_likelihood(const VectorXd &u);
-  virtual double log_determinant();
-  virtual int npar() const;
-  virtual int B() const;
-  virtual int Q() const;
-  virtual int max_block_dim() const;
-  virtual int block_dim(int b) const;
-  virtual void make_sparse();
-  virtual MatrixXd ZL();
-  virtual MatrixXd LZWZL(const VectorXd& w);
-  virtual MatrixXd ZLu(const MatrixXd& u);
-  virtual MatrixXd Lu(const MatrixXd& u);
-  virtual void set_sparse(bool sparse);
-  bool any_group_re() const;
-  intvec parameter_fn_index() const;
-  virtual intvec re_count() const;
-  virtual sparse ZL_sparse();
-  virtual sparse Z_sparse() const;
-  strvec parameter_names();
-  virtual void derivatives(std::vector<MatrixXd>& derivs,int order = 1);
+
+  // functions
+  virtual void      update_parameters(const dblvec& parameters);
+  virtual void      update_parameters_extern(const dblvec& parameters);
+  virtual void      update_parameters(const ArrayXd& parameters);
+  virtual int       parse();
+  double            get_val(int b, int i, int j) const;
+  virtual MatrixXd  Z();
+  virtual MatrixXd  D(bool chol = false, bool upper = false);
+  virtual VectorXd  sim_re();
+  virtual double    log_likelihood(const VectorXd &u);
+  virtual double    log_determinant();
+  virtual int       npar() const;
+  virtual int       B() const;
+  virtual int       Q() const;
+  virtual int       max_block_dim() const;
+  virtual int       block_dim(int b) const;
+  virtual void      make_sparse();
+  virtual MatrixXd  ZL();
+  virtual MatrixXd  LZWZL(const VectorXd& w);
+  virtual MatrixXd  ZLu(const MatrixXd& u);
+  virtual MatrixXd  Lu(const MatrixXd& u);
+  virtual void      set_sparse(bool sparse, bool amd = true);
+  bool              any_group_re() const;
+  intvec            parameter_fn_index() const;
+  virtual intvec    re_count() const;
+  virtual sparse    ZL_sparse();
+  virtual sparse    Z_sparse() const;
+  strvec            parameter_names();
+  virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
+  virtual VectorXd  log_gradient(const MatrixXd &umat, double& logl);
+ 
 protected:
-  std::vector<glmmr::calculator> calc_;
-  intvec3d re_pars_;
-  //strvec2d fn_;
-  std::vector<std::vector<CovFunc> > fn_;
-  dblvec2d par_for_calcs_;
-  std::vector<MatrixXd> dists;
-  intvec re_fn_par_link_;
-  intvec re_count_;
-  intvec re_order_;
-  intvec block_size;
-  intvec block_nvar;
-  intvec3d re_cols_data_;
-  dblvec3d re_temp_data_;
-  intvec z_;
-  int Q_;
-  sparse matZ;
-  int n_;
-  int B_;
-  int npars_;
-  MatrixXd dmat_matrix;
-  VectorXd zquad;
-  bool isSparse = true;
-  sparse mat;
-  sparse matL;
-  SparseChol spchol;
-  void update_parameters_in_calculators();
-  MatrixXd get_block(int b);
-  MatrixXd get_chol_block(int b,bool upper = false);
-  MatrixXd D_builder(int b,bool chol = false,bool upper = false);
-  void update_ax();
-  void L_constructor();
-  void Z_constructor();
-  MatrixXd D_sparse_builder(bool chol = false,bool upper = false);
+  // data
+  std::vector<glmmr::calculator>      calc_;
+  std::vector<std::vector<CovFunc> >  fn_;
+  intvec                              re_fn_par_link_;
+  intvec                              re_count_;
+  intvec                              re_order_;
+  intvec                              block_size;
+  intvec                              block_nvar;
+  intvec3d                            re_cols_data_;
+  dblvec3d                            re_temp_data_;
+  intvec                              z_;
+  int                                 Q_;
+  sparse                              matZ;
+  int                                 n_;
+  int                                 B_;
+  int                                 npars_;
+  MatrixXd                            dmat_matrix;
+  VectorXd                            zquad;
+  bool                                isSparse = true;
+  sparse                              matL;
+  SparseChol                          spchol;
+  // functions
+  void      update_parameters_in_calculators();
+  MatrixXd  get_block(int b);
+  MatrixXd  get_chol_block(int b,bool upper = false);
+  MatrixXd  D_builder(int b,bool chol = false,bool upper = false);
+  void      update_ax();
+  void      L_constructor();
+  void      Z_constructor();
+  MatrixXd  D_sparse_builder(bool chol = false,bool upper = false);
+  bool      sparse_initialised = false;
+  bool      use_amd_permute = true;
 };
 
 }
@@ -100,7 +107,7 @@ inline glmmr::Covariance::Covariance(const str& formula,
   form_(formula), data_(data), colnames_(colnames), Q_(parse()), matZ(),
   dmat_matrix(max_block_dim(),max_block_dim()),
   zquad(max_block_dim()) {
-  Z_constructor();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
@@ -109,7 +116,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
   form_(form), data_(data), colnames_(colnames),  
   Q_(parse()),matZ(), dmat_matrix(max_block_dim(),max_block_dim()),
   zquad(max_block_dim()) {
-  Z_constructor();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const str& formula,
@@ -118,9 +125,9 @@ inline glmmr::Covariance::Covariance(const str& formula,
            const dblvec& parameters) :
   form_(formula), data_(data), colnames_(colnames), parameters_(parameters), 
   Q_(parse()), matZ(), dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-  L_constructor();
-  Z_constructor();
+  zquad(max_block_dim()) {
+    make_sparse();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
@@ -129,9 +136,9 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
            const dblvec& parameters) :
   form_(form), data_(data), colnames_(colnames), parameters_(parameters), 
   Q_(parse()), matZ(), dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-  L_constructor();
-  Z_constructor();
+  zquad(max_block_dim()) {
+    make_sparse();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const str& formula,
@@ -141,9 +148,9 @@ inline glmmr::Covariance::Covariance(const str& formula,
   form_(formula), data_(data), colnames_(colnames),
   parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(parse()), matZ(),
   dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-  L_constructor();
-  Z_constructor();
+  zquad(max_block_dim()) {
+    make_sparse();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
@@ -153,27 +160,27 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
   form_(form), data_(data), colnames_(colnames),
   parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(parse()), matZ(),
   dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-  L_constructor();
-  Z_constructor();
+  zquad(max_block_dim()) {
+    make_sparse();
+    Z_constructor();
 };
 
 inline glmmr::Covariance::Covariance(const glmmr::Covariance& cov) : form_(cov.form_), data_(cov.data_),
-colnames_(cov.colnames_),
-parameters_(cov.parameters_), Q_(parse()), matZ(),
-dmat_matrix(max_block_dim(),max_block_dim()),
-zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-  L_constructor();
-  Z_constructor();
-};
+  colnames_(cov.colnames_),
+  parameters_(cov.parameters_), Q_(parse()), matZ(),
+  dmat_matrix(max_block_dim(),max_block_dim()),
+  zquad(max_block_dim()) {
+    make_sparse();
+    Z_constructor();
+  };
 
 inline int glmmr::Covariance::parse(){
   intvec3d re_cols_;
   strvec2d re_par_names_;
-  
+  intvec3d re_pars_;
   // now process each step of the random effect terms
   #ifdef R_BUILD
-  if(colnames_.size()!= (unsigned int)data_.cols())Rcpp::stop("colnames length != data columns");
+  if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
   #endif 
   
   int nre = form_.re_.size();
@@ -226,7 +233,7 @@ inline int glmmr::Covariance::parse(){
     dblvec2d groups;
     dblvec vals;
     bool isgr;
-    unsigned int j,k,idx,zcol;
+    int j,k,idx,zcol;
     if(form_.z_[i].compare("1")==0){
       zcol = -1;
     } else {
@@ -273,17 +280,15 @@ inline int glmmr::Covariance::parse(){
     allvals.resize(total_vars);
     newrecols.resize(fnvars.size());
     int currresize = calc_.size();
-    
     calc_.resize(currresize+groups.size());
     re_temp_data_.resize(currresize+groups.size());
     re_cols_.resize(currresize+groups.size());
     re_cols_data_.resize(currresize+groups.size());
-    // for each group, create a new z data including the group
     
     int fn_var_counter = 0;
-    for(unsigned int m = 0; m < fnvars.size(); m++){
+    for(int m = 0; m < fnvars.size(); m++){
       intvec iter_fn_var_index;
-      for(unsigned int p = 0; p < fnvars[m].size(); p++){
+      for(int p = 0; p < fnvars[m].size(); p++){
         iter_fn_var_index.push_back(p + fn_var_counter);
       }
       fn_var_counter += fnvars[m].size();
@@ -298,7 +303,6 @@ inline int glmmr::Covariance::parse(){
 #endif
         fn_.back().push_back(str_to_covfunc.at(fnvalue));
       }
-      //fn_.push_back(fn);
       z_.push_back(zcol);
       re_order_.push_back(form_.re_order_[i]);
       re_cols_[currresize + j] = newrecols;
@@ -306,9 +310,7 @@ inline int glmmr::Covariance::parse(){
     
     for(k = 0; k < data_.rows(); k++){
       if(isgr){
-        for(int m = 0; m < vals.size(); m++){
-          vals[m] = data_(k,fnvars[idx][m]);
-        }
+        for(int m = 0; m < vals.size(); m++) vals[m] = data_(k,fnvars[idx][m]);
         auto gridx2 = std::find(groups.begin(),groups.end(),vals);
         gridx = gridx2 - groups.begin();
       } else {
@@ -365,6 +367,14 @@ inline int glmmr::Covariance::parse(){
     }
   }
   
+  for(int i =0; i<fn_.size();i++){
+    for(int j = 0; j < re_pars_[i].size(); j++){
+      for(int k = 0; k < re_pars_[i][j].size(); k++){
+        calc_[i].parameter_indexes.push_back(re_pars_[i][j][k]);
+      }
+    }
+  }
+  
   //now build the reverse polish notation and add distances
   int nvarfn;
   for(int i =0; i<fn_.size();i++){
@@ -372,9 +382,9 @@ inline int glmmr::Covariance::parse(){
     intvec fn_par;
     int minvalue = 100;
     int ndata = re_temp_data_[i].size();
-    MatrixXd distmat = MatrixXd::Zero(ndata*(ndata-1)/2,fn_[i].size());
-    dists.push_back(distmat);
-    for(unsigned int j = 0; j<fn_[i].size();j++){
+    calc_[i].data.conservativeResize(ndata*(ndata-1)/2,fn_[i].size());
+    calc_[i].data_size = ndata;
+    for(int j = 0; j<fn_[i].size();j++){
       auto min_value_iterator = std::min_element(re_pars_[i][j].begin(),re_pars_[i][j].end());
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
     }
@@ -383,27 +393,31 @@ inline int glmmr::Covariance::parse(){
         nvarfn = re_cols_[i][j].size();
         double dist_val;
         double dist_ab;
-        for(int k = 0; k < (re_temp_data_[i].size()-1); k++){
-          for(int l = k+1; l < re_temp_data_[i].size(); l++){
+        for(int k = 0; k < (ndata-1); k++){
+          for(int l = k+1; l < ndata; l++){
             dist_val = 0;
             for(int m = 0; m < nvarfn; m++){
               dist_ab = re_temp_data_[i][k][re_cols_[i][j][m]]-re_temp_data_[i][l][re_cols_[i][j][m]];
               dist_val += dist_ab * dist_ab;
             }
             int idxval = (ndata-1)*k - ((k-1)*k/2) + (l-k-1);
-            dists[i](idxval,j) = sqrt(dist_val);
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+      if(idxval > calc_[i].data.rows())Rcpp::stop("idxval out of range, i: "+std::to_string(i)+" j: "+std::to_string(j)+" k: "+std::to_string(k));   
+      if(j > calc_[i].data.cols())Rcpp::stop("j out of range of cols");
+#endif
+            calc_[i].data(idxval,j) = sqrt(dist_val);
           }
         }
       }
       std::vector<Do> B = glmmr::interpret_re(fn_[i][j]);
       intvec re_par_less_min_ = re_pars_[i][j];
-      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
+      for(int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       intvec Bpar = glmmr::interpret_re_par(fn_[i][j],j,re_par_less_min_);
       fn_instruct.insert(fn_instruct.end(),B.begin(),B.end());
       fn_par.insert(fn_par.end(),Bpar.begin(),Bpar.end());
     }
     if(fn_[i].size() > 1){
-      for(unsigned int j = 0; j < (fn_[i].size()-1); j++){
+      for(int j = 0; j < (fn_[i].size()-1); j++){
         fn_instruct.push_back(Do::Multiply);
       }
     }
@@ -411,27 +425,27 @@ inline int glmmr::Covariance::parse(){
     calc_[i].indexes = fn_par;
     calc_[i].parameter_names = re_par_names_[i];
     calc_[i].parameter_count = re_par_names_[i].size();
+    calc_[i].parameters.resize(re_par_names_[i].size());
   }
   //get the number of random effects
   int Qn = 0;
   block_size.resize(calc_.size());
   block_nvar.resize(calc_.size());
-  for(unsigned int i = 0; i < calc_.size(); i++){
+  for(int i = 0; i < calc_.size(); i++){
     Qn += re_temp_data_[i].size();
     block_size[i] = re_temp_data_[i].size();
     block_nvar[i] = re_temp_data_[i][0].size();
   }
   re_count_.resize(form_.re_terms().size());
   std::fill(re_count_.begin(), re_count_.end(), 0);
-  for(unsigned int i = 0; i < calc_.size(); i++){
-    re_count_[re_order_[i]] += re_temp_data_[i].size();
-  }
+  for(int i = 0; i < calc_.size(); i++) re_count_[re_order_[i]] += re_temp_data_[i].size();
   B_ = calc_.size();
   n_ = data_.rows();
   return Qn;
 }
 
-inline void glmmr::Covariance::Z_constructor(){
+inline void glmmr::Covariance::Z_constructor()
+{
   matZ.n = data_.rows();
   matZ.m = Q_;
   matZ.Ap = intvec(data_.rows()+1,0);
@@ -461,19 +475,26 @@ inline void glmmr::Covariance::Z_constructor(){
 
 
 inline void glmmr::Covariance::update_parameters_in_calculators(){
-  if(par_for_calcs_.size()==0)par_for_calcs_.resize(B_);
   for(int i = 0; i < B_; i++){
-    dblvec par_for_calc;
-    for(unsigned int j = 0; j < re_pars_[i].size(); j++){
-      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
-        par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
-      }
-    }
-    par_for_calcs_[i] = par_for_calc;
+    calc_[i].update_parameters(parameters_);
+    // dblvec par_for_calc;
+    // for(unsigned int j = 0; j < re_pars_[i].size(); j++){
+    //   for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
+    //     par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
+    //   }
+    // }
+    // calc_[i].parameters = par_for_calc;
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+    Rcpp::Rcout << "\nCalculator parameters " << i << " :";
+    for(const auto& p: calc_[i].parameters)Rcpp::Rcout << p << " ";
+    Rcpp::Rcout << "\nCalculator parameter indexes " << i << " :";
+    for(const auto& p: calc_[i].parameter_indexes)Rcpp::Rcout << p << " ";
+#endif
   }
 }
 
-inline MatrixXd glmmr::Covariance::D(bool chol, bool upper){
+inline MatrixXd glmmr::Covariance::D(bool chol, bool upper)
+{
   MatrixXd D(Q_,Q_);
   if(isSparse){
     D = D_sparse_builder(chol,upper);
@@ -483,79 +504,91 @@ inline MatrixXd glmmr::Covariance::D(bool chol, bool upper){
   return D;
 };
 
-inline int glmmr::Covariance::npar() const{
+inline int glmmr::Covariance::npar() const
+{
   return npars_;
 };
 
 
-inline int glmmr::Covariance::B() const{
+inline int glmmr::Covariance::B() const
+{
   return B_;
 }
 
-inline int glmmr::Covariance::Q() const{
+inline int glmmr::Covariance::Q() const
+{
 #ifdef R_BUILD
   if(Q_==0)Rcpp::stop("Random effects not initialised");
 #endif
   return Q_;
 }
 
-inline int glmmr::Covariance::max_block_dim() const{
+inline int glmmr::Covariance::max_block_dim() const
+{
   int max = 0;
   for(const auto& b: block_size)if(b > max)max = b;
   return max;
 }
 
-inline int glmmr::Covariance::block_dim(int b) const{
+inline int glmmr::Covariance::block_dim(int b) const
+{
   return block_size[b];//re_data_[b].rows();
 };
 
-inline intvec glmmr::Covariance::parameter_fn_index() const{
+inline intvec glmmr::Covariance::parameter_fn_index() const
+{
   return re_fn_par_link_;
 }
 
-inline intvec glmmr::Covariance::re_count() const{
+inline intvec glmmr::Covariance::re_count() const
+{
   return re_count_;
 }
 
-inline void glmmr::Covariance::update_parameters(const dblvec& parameters){
+inline void glmmr::Covariance::update_parameters(const dblvec& parameters)
+{
   if(parameters_.size()==0){
-    parameters_ = parameters;
-    update_parameters_in_calculators();
+    parameters_.resize(npar());
+  }
+  
+  parameters_ = parameters;
+  update_parameters_in_calculators();
+  
+  if(!sparse_initialised){
     make_sparse();
-    spchol.update(mat);
-    L_constructor();
   } else {
-    parameters_ = parameters;
-    update_parameters_in_calculators();
     update_ax();
   }
 };
 
-inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters){
+inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters)
+{
   #ifdef R_BUILD
-  if(parameters.size()!=(unsigned)npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
+  if(parameters.size()!=npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
   #endif
   if(parameters_.size()==0){
-    parameters_ = parameters;
-    update_parameters_in_calculators();
+    parameters_.resize(npar());
+  }
+  
+  parameters_ = parameters;
+  update_parameters_in_calculators();
+  
+  if(!sparse_initialised){
     make_sparse();
-    spchol.update(mat);
-    L_constructor();
   } else {
-    parameters_ = parameters;
-    update_parameters_in_calculators();
     update_ax();
   }
 };
 
-inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
+inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters)
+{
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
     update_parameters_in_calculators();
   } else if(parameters_.size() == parameters.size()){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
     update_parameters_in_calculators();
@@ -567,11 +600,13 @@ inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
   }
 };
 
-inline double glmmr::Covariance::get_val(int b, int i, int j) const{
-  return calc_[b].calculate<CalcDyDx::None>(i,par_for_calcs_[b],dists[b],j,0,0,block_size[b])[0];
+inline double glmmr::Covariance::get_val(int b, int i, int j) const
+{
+  return calc_[b].calculate<CalcDyDx::None>(i,j,0,0)[0];
 }
 
-inline MatrixXd glmmr::Covariance::get_block(int b){
+inline MatrixXd glmmr::Covariance::get_block(int b)
+{
   
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   if(b > calc_.size()-1)Rcpp::stop("b larger than number of blocks");
@@ -597,11 +632,13 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
   return D;
 }
 
-inline MatrixXd glmmr::Covariance::Z(){
+inline MatrixXd glmmr::Covariance::Z()
+{
   return sparse_to_dense(matZ,false,true);
 }
 
-inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
+inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper)
+{
   int n = block_dim(b);//re_data_[b].rows();
   std::vector<double> L(n * n, 0.0);
   
@@ -621,10 +658,14 @@ inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
   }
 }
 
-inline VectorXd glmmr::Covariance::sim_re(){
+inline VectorXd glmmr::Covariance::sim_re()
+{
   #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no parameters, cannot simulate random effects");
   #endif
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nSim";
+#endif
   VectorXd samps(Q_);
   int idx = 0;
   int ndim;
@@ -643,15 +684,13 @@ inline VectorXd glmmr::Covariance::sim_re(){
   } else {
     VectorXd zz(Q_);
     randomGaussian(generator, zz);
-    samps = matL * zz;
-  }
-  
+    samps = SparseOperators::operator*(matL, zz);
+  }  
   return samps;
 }
 
-inline MatrixXd glmmr::Covariance::D_builder(int b,
-                                             bool chol,
-                                             bool upper){
+inline MatrixXd glmmr::Covariance::D_builder(int b, bool chol, bool upper)
+{
   if (b == B_ - 1) {
     return chol ? get_chol_block(b,upper) : get_block(b);
   }
@@ -673,7 +712,11 @@ inline MatrixXd glmmr::Covariance::D_builder(int b,
   }
 }
 
-inline sparse glmmr::Covariance::ZL_sparse() {
+inline sparse glmmr::Covariance::ZL_sparse() 
+{
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nZL multiplication: Z: " << matZ.m << " x " << matZ.n << "L: " << matL.m << " x " << matL.n;
+#endif
   return matZ * matL;
 }
 
@@ -705,24 +748,31 @@ inline MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w){
 inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
   sparse ZL = ZL_sparse();
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  Rcpp::Rcout << "\nZLu() fn";
   if(ZL.m != u.rows())Rcpp::stop("ZL*u bad dimension: "+std::to_string(ZL.m)+" cols "+std::to_string(u.rows())+" rows");
 #endif
-  return ZL * u;
+  return SparseOperators::operator*(ZL,u);
 }
 
 inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
-  return matL * u;
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  Rcpp::Rcout << "\nLu() fn";
+#endif
+  return SparseOperators::operator*(matL, u);
 }
 
 inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
 #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log likelihood");
 #endif
+  
   double logdet_val=0.0;
   double loglik_val=0.0;
   int obs_counter=0;
   ArrayXd size_B_array(B_);
-  if(!isSparse){
+  
+  if(!isSparse)
+  {
     int blocksize;
     size_B_array.setZero();
     for(int b=0;b<B_;b++){
@@ -744,9 +794,10 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
       obs_counter += blocksize;
     }
     loglik_val = size_B_array.sum();
+    
   } else {
-    for (auto k : spchol.D) logdet_val += log(k);
-    dblvec v(u.data(), u.data()+u.size());
+    dblvec v(u.data(),u.data()+u.size());
+    for (auto& k : spchol.D) logdet_val += log(k);
     spchol.ldl_lsolve(&v[0]);
     spchol.ldl_d2solve(&v[0]);
     double quad = glmmr::algo::inner_sum(&v[0],&v[0],Q_);
@@ -781,23 +832,42 @@ inline void glmmr::Covariance::make_sparse(){
 #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot make sparse");
 #endif
-  //isSparse = true;
   int dim;
   double val;
   int col_counter=0;
-  mat.Ap.clear();
-  mat.Ai.clear();
-  mat.Ax.clear();
-  // algorithm to generate the sparse matrix representation
+  sparse mat;
+  bool compact_fn = false;
+  int compact_col = 0;
+
   for(int b = 0; b < B(); b++){
+    compact_fn = false;
+    compact_col = 0;
+    for(const auto& fn: fn_[b]){
+      if(glmmr::is_compact_fn(fn)){
+        compact_fn = true;
+        break;
+      }
+      compact_col++;
+    }
     dim = block_dim(b);
     for(int i = 0; i < dim; i++){
       mat.Ap.push_back(mat.Ai.size());
       for(int j = 0; j < (i+1); j++){
         val = get_val(b,i,j);
+        if(compact_fn && i!=j){
+          double dist = calc_[b].get_covariance_data(i,j,compact_col);
+          if(dist >= 1)val = 0;
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+     if(i==0 && j==0) Rcpp::Rcout << "\nCompact function";
+#endif
+        }
         if(val!=0){
           mat.Ax.push_back(val);
           mat.Ai.push_back((col_counter+j));
+        } else {
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+          Rcpp::Rcout << "\n Zero val: (" << i << ", " << j << ")";
+#endif
         }
       }
     }
@@ -806,49 +876,92 @@ inline void glmmr::Covariance::make_sparse(){
   mat.n = mat.Ap.size();
   mat.m = mat.Ap.size();
   mat.Ap.push_back(mat.Ax.size());
+  
+  // use AMD ordering for LDL decomposition
+  if(use_amd_permute) mat.calculate_amd_permute();
+  
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nMade sparse: \nAi: ";
+  for(const auto& i: mat.Ai)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAp: ";
+  for(const auto& i: mat.Ap)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAx: ";
+  for(const auto& i: mat.Ax)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nPermutation vector: ";
+  intvec P = mat.permute();
+  for(const auto& i: P)Rcpp::Rcout << i << " ";
+#endif
+  
+  spchol.update(mat);
+  L_constructor();
+  sparse_initialised = true;
 };
 
 inline void glmmr::Covariance::L_constructor(){
   int d = spchol.ldl_numeric();
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\n L constructor... d = " << d << " expected: " << Q();
+#endif
   (void)d;
-  matL = spchol.LD();
+  spchol.LD(matL);
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nMade sparse: n: " << matL.n << " m: " << matL.m << " \nAi: ";
+  for(const auto& i: matL.Ai)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAp: ";
+  for(const auto& i: matL.Ap)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAx: ";
+  for(const auto& i: matL.Ax)Rcpp::Rcout << i << " ";
+#endif
 }
 
-inline void glmmr::Covariance::set_sparse(bool sparse){
+inline void glmmr::Covariance::set_sparse(bool sparse, bool amd){
+  use_amd_permute = amd;
   isSparse = sparse;
+  if(sparse)make_sparse();
 }
 
 inline void glmmr::Covariance::update_ax(){
   int llim = 0;
   int nj = 0;
-  int ulim = mat.Ap[nj+block_dim(0)];
+  int ulim = spchol.A_.Ap[nj+block_dim(0)];
   int j = 0;
   
   for(int b=0; b < B(); b++){
     for(int i = llim; i<ulim; i++){
-      if(i == mat.Ap[j+1])j++;
-      mat.Ax[i] = get_val(b,mat.Ai[i]-nj,j-nj);
+      if(i == spchol.A_.Ap[j+1])j++;
+      spchol.A_.Ax[i] = get_val(b,spchol.A_.Ai[i]-nj,j-nj);
     }
     llim = ulim;
     if(b<(B()-1)){
       nj += block_dim(b);
-      ulim = mat.Ap[nj+block_dim(b+1)];
+      ulim = spchol.A_.Ap[nj+block_dim(b+1)];
     }
     if(b == (B()-1)){
-      ulim = mat.Ai.size();
+      ulim = spchol.A_.Ai.size();
     }
   }
-  spchol.A_ = mat;
   int d = spchol.ldl_numeric(); // assumes structure of D doesn't change
   (void)d;
-  matL = spchol.LD();
+  spchol.LD(matL);
+  
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nUpdate L: n: " << matL.n << " m: " << matL.m << " \nAi: ";
+  for(const auto& i: matL.Ai)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAp: ";
+  for(const auto& i: matL.Ap)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nAx: ";
+  for(const auto& i: matL.Ax)Rcpp::Rcout << i << " ";
+#endif
 };
 
 inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
                                                     bool upper){
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nD sparse builder";
+#endif
   MatrixXd D = MatrixXd::Zero(Q_,Q_);
   if(!chol){
-    D = sparse_to_dense(mat,true);
+    D = sparse_to_dense(spchol.A_,true);
   } else {
     D = sparse_to_dense(matL,false);
   }
@@ -857,8 +970,8 @@ inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
 
 inline bool glmmr::Covariance::any_group_re() const{
   bool gr = false;
-  for(unsigned int i = 0; i < fn_.size(); i++){
-    for(unsigned int j = 0; j < fn_[i].size(); j++){
+  for(int i = 0; i < fn_.size(); i++){
+    for(int j = 0; j < fn_[i].size(); j++){
       if(fn_[i][j]==CovFunc::gr){
         gr = true;
         break;
@@ -871,7 +984,7 @@ inline bool glmmr::Covariance::any_group_re() const{
 
 inline strvec glmmr::Covariance::parameter_names(){
   strvec parnames;
-  for(unsigned int i = 0; i < form_.re_.size(); i++){
+  for(int i = 0; i < form_.re_.size(); i++){
     for(int j = 0; j < B_; j++){
       if(re_order_[j]==i){
         parnames.insert(parnames.end(),calc_[j].parameter_names.begin(),calc_[j].parameter_names.end());
@@ -881,6 +994,125 @@ inline strvec glmmr::Covariance::parameter_names(){
   }
   return parnames;
 };
+
+inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& logl){
+
+#pragma omp declare reduction(vec_dbl_plus : std::vector<double> : \
+                    std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+                    initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+
+  std::vector<MatrixXd> derivs;
+  derivatives(derivs,1);
+  int npars = derivs.size()-1;
+  int niter = umat.cols();
+  VectorXd grad(npars);
+  grad.setZero();
+
+  double logdet_val=0.0;
+  logl = 0.0;
+  dblvec dlogdet_vals(npars);
+  std::fill(dlogdet_vals.begin(), dlogdet_vals.end(), 0.0);
+  int obs_counter=0;
+  ArrayXd size_B_array(B_);
+  dblvec dqf(npars);
+  std::fill(dqf.begin(), dqf.end(), 0.0);
+
+  if(!isSparse)
+  {
+    int blocksize;
+    size_B_array.setZero();
+    for(int b=0;b<B_;b++){
+      blocksize = block_dim(b);
+      if(blocksize==1){
+        double var = get_val(b,0,0);
+        for(int i = 0; i < niter; i++)
+        {
+          size_B_array[b] += -0.5*log(var) -0.5*log(2*M_PI) - 0.5*umat(obs_counter,i)*umat(obs_counter,i)/(var);
+        }
+        size_B_array[b] *= 1.0/(double)niter;   
+        for(int i = 0; i < npars; i++) dlogdet_vals[i] += derivs[i](obs_counter,obs_counter) / var;        
+      } else {
+        zquad.setZero();
+        dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
+        logdet_val = 0.0;
+        for(int i = 0; i < blocksize; i++)
+        {
+          logdet_val += 2*log(dmat_matrix(i,i));
+        }
+        MatrixXd Lmat = dmat_matrix.block(0,0,blocksize,blocksize);
+        MatrixXd LmatT = Lmat.transpose();
+        for(int i = 0; i < npars; i++)
+        {
+          MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1].block(obs_counter,obs_counter,blocksize,blocksize));
+          MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
+          dlogdet_vals[i] += detmat2.trace();
+        }
+        double baccuml = 0.0;
+      #pragma omp parallel for if(niter > 30) reduction(+:baccuml) reduction(vec_dbl_plus : dqf)
+        for(int i = 0; i < niter; i++)
+        {
+          VectorXd ozquad = Lmat.triangularView<Lower>().solve(umat.col(i).segment(obs_counter, blocksize)); //glmmr::algo::forward_sub(dmat_matrix, umat.col(i).segment(obs_counter, blocksize), blocksize);
+          baccuml += (-0.5*blocksize * log(2*M_PI) - 0.5*logdet_val - 0.5*ozquad.transpose()*ozquad);
+          VectorXd zzquad = LmatT.triangularView<Upper>().solve(ozquad); //glmmr::algo::backward_sub(dmat_matrix.transpose(), ozquad, blocksize);
+          for(int j = 0; j < npars; j++)
+          {
+            dqf[j] += zzquad.transpose() * derivs[j+1].block(obs_counter, obs_counter, blocksize, blocksize) * zzquad;
+          }
+        }
+        size_B_array[b] = baccuml / (double)niter;
+        for(int j = 0; j < npars; j++) dqf[j] *= -1.0 / (double) niter;
+      }
+      obs_counter += blocksize;
+    }
+    logl = size_B_array.sum();
+    for(int i = 0; i < npars; i++)
+    {
+      grad(i) = 0.5*dlogdet_vals[i] - 0.5*dqf[i];
+    }
+  } else {
+    for (auto& k : spchol.D) logdet_val += log(k);
+    MatrixXd Lmat = sparse_to_dense(matL);
+    MatrixXd LmatT = Lmat.transpose();
+    for(int i = 0; i < npars; i++)
+      {
+        MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
+        MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
+        grad(i) += detmat2.trace();
+      }
+    logl += -0.5*Q_ * log(2*M_PI) - 0.5*logdet_val;
+    double qf = 0;
+#pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
+    for(int i = 0; i < niter; i++)
+    {
+      VectorXd ucol = umat.col(i);
+      dblvec v(ucol.data(),ucol.data()+ucol.size());     
+      spchol.ldl_lsolve(&v[0]);
+      spchol.ldl_d2solve(&v[0]);      
+      qf += glmmr::algo::inner_sum(&v[0],&v[0],Q_);    
+      VectorXd vvec = Map<VectorXd>(v.data(), v.size());
+      VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
+      for(int j = 0; j < npars; j++)
+      {
+        dqf[j] += (zzquad.transpose() * derivs[j+1] * zzquad)(0);
+      }
+    }
+    for(int j = 0; j < npars; j++)
+    {
+      grad(j) -= dqf[j] / (double) niter;
+      grad(j) *= 0.5;
+    } 
+    qf *= 1.0 / (double) niter;
+    logl -= 0.5 * qf;
+  }
+
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nTHETA: ";
+  for(const auto& x: parameters_) Rcpp::Rcout << x << " ";
+  Rcpp::Rcout << "\nGRADIENT: " << grad.transpose();
+  Rcpp::Rcout << "\nLOG-LIK.: " << logl;
+#endif 
+  return grad;
+}
 
 inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
                                            int order){
@@ -912,9 +1144,9 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
     for(int i = 0; i < block_dimension; i++){
       for(int j = i; j < block_dimension; j++){
         if(order == 1){
-          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,j,0,0);
         } else {
-          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,j,0,0);
         }
         derivs[0](block_count+i,block_count+j) = out[0];
         if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];

@@ -5,9 +5,12 @@ namespace ClusterApp {
 
     void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option) {
         ImGui::Begin("Statistical Model");
-
-        ImGui::TextWrapped("Set the statistical model using the two option trees below. The first sets the type of mixed model, including covariance function, the second specifies the parameter values, including \
-the treatment effect.");
+        if (ImGui::TreeNode("Info")){
+            ImGui::TextWrapped("Set the statistical model using the two option trees below. The first sets the type of mixed model, including covariance function, the second specifies the parameter values, including \
+            the treatment effect.");
+            ImGui::TreePop();
+        }
+        
 
         const char* family_items[] = { "Gaussian", "Binomial", "Poisson", "Beta", "Gamma" };
         const char* gaussian_link_items[] = { "Identity", "Log" };
