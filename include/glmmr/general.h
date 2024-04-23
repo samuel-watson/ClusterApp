@@ -18,6 +18,7 @@
 #define EIGEN_HAS_STD_RESULT_OF 0 // This has no effect with RcppEigen as it has Eigen <0.3.4
 #endif
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
+#undef EIGEN_DEFAULT_DENSE_INDEX_TYPE
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 // includes
 

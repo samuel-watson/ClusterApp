@@ -36,6 +36,28 @@ void ClusterApp::design::add_sequence(int i) {
     sequences++;
 };
 
+// std::vector<int> ClusterApp::design::periods_with_comparisons(){
+//     // return a vector with the indexes of all the time periods with any comparisons
+//     std::vector<int> periods;
+//     bool has_control;
+//     bool has_intervention;
+//     for(int t = 0; t < time; t++){
+//         has_control = false;
+//         has_intervention = false;
+//         for(int i = 0; i < sequences; i++){
+//             if(*active(i,t)){
+//                 has_intervention = *intervention(i,t);
+//                 has_control = !(*intervention(i,t));
+//             }
+//             if(has_intervention && has_control) break;
+//         }
+//         if(has_intervention && has_control){
+//             periods.push_back(t);
+//         }
+//     }
+//     return periods;
+// }
+
 void ClusterApp::design::remove_sequence(int i) {
     sequences--;
     periods.erase(periods.begin() + i);

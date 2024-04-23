@@ -221,8 +221,10 @@ namespace ClusterApp {
                 }
 
                 if (ImGui::BeginMenu("Treatment effect")) {
-                    if(!windows.dose_effect)ImGui::Checkbox("Two treatments", &windows.two_treatments);
-                    if(!windows.two_treatments)ImGui::Checkbox("Dose effect", &windows.dose_effect);
+                    if(!windows.dose_effect && !windows.time_averaged_te && !windows.heterogeneous_te)ImGui::Checkbox("Two treatments", &windows.two_treatments);
+                    if(!windows.two_treatments && !windows.time_averaged_te && !windows.heterogeneous_te)ImGui::Checkbox("Dose effect", &windows.dose_effect);
+                    if(!windows.dose_effect && !windows.two_treatments && !windows.time_averaged_te)ImGui::Checkbox("Heterogeneous", &windows.heterogeneous_te);
+                    // if(!windows.dose_effect && !windows.two_treatments && !windows.heterogeneous_te)ImGui::Checkbox("Time averaged", &windows.time_averaged_te);
                     ImGui::EndMenu();
                 }
 
@@ -292,7 +294,7 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.4.2");
+                    ImGui::Text("Version: 0.4.3");
                     ImGui::Text("glmmrBase Version: 0.8.1");
                     ImGui::Text("SparseChol Version: 0.2.2");
                     ImGui::Text("Code and license information is available on the GitHub repo.");
@@ -306,6 +308,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.4.3");
+                    ImGui::BulletText("Added heterogeneous treatment effects/different ICCs for treatment and control");
                     ImGui::Text("Version 0.4.2");
                     ImGui::BulletText("Updated to glmmrBase version 0.8.1");
                     ImGui::BulletText("Updating results is now manual by default, this provides significant improvement to performance when manipulating designs");

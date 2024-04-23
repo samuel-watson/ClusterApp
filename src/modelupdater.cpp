@@ -36,6 +36,7 @@ Eigen::ArrayXXd ClusterApp::modelUpdater::generate_data() {
             cl_number++;
         }
     }
+    newdata.col(6) = 1 - newdata.col(3);
     return newdata;
 }
 
@@ -69,6 +70,7 @@ void ClusterApp::modelUpdater::update_data() {
             cl_number++;
         }
     }
+    data.col(6) = 1 - data.col(3);
     log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: rows = " + std::to_string(data.rows())).c_str());
     log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: time periods = " + std::to_string(designs.time)).c_str());
     log.AddLog("[%05d] [%s] %s \n", ImGui::GetFrameCount(), log.cat[0], ("Data update: sequences = " + std::to_string(designs.sequences)).c_str());

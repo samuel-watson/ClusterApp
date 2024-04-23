@@ -9,8 +9,7 @@ namespace ClusterApp {
             ImGui::TextWrapped("Set the statistical model using the two option trees below. The first sets the type of mixed model, including covariance function, the second specifies the parameter values, including \
             the treatment effect.");
             ImGui::TreePop();
-        }
-        
+        }        
 
         const char* family_items[] = { "Gaussian", "Binomial", "Poisson", "Beta", "Gamma" };
         const char* gaussian_link_items[] = { "Identity", "Log" };
@@ -193,8 +192,13 @@ namespace ClusterApp {
 
                 if ((family_item_current == 0 && link_item_current == 0) || option.use_icc_for_non_gaussian) {
                     ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat("ICC", &model.ixx_pars[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        "Intra-class correlation coefficient.");
+                    ImGui::DragFloat(option.heterogeneous_te ? "Control ICC" : "ICC", &model.ixx_pars[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        option.heterogeneous_te ? "Control group intra-class correlation coefficient." : "Intra-class correlation coefficient.");
+                    if(option.heterogeneous_te){
+                        ImGui::SetNextItemWidth(200);
+                        ImGui::DragFloat("Treatment ICC", &model.ixx_pars[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        "Treatment group intra-class correlation coefficient.");
+                    }
                     if (cl_cov_item_current == 1) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("CAC", &model.ixx_pars[1], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
@@ -229,8 +233,13 @@ namespace ClusterApp {
                 }
                 else {
                     ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat("Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        "Cluster-level variance parameter.");
+                    ImGui::DragFloat(option.heterogeneous_te ?  "Control cluster-level variance" : "Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        option.heterogeneous_te ? "Control group cluster-level variance parameter." : "Cluster-level variance parameter.");
+                    if(option.heterogeneous_te){
+                        ImGui::SetNextItemWidth(200);
+                        ImGui::DragFloat("Treatment cluster-level variance" , &model.cov_pars[5], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        "Treatment group intra-class correlation coefficient.");
+                    }    
                     if (cl_cov_item_current == 1) {
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Cluster-period level variance", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
@@ -441,16 +450,6 @@ namespace ClusterApp {
 
             ImGui::TreePop();
         }
-        /*if (option.debug_info) {
-            if (ImGui::TreeNode("Model info")) {
-                ImGui::Text("Model checksum"); ImGui::SameLine();
-                ImGui::Text("%d", model.crc_val);
-                ImGui::Text("Parameters checksum"); ImGui::SameLine();
-                ImGui::Text("%d", model.crc_val_pars);
-                ImGui::TreePop();
-            }
-        }*/
-
 
         ImGui::End();
     };

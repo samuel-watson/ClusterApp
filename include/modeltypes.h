@@ -33,6 +33,8 @@ namespace ClusterApp {
         bool sample_size = false;
         bool two_treatments = false;
         bool dose_effect = false;
+        bool heterogeneous_te = false;
+        bool time_averaged_te = false;
         bool model = true;
         bool results = true;
         bool optimiser = false;

@@ -4,6 +4,7 @@
 
 void ClusterApp::glmmModel::update_formula() {
     std::string new_formula = "int";
+    std::string re_string = option.heterogeneous_te ? "int" : "1";
     if (option.two_treatments) {
         new_formula += "+int2+int12";
     }
@@ -12,7 +13,7 @@ void ClusterApp::glmmModel::update_formula() {
             new_formula += "+factor(t)";
         }
         else {
-            new_formula += "+factor(t)";
+            new_formula += "+t";
             //need to update this so that it creates new data with the cluster linear trends; add these by default to the data?
         }
     }
@@ -20,19 +21,24 @@ void ClusterApp::glmmModel::update_formula() {
     // covariance
     switch (statmodel.covariance) {
     case ClusterApp::Covariance::exchangeable:
-        new_formula += "+(1|gr(cl))";
+        new_formula += "+(" + re_string + "|gr(cl))";
+        if(option.heterogeneous_te) new_formula += "+(control|gr(cl))";
         break;
     case ClusterApp::Covariance::nested_exchangeable:
-        new_formula += "+(1|gr(cl))+(1|gr(cl,t))";
+        new_formula += "+(" + re_string + "|gr(cl))+(" + re_string + "|gr(cl,t))";
+        if(option.heterogeneous_te) new_formula += "+(control|gr(cl))+(control|gr(cl,t))";
         break;
     case ClusterApp::Covariance::autoregressive:
-        new_formula += "+(1|gr(cl)*ar0(t))";
+        new_formula += "+(" + re_string + "|gr(cl)*ar0(t))";
+        if(option.heterogeneous_te) new_formula += "+(control|gr(cl)*ar0(t))";
         break;
     case ClusterApp::Covariance::exponential:
-        new_formula += "+(1|gr(cl)*fexp0(t))";
+        new_formula += "+(" + re_string + "|gr(cl)*fexp0(t))";
+        if(option.heterogeneous_te) new_formula += "+(control|gr(cl)*fexp0(t))";
         break;
     case ClusterApp::Covariance::squared_exponential:
-        new_formula += "+(1|gr(cl)*sqexp0(t))";
+        new_formula += "+(" + re_string + "|gr(cl)*sqexp0(t))";
+        if(option.heterogeneous_te) new_formula += "+(control|gr(cl)*sqexp(t))";
         break;
     }
     if (statmodel.sampling == ClusterApp::Sampling::cohort) {
@@ -139,17 +145,30 @@ void ClusterApp::glmmModel::update_parameters() {
     if (statmodel.family == ClusterApp::Family::gaussian) {
         if (statmodel.covariance == ClusterApp::Covariance::exchangeable) {
             theta.push_back(statmodel.ixx_pars[0]);
+            if(option.heterogeneous_te) theta.push_back(statmodel.ixx_pars[3]);
         }       
         else if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
             double tau1 = statmodel.ixx_pars[0] * statmodel.ixx_pars[1];
             double tau2 = statmodel.ixx_pars[0] * (1 - statmodel.ixx_pars[1]);
             theta.push_back(tau1);
             theta.push_back(tau2);
+            if(option.heterogeneous_te){
+                tau1 = statmodel.ixx_pars[3] * statmodel.ixx_pars[1];
+                tau2 = statmodel.ixx_pars[3] * (1 - statmodel.ixx_pars[1]);
+                theta.push_back(tau1);
+                theta.push_back(tau2);
+            }
         }
         else if (statmodel.covariance == ClusterApp::Covariance::autoregressive || statmodel.covariance == ClusterApp::Covariance::exponential || statmodel.covariance == ClusterApp::Covariance::squared_exponential) {
             theta.push_back(statmodel.ixx_pars[0]);
             theta.push_back(statmodel.cov_pars[1]);
+            if(option.heterogeneous_te){
+                 theta.push_back(statmodel.ixx_pars[3]);
+                 theta.push_back(statmodel.cov_pars[1]);
+            }
         }
+        // heterogeneous ICCs
+
 
         if (statmodel.sampling == ClusterApp::Sampling::cohort) {
             double tau3 = statmodel.ixx_pars[2] * (1 - statmodel.ixx_pars[0]);
@@ -190,13 +209,22 @@ void ClusterApp::glmmModel::update_parameters() {
                 statmodel.cov_pars[3] = statmodel.ixx_pars[2] * statmodel.cov_pars[2] / (1 - statmodel.ixx_pars[2]);
                 ind_level_error += statmodel.cov_pars[3];
             }
-            cl_level_error = statmodel.ixx_pars[0] * ind_level_error / (1 - statmodel.ixx_pars[0]);
+            cl_level_error = statmodel.ixx_pars[0] * ind_level_error / (1 - statmodel.ixx_pars[0]);            
             if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
                 statmodel.cov_pars[0] = statmodel.ixx_pars[1] * cl_level_error;
                 statmodel.cov_pars[1] = ( 1- statmodel.ixx_pars[1])  * cl_level_error;
+                if(option.heterogeneous_te){
+                    cl_level_error = statmodel.ixx_pars[3] * ind_level_error / (1 - statmodel.ixx_pars[0]);
+                    statmodel.cov_pars[5] = statmodel.ixx_pars[1] * cl_level_error;
+                    statmodel.cov_pars[6] = ( 1- statmodel.ixx_pars[1])  * cl_level_error;
+                }
             }
             else  {
                 statmodel.cov_pars[0] = cl_level_error;
+                if(option.heterogeneous_te){
+                    cl_level_error = statmodel.ixx_pars[3] * ind_level_error / (1 - statmodel.ixx_pars[0]);
+                    statmodel.cov_pars[5] = cl_level_error;
+                }
             }
         }
         else {
@@ -208,8 +236,19 @@ void ClusterApp::glmmModel::update_parameters() {
                 cl_level_error += statmodel.cov_pars[1];
             }
             statmodel.ixx_pars[0] = cl_level_error / (cl_level_error + ind_level_error);
+            if(option.heterogeneous_te){
+                cl_level_error = statmodel.cov_pars[5];
+                if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+                    cl_level_error += statmodel.cov_pars[6];
+                }
+                statmodel.ixx_pars[3] = cl_level_error / (cl_level_error + ind_level_error);
+            }
             if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
                 statmodel.ixx_pars[1] = statmodel.cov_pars[1] / cl_level_error;
+                if(option.heterogeneous_te){
+                    statmodel.ixx_pars[1] *= 0.5;
+                    statmodel.ixx_pars[1] += 0.5 * statmodel.cov_pars[6] / cl_level_error;
+                }
             }
             if (statmodel.sampling == ClusterApp::Sampling::cohort) {
                 statmodel.ixx_pars[2] = statmodel.cov_pars[3] / ind_level_error;
@@ -219,6 +258,15 @@ void ClusterApp::glmmModel::update_parameters() {
         theta.push_back(statmodel.cov_pars[0]);
         if (statmodel.covariance != ClusterApp::Covariance::exchangeable) {
             theta.push_back(statmodel.cov_pars[1]);
+        }
+        if(option.heterogeneous_te){
+            theta.push_back(statmodel.cov_pars[5]);
+            if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
+                theta.push_back(statmodel.cov_pars[6]);
+            }
+            if (statmodel.covariance != ClusterApp::Covariance::nested_exchangeable && statmodel.covariance != ClusterApp::Covariance::exchangeable) {
+                theta.push_back(statmodel.cov_pars[1]);
+            }
         }
         if (statmodel.sampling == ClusterApp::Sampling::cohort) {
             double tau3 = statmodel.cov_pars[3];

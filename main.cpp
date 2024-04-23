@@ -67,7 +67,7 @@ void loop()
   // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
   static ClusterApp::design designs;
   static ClusterApp::options windows;
-  static ClusterApp::statisticalModel model;
+  static ClusterApp::statisticalModel model(windows);
   static ClusterApp::colourPicker colour;
   static ClusterApp::modelSummary results(designs);
   static ClusterApp::AppLog log;

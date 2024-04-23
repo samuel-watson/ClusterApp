@@ -64,39 +64,40 @@ namespace ClusterApp {
         int     time = 1;
         int     crc_val = 0;
         design();
-        void add_sequence();
-        void add_sequence(int i);
-        void remove_sequence(int i);
-        void add_period();
-        void add_period(int t);
-        void remove_period(int t);
-        bool* active(int i, int t);
-        bool* intervention(int i, int t);
-        bool* intervention_2(int i, int t);
-        int* n(int i, int t);
-        int* n_clusters(int i);
-        float* dose(int i, int t);
-        int seq_by_cluster(int i);
-        int total_clusters();
-        int total_cluster_periods();
-        int total_n();
-        double mean_n();
-        void set_parallel(const int t, const int n, const int J);
-        void set_parallel_with_baseline(const int t, const int n, const int J);
-        void set_stepped_wedge(const int t, const int n, const int J);
-        void set_crossover(const int n, const int J);
-        void set_staircase(const int t, const int n, const int J);
-        void set_factorial(const int t, const int n, const int J);
-        void split_sequences();
-        void combine_sequences();
+        void    add_sequence();
+        void    add_sequence(int i);
+        void    remove_sequence(int i);
+        void    add_period();
+        void    add_period(int t);
+        void    remove_period(int t);
+        bool*   active(int i, int t);
+        bool*   intervention(int i, int t);
+        bool*   intervention_2(int i, int t);
+        int*    n(int i, int t);
+        int*    n_clusters(int i);
+        float*  dose(int i, int t);
+        int     seq_by_cluster(int i);
+        int     total_clusters();
+        int     total_cluster_periods();
+        int     total_n();
+        double  mean_n();
+        void    set_parallel(const int t, const int n, const int J);
+        void    set_parallel_with_baseline(const int t, const int n, const int J);
+        void    set_stepped_wedge(const int t, const int n, const int J);
+        void    set_crossover(const int n, const int J);
+        void    set_staircase(const int t, const int n, const int J);
+        void    set_factorial(const int t, const int n, const int J);
+        void    split_sequences();
+        void    combine_sequences();
+        //std::vector<int>    periods_with_comparisons();
         ~design();
-        bool check(bool update_if_changed = true);
-        void apply_design(std::vector<std::vector<int> >& n);
-        int active_time_periods();
-        void swap_cells(int source, int target);
-        void copy_cells(int source, int target);
-        void move_cells(int source, int target);
-        float randomisation_ratio(int intervention_arm = 1, bool cluster=true);
+        bool    check(bool update_if_changed = true);
+        void    apply_design(std::vector<std::vector<int> >& n);
+        int     active_time_periods();
+        void    swap_cells(int source, int target);
+        void    copy_cells(int source, int target);
+        void    move_cells(int source, int target);
+        float   randomisation_ratio(int intervention_arm = 1, bool cluster=true);
     };
 
     class statisticalModel {
@@ -107,20 +108,21 @@ namespace ClusterApp {
         IndividualCovariance    ind_covariance = IndividualCovariance::exchangeable;
         LinearPredictor         linearpredictor = LinearPredictor::time_fixed_effects;
         Sampling                sampling = Sampling::cross_sectional;
+        ClusterApp::options&    option;
         int                     include_intercept = 1;
         float                   sigma = 1;
-        std::vector<float>      te_pars = { 0.5f,0.5f,0.5f };
-        std::vector<float>      ixx_pars = { 0.05f,0.8f,0.5f };
-        std::vector<float>      cov_pars = std::vector<float>(5, 0.5f);
+        std::array<float,3>     te_pars = { 0.5f,0.5f,0.5f };
+        std::array<float,4>     ixx_pars = { 0.05f,0.8f,0.5f, 0.05f };
+        std::array<float,7>     cov_pars = { 0.5f,0.5f,0.5f, 0.5f,0.5f,0.5f, 0.5f };
         std::vector<float>      beta_pars = std::vector<float>(1, 0.0f);
         std::vector<float>      c_vals = { 1.0f,1.0f,1.0f };
         int                     crc_val = 0;
         int                     crc_val_pars = 0;
-        std::pair<bool, bool> check();
-        statisticalModel() {};
-        void update_beta(ClusterApp::design& design);
-        void set_beta_random(const double m, const double s);
-        float alpha = 0.05;
+        std::pair<bool, bool>   check();
+        statisticalModel(ClusterApp::options& option_) : option(option_) {};
+        void                    update_beta(ClusterApp::design& design);
+        void                    set_beta_random(const double m, const double s);
+        float                   alpha = 0.05;
     };
 
     struct modelSummary {
@@ -219,28 +221,28 @@ namespace ClusterApp {
         std::string                     formula = "int+(1|gr(cl))";
         std::string                     family = "gaussian";
         std::string                     link = "identity";
-        const std::vector<std::string>  colnames = { "cl","t","n","int","int2","int12" };
+        const std::vector<std::string>  colnames = { "cl","t","n","int","int2","int12","control" };
         boost::math::normal             norm = boost::math::normal(0.0, 1.0);
         double                          zcutoff = boost::math::quantile(norm, 0.975);
         int                             dof = 1;
         std::vector<double>             optimal_weights = { 0.5, 0.5 };
         glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_, ClusterApp::design& designs_, ClusterApp::AppLog& log_) : statmodel(statmodel_), option(option_), designs(designs_), logger(log_) {};
         ~glmmModel() = default;
-        void update_formula();
-        void update_parameters();
-        void update_model_data(const Eigen::ArrayXXd& data);
-        std::vector<double> sim_data();
-        void power(ClusterApp::modelSummary& summary);
-        void power_kr(ClusterApp::modelSummary& summary);
-        void power_box(ClusterApp::modelSummary& summary);
-        void power_bw(ClusterApp::modelSummary& summary);
-        void optimum(int N);
-        float individual_n();
-        double design_effect();
-        void power_de(ClusterApp::modelSummary& summary, int type);
-        double mean_individual_variance(bool weighted = true);
+        void                    update_formula();
+        void                    update_parameters();
+        void                    update_model_data(const Eigen::ArrayXXd& data);
+        std::vector<double>     sim_data();
+        void                    power(ClusterApp::modelSummary& summary);
+        void                    power_kr(ClusterApp::modelSummary& summary);
+        void                    power_box(ClusterApp::modelSummary& summary);
+        void                    power_bw(ClusterApp::modelSummary& summary);
+        void                    optimum(int N);
+        float                   individual_n();
+        double                  design_effect();
+        void                    power_de(ClusterApp::modelSummary& summary, int type);
+        double                  mean_individual_variance(bool weighted = true);
         std::pair<double,double> mean_outcome();
-        std::vector<int> round_weights(std::vector<float> w, int n);
+        std::vector<int>        round_weights(std::vector<float> w, int n);
     };
 
     class modelUpdater {
@@ -253,7 +255,7 @@ namespace ClusterApp {
         bool                            update = false;
         bool                            manual_n_optim = false;
         int                             de_mode = 0;
-        Eigen::ArrayXXd                 data = Eigen::ArrayXXd::Constant(1, 6, 1); // order of columns cl, t, n, int1, int2, int1*int2
+        Eigen::ArrayXXd                 data = Eigen::ArrayXXd::Constant(1, 7, 1); // order of columns cl, t, n, int1, int2, int1*int2
         std::vector<std::vector<double> >   optimum_data = { {0.5},{0.5} };
         std::vector<std::vector<int> >      optimum_n = { {10},{10} };
         bool                            requires_update = false;
@@ -265,12 +267,12 @@ namespace ClusterApp {
             ClusterApp::glmmModel& glmm_,
             ClusterApp::AppLog& log_);
         ~modelUpdater() = default;
-        Eigen::ArrayXXd generate_data();
-        void update_data();
-        void update_formula();
-        void update_parameters();
-        void update_summary_statistics();
-        void update_optimum();
+        Eigen::ArrayXXd     generate_data();
+        void                update_data();
+        void                update_formula();
+        void                update_parameters();
+        void                update_summary_statistics();
+        void                update_optimum();
     };
 
     class plotData {
@@ -298,11 +300,11 @@ namespace ClusterApp {
         float                       lower_float[4] = { 0.01, 0.0, 0.0, 0.1 };
         int                         crc_val = 0;
         plotData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) {};
-        void update_data();
-        bool check();
-        void extract_y(ClusterApp::modelSummary& summary, int i, int series);
-        float max_y();
-        float min_y();
+        void    update_data();
+        bool    check();
+        void    extract_y(ClusterApp::modelSummary& summary, int i, int series);
+        float   max_y();
+        float   min_y();
     };
 
     class krigingData {
@@ -327,15 +329,15 @@ namespace ClusterApp {
         char*                       n_cl_grid_label[20];
         float                       mu;
         int                         resample_total = 20;
-        void new_sample(int n = 25);
-        void generate_data();
-        void update(bool resample = true);
+        void    new_sample(int n = 25);
+        void    generate_data();
+        void    update(bool resample = true);
         krigingData(ClusterApp::glmmModel& glmm_, ClusterApp::modelUpdater& updater_) : glmm(glmm_), updater(updater_) { 
             generate_grid();
             new_sample();
         };
-        void generate_grid();
-        void set_power_type(PowerType type_);
+        void    generate_grid();
+        void    set_power_type(PowerType type_);
     private:
         PowerType type = PowerType::GLS;
     };

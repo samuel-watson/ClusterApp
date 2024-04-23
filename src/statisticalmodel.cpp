@@ -8,6 +8,7 @@ std::pair<bool, bool> ClusterApp::statisticalModel::check() {
     crc(static_cast<int>(covariance));
     crc(static_cast<int>(linearpredictor));
     crc(static_cast<int>(sampling));
+    crc(option.heterogeneous_te);
     crc(include_intercept);
     for (int i = 0; i < te_pars.size(); i++)crc2(te_pars[i]);
     for (int i = 0; i < ixx_pars.size(); i++)crc2(ixx_pars[i]);
