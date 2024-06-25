@@ -154,9 +154,15 @@ namespace ClusterApp {
                         }
                         ImGui::EndMenu();
                     }
+
                     if (ImGui::BeginMenu("Clusters")) {
                         static int total_t = 1;
                         static int total_n = 10;
+                        static int mean_cp_size = 50;
+                        static float cv_cp_size = 0.5;
+                        static float within_cv = 0.0;
+                        static int variable_cp_sizes = 0; 
+
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
                         ImGui::PushID(2001);
@@ -166,19 +172,74 @@ namespace ClusterApp {
                             }
                         }
                         ImGui::PopID();
-                        ImGui::SetNextItemWidth(100);
-                        ImGui::InputInt("n per cluster-period", &total_n, 1, 10, 0); ImGui::SameLine();
-                        ImGui::PushID(2002);
-                        if (ImGui::Button("Set n")) {
-                            if (total_n > 0) {
-                                for (int j = 0; j < designs.sequences; j++) {
-                                    for (int t = 0; t < designs.time; t++) {
-                                        *(designs.n(j, t)) = total_n;
+
+                        if (ImGui::Button("Set cluster sizes")) ImGui::OpenPopup("Modify cluster sizes");
+                        if (ImGui::BeginPopupModal("Modify cluster sizes", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+                                    {
+
+                                        ImGui::SetNextItemWidth(100);
+                                        ImGui::InputInt("Set size for all cluster-periods", &total_n, 1, 10, 0); ImGui::SameLine();
+                                        ImGui::PushID(2002);
+                                        if (ImGui::Button("Set n")) {
+                                            if (total_n > 0) {
+                                                for (int j = 0; j < designs.sequences; j++) {
+                                                    for (int t = 0; t < designs.time; t++) {
+                                                        *(designs.n(j, t)) = total_n;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        ImGui::PopID();
+
+                                        ImGui::TextWrapped("Generate random cluster and/or cluster-period sizes with pre-defined coefficient of variation. Generated sizes of zero or less are set to one. Note that clusters  in the same sequence in the designer will be given the same size. Split the sequences to get different sizes using Edit->Design->Sequences->Split sequences into clusters");
+                                        if(designs.time > 1){
+                                            ImGui::Text("Constant size within clusters"); ImGui::SameLine();
+                                            ImGui::RadioButton("No", &variable_cp_sizes, 0); ImGui::SameLine();
+                                            ImGui::RadioButton("Yes", &variable_cp_sizes, 1);
+                                        }
+                                        
+                                        ImGui::SetNextItemWidth(100);
+                                        ImGui::InputInt("Mean cluster size", &mean_cp_size, 1, 50, 0);
+                                        ImGui::SetNextItemWidth(100);
+                                        ImGui::DragFloat("Cluster size c.v.", &cv_cp_size, 0.1f, 0.0f, 10.0f, "%.1f", ImGuiSliderFlags_None);
+                                        if(variable_cp_sizes==1 && designs.time > 1){
+                                            ImGui::SetNextItemWidth(100);
+                                            ImGui::DragFloat("Within-cluster period c.v.", &within_cv, 0.1f, 0.0f, 10.0f, "%.1f", ImGuiSliderFlags_None);
+                                        }
+                                        if(ImGui::Button("Generate sizes")){
+                                            boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+                                                generator(boost::mt19937(time(0)),
+                                                        boost::normal_distribution<>());
+                                            VectorXd zz(designs.sequences);      
+                                            glmmr::randomGaussian(generator, zz); 
+                                            zz.array() *= cv_cp_size*mean_cp_size;    
+                                            zz.array() += mean_cp_size;
+                                            if(variable_cp_sizes==1 && designs.time > 1){
+                                                VectorXd zz_within(designs.time);
+                                                for (int j = 0; j < designs.sequences; j++) {
+                                                    glmmr::randomGaussian(generator, zz_within); 
+                                                    zz_within.array() *= within_cv*(zz(j));    
+                                                    zz_within.array() += zz(j);
+                                                    for (int t = 0; t < designs.time; t++) {
+                                                        *(designs.n(j, t)) = zz_within(t) <= 0.0 ? 1 : (int)(zz_within(t)+1);
+                                                    }
+                                                }
+                                            } else {
+                                                for (int j = 0; j < designs.sequences; j++) {
+                                                    for (int t = 0; t < designs.time; t++) {
+                                                        *(designs.n(j, t)) = zz(j) <= 0.0 ? 1 : (int)(zz(j)+1);
+                                                    }
+                                                }
+                                            }
+                                        } ImGui::SameLine();
+                                        ImGui::PushID(20023);
+                                        if (ImGui::Button("Close"))
+                                            ImGui::CloseCurrentPopup();
+                                        ImGui::PopID();
+                                        ImGui::EndPopup();
                                     }
-                                }
-                            }
-                        }
-                        ImGui::PopID();
+
+                        
                         ImGui::EndMenu();
                     }
                     if (ImGui::MenuItem("Activate all")) {
@@ -293,11 +354,12 @@ namespace ClusterApp {
                     ImGui::OpenPopup("About");
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
-                    ImGui::Text("(c) Sam Watson 2023");
-                    ImGui::Text("Version: 0.4.3");
+                    ImGui::Text("(c) Sam Watson 2024");
+                    ImGui::Text("Version: 0.5.1");
                     ImGui::Text("glmmrBase Version: 0.8.1");
                     ImGui::Text("SparseChol Version: 0.2.2");
-                    ImGui::Text("Code and license information is available on the GitHub repo.");
+
+                    ImGui::Text("License: GNU GPLv3");
 
                     if (ImGui::Button("Close"))
                         ImGui::CloseCurrentPopup();
@@ -308,6 +370,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.5.1");
+                    ImGui::BulletText("Added varying cluster sizes generation.");
                     ImGui::Text("Version 0.4.3");
                     ImGui::BulletText("Added heterogeneous treatment effects/different ICCs for treatment and control");
                     ImGui::Text("Version 0.4.2");
