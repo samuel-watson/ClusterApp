@@ -207,21 +207,27 @@ void ClusterApp::design::set_parallel_with_baseline(const int t, const int n, co
     time = t + 1;
 }
 
-void ClusterApp::design::set_stepped_wedge(const int t, const int n, const int J) {
+void ClusterApp::design::set_stepped_wedge(const int t, const int n, const int J, bool implement_period) {
     sequences = 1;
     time = 1;
     periods.clear();
     n_per_sequence.clear();
-    for (int s = 0; s < (t - 1); s++) {
+    int range_lim = implement_period ? t+1 : t;
+    for (int s = 0; s < t-1; s++) {
         periods.emplace_back();
-        for (int u = 0; u < t; u++) {
+        for (int u = 0; u < range_lim; u++) {
             bool has_intervention = u > s;
             periods[s].push_back(ClusterApp::sequencePeriod(true, n, has_intervention));
         }
         n_per_sequence.push_back(J);
     }
-    sequences = t - 1;
-    time = t;
+
+    if(implement_period){
+        for(int s = 1; s < t; s++) periods[s-1][s].set_active(false);
+    }
+
+    sequences = t-1;
+    time = range_lim;
 }
 
 void ClusterApp::design::set_crossover(const int n, const int J) {

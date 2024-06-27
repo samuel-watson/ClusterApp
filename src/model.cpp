@@ -28,9 +28,15 @@ namespace ClusterApp {
         static int linpred_item_current = 0;
         static float control_mean = 0.5;
         static float treatment_mean = 0.5;
+        static int simple_interface = 1;
 
-        if (ImGui::TreeNode("Statistical Model")) {
-            ImGui::SetNextItemWidth(200);
+        ImGui::Text("Options: "); ImGui::SameLine();
+        ImGui::RadioButton("Simplified", &simple_interface, 1); ImGui::SameLine();
+        ImGui::RadioButton("Complete", &simple_interface, 0);
+
+        ImGui::Spacing();
+        ImGui::Text("Statistical Model");
+        ImGui::SetNextItemWidth(200);
             ImGui::Combo("Family", &family_item_current, family_items, IM_ARRAYSIZE(family_items));
 
             switch (family_item_current) {
@@ -126,50 +132,15 @@ namespace ClusterApp {
             }
             }
 
-
+            ImGui::Spacing();
             ImGui::Text("Sampling");
             ImGui::RadioButton("Cross-section", &structure_sampling, 0); ImGui::SameLine();
             ImGui::RadioButton("Closed cohort", &structure_sampling, 1); ImGui::SameLine();
             ImGui::RadioButton("Open cohort", &structure_sampling, 2); 
             model.sampling = static_cast<ClusterApp::Sampling>(structure_sampling + 1);
-            ImGui::Text("Covariance");
 
-            int options_size = 1;
-            if (design.time > 1)options_size = IM_ARRAYSIZE(cluster_covariance_items);
-
-            ImGui::SetNextItemWidth(200);
-            ImGui::Combo("Cluster-level", &cl_cov_item_current, cluster_covariance_items, options_size); ImGui::SameLine(); HelpMarker(
-                "Exhangeable means a single cluster-level random effect, nested exchangeable also includes a cluster-period random effect. The other functions describe the within-cluster temporal covariance.");
-            if (structure_sampling == 1) {
-                ImGui::SetNextItemWidth(200);
-                ImGui::Combo("Individual-level", &ind_cov_item_current, individual_covariance_items, IM_ARRAYSIZE(individual_covariance_items));
-            }
-            else if (structure_sampling == 2) {
-                ind_cov_item_current = 0;
-                ImGui::SetNextItemWidth(200);
-                ImGui::DragFloat("Individual replacement rate", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                    "This is the proportion of individuals that dropout each time period and are replaced in the cohort. A value of 1 is a closed cohort and a value of 0 is a cross-sectional study.");
-            }
-
-            model.covariance = static_cast<ClusterApp::Covariance>(cl_cov_item_current + 1);
-            model.ind_covariance = static_cast<ClusterApp::IndividualCovariance>(ind_cov_item_current + 1);
-
-            ImGui::Text("Linear predictor");
-            ImGui::SetNextItemWidth(200);
-            ImGui::Combo("Fixed effects", &linpred_item_current, linpred_items, IM_ARRAYSIZE(linpred_items));
-            ImGui::Text("Include intercept?"); ImGui::SameLine();
-            ImGui::RadioButton("No", &model.include_intercept, 0); ImGui::SameLine();
-            ImGui::RadioButton("Yes", &model.include_intercept, 1); ImGui::SameLine(); HelpMarker(
-                "Excluding the intercept will include all time period fixed effects. It will affect the parameter values that should be entered in non-linear model. This choice will be reflected in the parameter values section below.");
-
-            model.linearpredictor = static_cast<ClusterApp::LinearPredictor>(linpred_item_current + 1);
-            ImGui::TreePop();
-        }
-
-        model.update_beta(design);
-
-        if (ImGui::TreeNode("Parameters")) {
-            if (ImGui::TreeNode("Treatment effects")) {
+            ImGui::Text("Treatment Effect");
+            if((model.family == ClusterApp::Family::gaussian && simple_interface==1)|| simple_interface == 0 || option.two_treatments){
                 ImGui::SetNextItemWidth(200);
                 ImGui::DragFloat("Treatment effect parameter", &model.te_pars[0], 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
                     "Use CTRL+Click to directly input the value.");
@@ -179,188 +150,30 @@ namespace ClusterApp {
                     ImGui::SetNextItemWidth(200);
                     ImGui::DragFloat("Interaction effect parameter", &model.te_pars[2], 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", ImGuiSliderFlags_None);
                 }
-                ImGui::TreePop();
-            }
+            } 
 
-            if (ImGui::TreeNode("Covariance parameters")) {
-
-                if (!(family_item_current == 0 && link_item_current == 0)) {
-                    ImGui::TextWrapped("You can set the variance terms for non-Gaussian models using the ICC and related statistics, or by setting the parameter values directly."); ImGui::SameLine();
-                    HelpMarker("Use of ICC, CAC, and IAC values for non-Gaussian-identity models uses the mean individual-level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
-                    ImGui::Checkbox("Use ICC?", &option.use_icc_for_non_gaussian);
-                }
-
-                if ((family_item_current == 0 && link_item_current == 0) || option.use_icc_for_non_gaussian) {
-                    ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat(option.heterogeneous_te ? "Control ICC" : "ICC", &model.ixx_pars[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        option.heterogeneous_te ? "Control group intra-class correlation coefficient." : "Intra-class correlation coefficient.");
-                    if(option.heterogeneous_te){
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Treatment ICC", &model.ixx_pars[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        "Treatment group intra-class correlation coefficient.");
-                    }
-                    if (cl_cov_item_current == 1) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("CAC", &model.ixx_pars[1], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                            "Cluster autocorrelation coefficient.");
-                    }
-                    if (cl_cov_item_current == 2) {
-                        ImGui::SetNextItemWidth(200);
-                        //ImGui::PushFont(unifont);ImGui::PopFont();
-                        ImGui::DragFloat("Autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period autoregressive parameter.");
-                    }
-                    if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
-                    }
-                    if (structure_sampling == 1 || structure_sampling == 2) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("IAC", &model.ixx_pars[2], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                            "Individual autocorrelation coefficient. For open cohorts, set this parameter as if it were a closed cohort.");
-                        if (ind_cov_item_current == 1 && structure_sampling != 2) {
-                            ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                "Individual autoregressive parameter.");
-                        }
-                        if ((ind_cov_item_current == 2 || ind_cov_item_current == 3) && structure_sampling != 2) {
-                            ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
-                        }
-                    }
-                }
-                else {
-                    ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat(option.heterogeneous_te ?  "Control cluster-level variance" : "Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        option.heterogeneous_te ? "Control group cluster-level variance parameter." : "Cluster-level variance parameter.");
-                    if(option.heterogeneous_te){
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Treatment cluster-level variance" , &model.cov_pars[5], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                        "Treatment group intra-class correlation coefficient.");
-                    }    
-                    if (cl_cov_item_current == 1) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Cluster-period level variance", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period level variance parameter.");
-                    }
-                    if (cl_cov_item_current == 2) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Cluster-period autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period autoregressive parameter.");
-                    }
-                    if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Cluster-period denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
-                    }
-                    if (structure_sampling == 1 || structure_sampling == 2) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Individual-level variance", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                            "Individual-level variance term");
-                        if (ind_cov_item_current == 2 && structure_sampling != 2) {
-                            ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
-                                "Individual autoregressive parameter.");
-                        }
-                        if ((ind_cov_item_current == 3 || ind_cov_item_current == 4) && structure_sampling != 2) {
-                            ImGui::SetNextItemWidth(200);
-                            ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                                "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
-                        }
-                    }
-                    if (family_item_current == 3 || family_item_current == 4) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat("Observation-level variance", &model.cov_pars[2], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
-                            "Observation-level variance term.");
-                    }
-
-                }
-                ImGui::TreePop();
-            }
-
-            if (ImGui::TreeNode("Fixed effect parameters")) {
-                // add set all zero, random, constant
-                ImGui::Text("Set value defaults");
-                if (ImGui::SmallButton("Set all zero")) {
-                    for (int i = 0; i < model.beta_pars.size(); i++) {
-                        model.beta_pars[i] = 0;
-                    }
-                }
-
-                static float beta_m = 0;
-                static float beta_s = 1;
-                static float beta_c = 0;
-                if (ImGui::SmallButton("Set random normal")) {
-                    model.set_beta_random(beta_m, beta_s);
-                }
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::DragFloat("Mean", &beta_m, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::DragFloat("sd", &beta_s, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-
-                if (ImGui::SmallButton("Set constant")) {
-                    for (int i = 0; i < model.beta_pars.size(); i++) {
-                        model.beta_pars[i] = beta_c;
-                    }
-                }
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::DragFloat("sd", &beta_c, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-
-                ImGui::Dummy(ImVec2(20, 20));
-
-                if (model.include_intercept == 1) {
-                    ImGui::SetNextItemWidth(200);
-                    ImGui::DragFloat("Intercept", &(model.beta_pars[0]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                }
-                if (linpred_item_current == 0) {
-                    for (int t = 0; t < (design.time - 1); t++) {
-                        ImGui::Text("Time period effects:");
-                        ImGui::SetNextItemWidth(200);
-                        int shift_idx = model.include_intercept == 0 ? 0 : 1;
-                        ImGui::DragFloat(int_to_char(t + 1), &(model.beta_pars[t + shift_idx]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    }
-                    if (model.include_intercept == 0) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(int_to_char(design.time), &(model.beta_pars[design.time - 1]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    }
-                }
-                else {
-                    ImGui::Text("Cluster specific time trend parameters:");
-                    for (int l = 0; l < model.beta_pars.size(); l++) {
-                        ImGui::SetNextItemWidth(200);
-                        ImGui::DragFloat(int_to_char(l + 1), &(model.beta_pars[l]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-
+            if(model.family != ClusterApp::Family::gaussian){
             if (!option.two_treatments) {
-                if (ImGui::TreeNode("Set using group means")) {
-                    ImGui::TextWrapped("Automatically set fixed effect parameters by specifying the mean outcomes in treatment and control groups. Temporal variation is assumed to be zero. For non-linear models, a correction is applied for the random effect. Parameter values can be found above.");
+                HelpMarker("Automatically set fixed effect parameters by specifying the mean outcomes in treatment and control groups. Temporal variation is assumed to be zero. For non-linear models, a correction is applied for the random effect. Parameter values can be found above.");
 
 
                     switch (model.family) {
                     case ClusterApp::Family::gaussian:
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Control group mean", &control_mean, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
                         break;
                     case ClusterApp::Family::binomial: case ClusterApp::Family::beta:
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Control group mean", &control_mean, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None);
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None);
                         break;
                     case ClusterApp::Family::poisson: case ClusterApp::Family::gamma:
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Control group mean", &control_mean, 0.01f, 0.0f, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
-                        ImGui::SetNextItemWidth(150);
+                        ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Treatment group mean", &treatment_mean, 0.01f, 0.0f, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
                         break;
                     }
@@ -441,15 +254,203 @@ namespace ClusterApp {
 
                         }
                     }
+            }
+        }
+
+        if(simple_interface == 0){
+            ImGui::Text("Linear predictor");
+            ImGui::SetNextItemWidth(200);
+            ImGui::Combo("Fixed effects", &linpred_item_current, linpred_items, IM_ARRAYSIZE(linpred_items));
+            ImGui::Text("Include intercept?"); ImGui::SameLine();
+            ImGui::RadioButton("No", &model.include_intercept, 0); ImGui::SameLine();
+            ImGui::RadioButton("Yes", &model.include_intercept, 1); ImGui::SameLine(); HelpMarker(
+                "Excluding the intercept will include all time period fixed effects. It will affect the parameter values that should be entered in non-linear model. This choice will be reflected in the parameter values section below.");
+
+            model.linearpredictor = static_cast<ClusterApp::LinearPredictor>(linpred_item_current + 1);
+        }
+
+        ImGui::Spacing();
+        ImGui::Text("Covariance");
+
+        if ((!(family_item_current == 0 && link_item_current == 0) && simple_interface == 0)) {
+            ImGui::TextWrapped("You can set the variance terms for non-Gaussian models using the ICC and related statistics, or by setting the parameter values directly."); ImGui::SameLine();
+            HelpMarker("Use of ICC, CAC, and IAC values for non-Gaussian-identity models uses the mean individual-level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
+            ImGui::Checkbox("Use ICC?", &option.use_icc_for_non_gaussian);
+        }
+        int options_size = 1;
+        if (design.time > 1)options_size = IM_ARRAYSIZE(cluster_covariance_items);
+
+        ImGui::SetNextItemWidth(200);
+        ImGui::Combo("Cluster-level", &cl_cov_item_current, cluster_covariance_items, options_size); ImGui::SameLine(); HelpMarker(
+            "Exhangeable means a single cluster-level random effect, nested exchangeable also includes a cluster-period random effect. The other functions describe the within-cluster temporal covariance.");
+        if (structure_sampling == 1) {
+            ImGui::SetNextItemWidth(200);
+            ImGui::Combo("Individual-level", &ind_cov_item_current, individual_covariance_items, IM_ARRAYSIZE(individual_covariance_items));
+        }
+        else if (structure_sampling == 2) {
+            ind_cov_item_current = 0;
+            ImGui::SetNextItemWidth(200);
+            ImGui::DragFloat("Individual replacement rate", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                "This is the proportion of individuals that dropout each time period and are replaced in the cohort. A value of 1 is a closed cohort and a value of 0 is a cross-sectional study.");
+        }
+
+        model.covariance = static_cast<ClusterApp::Covariance>(cl_cov_item_current + 1);
+        model.ind_covariance = static_cast<ClusterApp::IndividualCovariance>(ind_cov_item_current + 1);
+
+        
 
 
-                    ImGui::TreePop();
+        model.update_beta(design);
+
+        
+        if ((family_item_current == 0 && link_item_current == 0) || (option.use_icc_for_non_gaussian || simple_interface == 1)) {
+            ImGui::SetNextItemWidth(200);
+            ImGui::DragFloat(option.heterogeneous_te ? "Control ICC" : "ICC", &model.ixx_pars[0], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                option.heterogeneous_te ? "Control group intra-class correlation coefficient." : "Intra-class correlation coefficient.");
+            if(option.heterogeneous_te){
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Treatment ICC", &model.ixx_pars[3], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                "Treatment group intra-class correlation coefficient.");
+            }
+            if (cl_cov_item_current == 1) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("CAC", &model.ixx_pars[1], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                    "Cluster autocorrelation coefficient.");
+            }
+            if (cl_cov_item_current == 2) {
+                ImGui::SetNextItemWidth(200);
+                //ImGui::PushFont(unifont);ImGui::PopFont();
+                ImGui::DragFloat("Autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Cluster-period autoregressive parameter.");
+            }
+            if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
+            }
+            if (structure_sampling == 1 || structure_sampling == 2) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("IAC", &model.ixx_pars[2], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                    "Individual autocorrelation coefficient. For open cohorts, set this parameter as if it were a closed cohort.");
+                if (ind_cov_item_current == 1 && structure_sampling != 2) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        "Individual autoregressive parameter.");
+                }
+                if ((ind_cov_item_current == 2 || ind_cov_item_current == 3) && structure_sampling != 2) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
+                }
+            }
+        }
+        else {
+            ImGui::SetNextItemWidth(200);
+            ImGui::DragFloat(option.heterogeneous_te ?  "Control cluster-level variance" : "Cluster-level variance", &model.cov_pars[0], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                option.heterogeneous_te ? "Control group cluster-level variance parameter." : "Cluster-level variance parameter.");
+            if(option.heterogeneous_te){
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Treatment cluster-level variance" , &model.cov_pars[5], 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                "Treatment group intra-class correlation coefficient.");
+            }    
+            if (cl_cov_item_current == 1) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Cluster-period level variance", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Cluster-period level variance parameter.");
+            }
+            if (cl_cov_item_current == 2) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Cluster-period autoregressive", &model.cov_pars[1], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Cluster-period autoregressive parameter.");
+            }
+            if (cl_cov_item_current == 3 || cl_cov_item_current == 4) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Cluster-period denominator", &model.cov_pars[1], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Cluster-period denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
+            }
+            if (structure_sampling == 1 || structure_sampling == 2) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Individual-level variance", &model.cov_pars[3], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                    "Individual-level variance term");
+                if (ind_cov_item_current == 2 && structure_sampling != 2) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat("Autoregressive (individual)", &model.cov_pars[4], 0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine(); HelpMarker(
+                        "Individual autoregressive parameter.");
+                }
+                if ((ind_cov_item_current == 3 || ind_cov_item_current == 4) && structure_sampling != 2) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat("Denominator (individual)", &model.cov_pars[4], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                        "Individual denominator parameter, e.g. exp(|t-t'|/parameter) for exponential covariance.");
+                }
+            }
+            if (family_item_current == 3 || family_item_current == 4) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Observation-level variance", &model.cov_pars[2], 0.01f, 0.0f, +FLT_MAX, "%.3f", ImGuiSliderFlags_None); ImGui::SameLine();  HelpMarker(
+                    "Observation-level variance term.");
+            }
+
+        }
+
+
+        if(simple_interface == 0){
+            ImGui::Spacing();
+            ImGui::Text("Fixed Effect Parameter Values");
+                // add set all zero, random, constant
+            ImGui::Text("Set value defaults");
+            if (ImGui::SmallButton("Set all zero")) {
+                for (int i = 0; i < model.beta_pars.size(); i++) {
+                    model.beta_pars[i] = 0;
                 }
             }
 
+            static float beta_m = 0;
+            static float beta_s = 1;
+            static float beta_c = 0;
+            if (ImGui::SmallButton("Set random normal")) {
+                model.set_beta_random(beta_m, beta_s);
+            }
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::DragFloat("Mean", &beta_m, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::DragFloat("sd", &beta_s, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
 
-            ImGui::TreePop();
+            if (ImGui::SmallButton("Set constant")) {
+                for (int i = 0; i < model.beta_pars.size(); i++) {
+                    model.beta_pars[i] = beta_c;
+                }
+            }
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            ImGui::DragFloat("sd", &beta_c, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+
+            ImGui::Dummy(ImVec2(20, 20));
+
+            if (model.include_intercept == 1) {
+                ImGui::SetNextItemWidth(200);
+                ImGui::DragFloat("Intercept", &(model.beta_pars[0]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+            }
+            if (linpred_item_current == 0) {
+                for (int t = 0; t < (design.time - 1); t++) {
+                    ImGui::Text("Time period effects:");
+                    ImGui::SetNextItemWidth(200);
+                    int shift_idx = model.include_intercept == 0 ? 0 : 1;
+                    ImGui::DragFloat(int_to_char(t + 1), &(model.beta_pars[t + shift_idx]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                }
+                if (model.include_intercept == 0) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat(int_to_char(design.time), &(model.beta_pars[design.time - 1]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                }
+            }
+            else {
+                ImGui::Text("Cluster specific time trend parameters:");
+                for (int l = 0; l < model.beta_pars.size(); l++) {
+                    ImGui::SetNextItemWidth(200);
+                    ImGui::DragFloat(int_to_char(l + 1), &(model.beta_pars[l]), 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+                }
+            }
         }
+        
 
         ImGui::End();
     };

@@ -47,6 +47,7 @@ namespace ClusterApp {
                     static int wedge_t = 6;
                     static int wedge_n = 10;
                     static int wedge_J = 1;
+                    static bool implement = false;
                     ImGui::Text("Trial details");
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("Time periods", &wedge_t, 1, 10, 0);
@@ -54,8 +55,9 @@ namespace ClusterApp {
                     ImGui::InputInt("Observations per cluster-period", &wedge_n, 1, 10, 0);
                     ImGui::SetNextItemWidth(100);
                     ImGui::InputInt("Clusters per arm", &wedge_J, 1, 10, 0);
+                    ImGui::Checkbox("Implementation periods", &implement);
                     if (ImGui::Button("Set")) {
-                        designs.set_stepped_wedge(wedge_t, wedge_n, wedge_J);
+                        designs.set_stepped_wedge(wedge_t, wedge_n, wedge_J, implement);
                         updater.update_data();
                     }
                     ImGui::EndMenu();
@@ -161,7 +163,7 @@ namespace ClusterApp {
                         static int mean_cp_size = 50;
                         static float cv_cp_size = 0.5;
                         static float within_cv = 0.0;
-                        static int variable_cp_sizes = 0; 
+                        static int variable_cp_sizes = 1; 
 
                         ImGui::SetNextItemWidth(100);
                         ImGui::InputInt("Clusters per sequence", &total_t, 1, 10, 0); ImGui::SameLine();
@@ -202,7 +204,7 @@ namespace ClusterApp {
                                         ImGui::InputInt("Mean cluster size", &mean_cp_size, 1, 50, 0);
                                         ImGui::SetNextItemWidth(100);
                                         ImGui::DragFloat("Cluster size c.v.", &cv_cp_size, 0.1f, 0.0f, 10.0f, "%.1f", ImGuiSliderFlags_None);
-                                        if(variable_cp_sizes==1 && designs.time > 1){
+                                        if(variable_cp_sizes==0 && designs.time > 1){
                                             ImGui::SetNextItemWidth(100);
                                             ImGui::DragFloat("Within-cluster period c.v.", &within_cv, 0.1f, 0.0f, 10.0f, "%.1f", ImGuiSliderFlags_None);
                                         }
@@ -214,7 +216,7 @@ namespace ClusterApp {
                                             glmmr::randomGaussian(generator, zz); 
                                             zz.array() *= cv_cp_size*mean_cp_size;    
                                             zz.array() += mean_cp_size;
-                                            if(variable_cp_sizes==1 && designs.time > 1){
+                                            if(variable_cp_sizes==0 && designs.time > 1){
                                                 VectorXd zz_within(designs.time);
                                                 for (int j = 0; j < designs.sequences; j++) {
                                                     glmmr::randomGaussian(generator, zz_within); 
@@ -372,6 +374,8 @@ namespace ClusterApp {
                 {
                     ImGui::Text("Version 0.5.1");
                     ImGui::BulletText("Added varying cluster sizes generation.");
+                    ImGui::BulletText("Added stepped-wedge with implementation period design.");
+                    ImGui::BulletText("Added simpified statistical model interface.");
                     ImGui::Text("Version 0.4.3");
                     ImGui::BulletText("Added heterogeneous treatment effects/different ICCs for treatment and control");
                     ImGui::Text("Version 0.4.2");

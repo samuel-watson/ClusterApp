@@ -107,7 +107,7 @@ void loop()
   }
       
   if (windows.model) {
-      ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
       ImGui::SetNextWindowPos(ImVec2(750, 50), ImGuiCond_FirstUseEver);
       ClusterApp::RenderModel(designs, model, windows);
   }

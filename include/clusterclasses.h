@@ -83,6 +83,7 @@ namespace ClusterApp {
         double  mean_n();
         void    set_parallel(const int t, const int n, const int J);
         void    set_parallel_with_baseline(const int t, const int n, const int J);
+        void    set_stepped_wedge(const int t, const int n, const int J, bool implement_period = false);
         void    set_stepped_wedge(const int t, const int n, const int J);
         void    set_crossover(const int n, const int J);
         void    set_staircase(const int t, const int n, const int J);

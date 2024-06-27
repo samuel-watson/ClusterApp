@@ -28,7 +28,7 @@ LDFLAGS += --shell-file shell_full.html
 all: $(SOURCES) $(OUTPUT)
 
 $(OUTPUT): $(SOURCES) 
-	$(CXX)  $(SOURCES) -std=c++20 -o $(OUTPUT) $(LIBS) $(WEBGL_VER)  -s NO_DISABLE_EXCEPTION_CATCHING --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS) 
+	$(CXX)  $(SOURCES) -std=c++20 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os -g2 -fno-math-errno -s NO_DISABLE_EXCEPTION_CATCHING --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS) 
 clean:
 	rm -f $(OUTPUT)
 
