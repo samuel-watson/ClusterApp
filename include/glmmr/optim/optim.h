@@ -1004,7 +1004,7 @@ inline void optim<T(const std::vector<T>&),DIRECT>::divide_rectangles()
       T delta = 2 * r->max_dim_size / 3.0;
 
 #ifdef R_BUILD
-      if(largest_dims.size()==0)Rcpp::stop("No dimension data");
+      if(largest_dims.size()==0)throw std::runtime_error("No dimension data");
       if(control.trace >= 2)
       {
         Rcpp::Rcout << "\nDIVIDING RECTANGLE " << counter << " | Largest dim size: " << r->max_dim_size << " delta: " << delta << " in dimensions: ";

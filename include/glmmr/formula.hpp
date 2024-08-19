@@ -9,12 +9,12 @@ namespace glmmr{
 
 class Formula {
 public:
-  str formula_;
-  std::vector<char> linear_predictor_;
-  strvec re_;
-  strvec z_;
-  intvec re_order_;
-  bool RM_INT;
+  str                 formula_;
+  std::vector<char>   linear_predictor_;
+  strvec              re_;
+  strvec              z_;
+  intvec              re_order_;
+  bool                RM_INT;
   Formula(const str& formula) : formula_(formula) {tokenise();};
   Formula(const glmmr::Formula& formula) : formula_(formula.formula_){tokenise();};
   Formula& operator= (const glmmr::Formula& formula){
@@ -22,14 +22,14 @@ public:
     tokenise();
     return *this;
   };
-  void tokenise();
-  void formula_validate();
-  void calculate_linear_predictor(glmmr::calculator& calculator,const ArrayXXd& data,const strvec& colnames, MatrixXd& Xdata);
-  strvec re() const;
-  strvec z() const;
-  strvec re_terms() const;
+  void    tokenise();
+  void    formula_validate();
+  void    calculate_linear_predictor(glmmr::calculator& calculator,const ArrayXXd& data,const strvec& colnames, MatrixXd& Xdata);
+  strvec  re() const;
+  strvec  z() const;
+  strvec  re_terms() const;
 private:
-  strvec re_terms_;
+  strvec  re_terms_;
 };
 }
 
@@ -38,7 +38,7 @@ inline void glmmr::Formula::tokenise(){
   RM_INT = false;
   formula_.erase(std::remove_if(formula_.begin(), formula_.end(), [](unsigned char x) { return std::isspace(x); }), formula_.end());
   
-  #ifdef ENABLE_DEBUG
+  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
   Rcpp::Rcout << "\nINITIALISE FORMULA: " << formula_;
   #endif
   
@@ -58,7 +58,6 @@ inline void glmmr::Formula::tokenise(){
     cursor++;
   }
   
-  //auto minone = formula_.find("-1");minone != str::npos
   if(has_found_symbol){
     RM_INT = true;
     formula_.erase(cursor,2);
@@ -73,10 +72,7 @@ inline void glmmr::Formula::tokenise(){
     if(has_found_symbol)Rcpp::Rcout << "\nfound remove intercept: " << formula_;
   #endif
   
-  #ifdef R_BUILD
-  if(formula_as_chars[0]=='+' && !has_found_symbol)Rcpp::stop("Cannot start a formula with +");
-  #endif
-  
+  if(formula_as_chars[0]=='+' && !has_found_symbol)throw std::runtime_error("Cannot start a formula with +");
   if(formula_as_chars[0]=='+' && has_found_symbol)formula_as_chars.erase(formula_as_chars.begin());
   std::vector<char> temp_token;
   int idx = 0;
@@ -93,11 +89,7 @@ inline void glmmr::Formula::tokenise(){
         linear_predictor_.insert(linear_predictor_.end(),temp_token.begin(),temp_token.end());
         linear_predictor_.push_back('+');
       } else {
-        
-        #ifdef R_BUILD
-        if(temp_token.back()!=')')Rcpp::stop("Invalid formula, no closing bracket");
-        #endif
-        
+        if(temp_token.back()!=')')throw std::runtime_error("Invalid formula, no closing bracket");
         int mm = temp_token.size();
         int cursor_re = 1;
         std::vector<char> temp_token_re;
@@ -124,12 +116,12 @@ inline void glmmr::Formula::tokenise(){
     cursor++;
   }
   if(linear_predictor_.back()=='+')linear_predictor_.pop_back();
-  for(int i =0; i<re_.size(); i++){
+  for(int i =0; i< static_cast<int>(re_.size()); i++){
     re_order_.push_back(i);
   }
   re_terms_ = re_;
   
-  #ifdef ENABLE_DEBUG
+  #if defined(ENABLE_DEBUG) & defined(R_BUILD)
     Rcpp::Rcout << "\nLinear predictor: ";
     for(const auto& i: linear_predictor_)Rcpp::Rcout << i;
     Rcpp::Rcout << "\nRandom effects: ";
@@ -153,10 +145,7 @@ inline void glmmr::Formula::formula_validate(){
     }
     if(ch=='+' && open > 0)has_a_plus = true;
     if(ch=='|' && open > 0)has_a_vert = true;
-    
-    #ifdef R_BUILD
-    if(has_a_plus && has_a_vert)Rcpp::stop("Addition inside re term not currently supported");
-    #endif
+    if(has_a_plus && has_a_vert)throw std::runtime_error("Addition inside re term not currently supported");
   }
 }
 

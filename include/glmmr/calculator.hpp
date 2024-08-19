@@ -55,9 +55,7 @@ public:
 }
 
 inline void glmmr::calculator::update_parameters(const dblvec& parameters_in){
-#ifdef R_BUILD
-  if(parameters_in.size() < parameter_count)Rcpp::stop("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
-#endif
+  if(static_cast<int>(parameters_in.size()) < parameter_count)throw std::runtime_error("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
   for(int i = 0; i < parameter_indexes.size(); i++)parameters[i] = parameters_in[parameter_indexes[i]];
 }
 
@@ -90,8 +88,8 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
 
 inline MatrixXd glmmr::calculator::jacobian(){
   int n = data.rows();
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(n==0)Rcpp::stop("No data initialised in calculator");
+#ifdef ENABLE_DEBUG
+  if(n==0)throw std::runtime_error("No data initialised in calculator");
 #endif
   MatrixXd J(n,parameter_count);
 #pragma omp parallel for
@@ -106,8 +104,8 @@ inline MatrixXd glmmr::calculator::jacobian(){
 
 inline MatrixXd glmmr::calculator::jacobian(const VectorXd& extraData){
   int n = data.rows();
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(n==0)Rcpp::stop("No data initialised in calculator");
+#ifdef ENABLE_DEBUG
+  if(n==0)throw std::runtime_error("No data initialised in calculator");
 #endif 
   MatrixXd J(n,parameter_count);
 #pragma omp parallel for
@@ -123,9 +121,9 @@ inline MatrixXd glmmr::calculator::jacobian(const VectorXd& extraData){
 inline MatrixXd glmmr::calculator::jacobian(const MatrixXd& extraData){
   int n = data.rows();
   
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(n==0)Rcpp::stop("No data initialised in calculator");
-  if(extraData.rows()!=n)Rcpp::stop("Extra data not of length n");
+#ifdef ENABLE_DEBUG
+  if(n==0)throw std::runtime_error("No data initialised in calculator");
+  if(extraData.rows()!=n)throw std::runtime_error("Extra data not of length n");
 #endif
   
   int iter = extraData.cols();
@@ -149,8 +147,8 @@ inline MatrixMatrix glmmr::calculator::jacobian_and_hessian(const MatrixXd& extr
   MatrixMatrix result(parameter_count,parameter_count,parameter_count,n);
   
 #ifdef ENABLE_DEBUG
-  if(n==0)Rcpp::stop("No data initialised in calculator");
-  if(extraData.rows()!=n)Rcpp::stop("Extra data not of length n");
+  if(n==0)throw std::runtime_error("No data initialised in calculator");
+  if(extraData.rows()!=n)throw std::runtime_error("Extra data not of length n");
 #endif
   
   int iter = extraData.cols();
@@ -213,8 +211,8 @@ inline VectorMatrix glmmr::calculator::jacobian_and_hessian(){
 
 inline double glmmr::calculator::get_covariance_data(const int i, const int j, const int fn){
   int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
+#ifdef ENABLE_DEBUG
+  if(i1 >= data.rows())throw std::runtime_error("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
 #endif
   return data(i1,fn);
 }
@@ -270,10 +268,10 @@ inline dblvec glmmr::calculator::calculate(const int i,
     case Do::PushData:
     {
       // debugging statements to find possible errors
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-      if(indexes[idx_iter] >= data.cols())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
-      if(i >= data.rows())Rcpp::stop("Row index out of range: case 0: "+std::to_string(i)+" versus "+std::to_string(data.rows()));
+#ifdef ENABLE_DEBUG
+      if(idx_iter >= indexes.size())throw std::runtime_error("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+      if(indexes[idx_iter] >= data.cols())throw std::runtime_error("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
+      if(i >= data.rows())throw std::runtime_error("Row index out of range: case 0: "+std::to_string(i)+" versus "+std::to_string(data.rows()));
 #endif
       stack.push(data(i,indexes[idx_iter]));
       if constexpr (dydx == CalcDyDx::BetaFirst || dydx == CalcDyDx::BetaSecond)addZeroDx();
@@ -293,17 +291,17 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::PushCovData:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 1 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-      if(indexes[idx_iter] >= data.cols())Rcpp::stop("Index out of range: case 1 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
+#ifdef ENABLE_DEBUG
+      if(idx_iter >= indexes.size())throw std::runtime_error("Index out of range: case 1 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+      if(indexes[idx_iter] >= data.cols())throw std::runtime_error("Index out of range: case 1 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
 #endif
       
       if(i==j){
         stack.push(0.0);
       } else {
         int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-        if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
+#ifdef ENABLE_DEBUG
+        if(i1 >= data.rows())throw std::runtime_error("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
 #endif
         stack.push(data(i1,indexes[idx_iter]));
       }
@@ -314,10 +312,10 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::PushParameter:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-      if(indexes[idx_iter] >= parameter_count)Rcpp::stop("Index out of range: case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameter_count));
-      if(indexes[idx_iter] >= parameters.size())Rcpp::stop("Index out of range (pars): case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
+#ifdef ENABLE_DEBUG
+      if(idx_iter >= indexes.size())throw std::runtime_error("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+      if(indexes[idx_iter] >= parameter_count)throw std::runtime_error("Index out of range: case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameter_count));
+      if(indexes[idx_iter] >= parameters.size())throw std::runtime_error("Index out of range (pars): case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
 #endif
       
       stack.push(parameters[indexes[idx_iter]]);
@@ -348,8 +346,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Add:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()<2)Rcpp::stop("Stack too small (3)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()<2)throw std::runtime_error("Stack too small (3)");
 #endif
       a = stack.top();
       stack.pop();
@@ -378,8 +376,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Subtract:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()<2)Rcpp::stop("Stack too small (4)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()<2)throw std::runtime_error("Stack too small (4)");
 #endif
       a = stack.top();
       stack.pop();
@@ -408,8 +406,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Multiply:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()<2)Rcpp::stop("Stack too small (5)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()<2)throw std::runtime_error("Stack too small (5)");
 #endif
       
       a = stack.top();
@@ -456,17 +454,17 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Divide:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()<2)Rcpp::stop("Stack too small (6)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()<2)throw std::runtime_error("Stack too small (6)");
 #endif
       
       a = stack.top();
       stack.pop();
       b = stack.top();
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(b == 0.0)Rcpp::stop("Divide by zero (6)");
-      if(isinf(a/b))Rcpp::stop("Infinity in division (6b)");
+#ifdef ENABLE_DEBUG
+      if(b == 0.0)throw std::runtime_error("Divide by zero (6)");
+      if(isinf(a/b))throw std::runtime_error("Infinity in division (6b)");
 #endif
       
       stack.pop();
@@ -511,8 +509,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Sqrt:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (7)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (7)");
 #endif
       
       a = stack.top();
@@ -550,8 +548,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::Power:
     {
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()<2)Rcpp::stop("Stack too small (8)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()<2)throw std::runtime_error("Stack too small (8)");
 #endif
       
       a = stack.top();
@@ -562,7 +560,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       
 #ifdef R_BUILD
       // try and catch these possible failures as it seems to cause crash if nan allowed to propogate
-      if(out != out)Rcpp::stop("Exponent fail: "+std::to_string(a)+"^"+std::to_string(b));
+      if(out != out)throw std::runtime_error("Exponent fail: "+std::to_string(a)+"^"+std::to_string(b));
 #endif
       
       stack.push(out);
@@ -579,7 +577,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           if(a > 0) result += pow(a,b)*b_top_dx.back()*log(a) + pow(a,b-1)*b*a_top_dx.back(); 
 #ifdef R_BUILD
           // this can sometimes result in a crash if the values of the parameters aren't right
-          if(result != result)Rcpp::stop("Exponent dydx fail: "+std::to_string(a)+"^"+std::to_string(b-1));
+          if(result != result)throw std::runtime_error("Exponent dydx fail: "+std::to_string(a)+"^"+std::to_string(b-1));
 #endif
           fstack.push(result);
         }
@@ -598,7 +596,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
               if(a > 0) result4 = result1 + result3;
               #ifdef R_BUILD
               // this can sometimes result in a crash if the values of the parameters aren't right
-              if(result4 != result4)Rcpp::stop("Exponent d2ydx2 fail: "+std::to_string(a)+"^"+std::to_string(b-2)+" (i,j) = ("+std::to_string(idx)+","+std::to_string(jdx)+")");
+              if(result4 != result4)throw std::runtime_error("Exponent d2ydx2 fail: "+std::to_string(a)+"^"+std::to_string(b-2)+" (i,j) = ("+std::to_string(idx)+","+std::to_string(jdx)+")");
               #endif
               second_dx[index_count].push(result4);
               index_count++;
@@ -622,8 +620,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Exp:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (9)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (9)");
 #endif
       
       a = stack.top();
@@ -661,8 +659,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::Negate:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (10)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (10)");
 #endif
       
       a = stack.top();
@@ -685,8 +683,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::Bessel:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (11)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (11)");
 #endif
       
       a = stack.top();
@@ -728,8 +726,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
       break;
     case Do::Gamma:
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (12)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (12)");
 #endif
       a = stack.top();
       stack.pop();
@@ -770,8 +768,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::Sin:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (13)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (13)");
 #endif
       
       a = stack.top();
@@ -812,8 +810,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
       break;
     case Do::Cos:
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (14)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (14)");
 #endif
       
       a = stack.top();
@@ -855,8 +853,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::BesselK:
       
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (15)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (15)");
 #endif
       
       a = stack.top();
@@ -941,8 +939,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }        
         break;
     case Do::Log:
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (16)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (16)");
 #endif
       
       a = stack.top();
@@ -983,8 +981,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
       break;
     case Do::Square:
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (17)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (17)");
 #endif
       a = stack.top();
       stack.pop();
@@ -1128,8 +1126,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     case Do::LogFactorialApprox:
     {
       //log factorial approximation
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(stack.size()==0)Rcpp::stop("Stack too small (40)");
+#ifdef ENABLE_DEBUG
+      if(stack.size()==0)throw std::runtime_error("Stack too small (40)");
 #endif
       
       a = stack.top();
@@ -1256,13 +1254,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;    
     }
     
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-    if(stack.size() == 0)Rcpp::stop("Error stack empty");
-    if(stack.top() != stack.top() || isnan(stack.top()))Rcpp::stop("Calculation evaluates to NaN");
+#ifdef ENABLE_DEBUG
+    if(stack.size() == 0)throw std::runtime_error("Error stack empty");
+    if(stack.top() != stack.top() || isnan(stack.top()))throw std::runtime_error("Calculation evaluates to NaN");
 #endif
   }
   
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#ifdef ENABLE_DEBUG
   if(stack.size()>1)Rcpp::warning("More than one element on the stack at end of calculation");
 #endif
   
@@ -1271,16 +1269,16 @@ inline dblvec glmmr::calculator::calculate(const int i,
   
   if constexpr (dydx != CalcDyDx::None){
     for(const auto& fstack: first_dx){
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(fstack.size()==0)Rcpp::stop("Error derivative stack empty");
+#ifdef ENABLE_DEBUG
+      if(fstack.size()==0)throw std::runtime_error("Error derivative stack empty");
 #endif
       result.push_back(fstack.top());
     }
   }
   if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta){
     for(const auto& sstack: second_dx){
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      if(sstack.size()==0)Rcpp::stop("Error second derivative stack empty");
+#ifdef ENABLE_DEBUG
+      if(sstack.size()==0)throw std::runtime_error("Error second derivative stack empty");
 #endif
       result.push_back(sstack.top());
     }
@@ -1337,7 +1335,7 @@ inline void glmmr::calculator::print_instructions() const {
           glmmr::print_vec_1d(indexes);
           Rcpp::Rcout << "\nParameter names: ";
           glmmr::print_vec_1d(parameter_names);
-          Rcpp::stop("Execution halted");
+          throw std::runtime_error("Execution halted");
         }
         Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<"\n";
         idx_iter++;
@@ -1352,7 +1350,7 @@ inline void glmmr::calculator::print_instructions() const {
           glmmr::print_vec_1d(indexes);
           Rcpp::Rcout << "\nData names: ";
           glmmr::print_vec_1d(data_names);
-          Rcpp::stop("Execution halted");
+          throw std::runtime_error("Execution halted");
         }
         Rcpp::Rcout << " (column " << data_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<")\n";
         idx_iter++;

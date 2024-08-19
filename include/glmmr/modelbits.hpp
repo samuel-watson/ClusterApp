@@ -22,8 +22,6 @@ public:
   linpred               linear_predictor;
   glmmr::ModelExtraData data;
   glmmr::Family         family;
-  // glmmr::calculator     calc;
-  // glmmr::calculator     vcalc;
   bool                  weighted = false;
   int                   trace = 0;
     
@@ -33,8 +31,6 @@ public:
   virtual ArrayXd   xb() {return linear_predictor.xb().array() + data.offset.array();};
   virtual void      make_covariance_sparse(bool amd = true);
   virtual void      make_covariance_dense();
-private:
-  //void              setup_calculator();
 };
 
 }
@@ -50,34 +46,6 @@ inline glmmr::ModelBits<cov, linpred>::ModelBits(const std::string& formula_,
   linear_predictor(formula,data_,colnames_),
   data(data_.rows()),
   family(family_,link_) {};
-   //setup_calculator(); };
-
-
-// template<typename cov, typename linpred>
-// inline void glmmr::ModelBits<cov, linpred>::setup_calculator()
-// {
-//   dblvec yvec(n(),0.0);
-//   calc = linear_predictor.calc;
-//   glmmr::re_linear_predictor(vcalc,covariance.Q());
-//   glmmr::linear_predictor_to_link(calc,family.link);
-//   glmmr::link_to_likelihood(calc,family.family);
-//   calc.y = yvec;
-//   calc.variance.conservativeResize(yvec.size());
-//   calc.variance = data.variance;
-//   
-//   // vcalc = linear_predictor.calc;
-//   // glmmr::re_linear_predictor(vcalc,covariance.Q());
-//   // glmmr::linear_predictor_to_link(vcalc,family.link);
-//   // glmmr::link_to_likelihood(vcalc,family.family);
-//   // glmmr::re_log_likelihood(vcalc,covariance.Q());
-//   // vcalc.variance.conservativeResize(n());
-//   // vcalc.variance = data.variance;
-//   // vcalc.data.conservativeResize(n(),linear_predictor.calc.data_count + covariance.Q());
-//   // vcalc.parameters.resize(linear_predictor.P()+covariance.Q());
-//   // vcalc.y.resize(n());
-//   // std::fill(vcalc.parameters.begin(),vcalc.parameters.end(),0.0);
-//   // std::fill(vcalc.y.begin(),vcalc.y.end(),0.0);
-// }
 
 template<typename cov, typename linpred>
 inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(bool amd){

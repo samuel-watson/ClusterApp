@@ -77,6 +77,9 @@ void ClusterApp::glmmModel::update_formula() {
     case ClusterApp::Family::beta:
         family = "beta";
         break;
+    case ClusterApp::Family::quantile:
+        family = "quantile_scaled";     
+        break;
     }
     switch (statmodel.link) {
     case ClusterApp::Link::identity:
@@ -288,6 +291,10 @@ void ClusterApp::glmmModel::update_parameters() {
 
     (*model).update_beta(beta);
     (*model).update_theta(theta);
+    if(statmodel.family == ClusterApp::Family::quantile){
+        (*model).model.family.set_quantile(statmodel.quantile);
+        if (option.log)logger.AddLog("[%05d] [%s] Update quantile: %f \n", ImGui::GetFrameCount(), logger.cat[0], statmodel.quantile);
+    }
     if (option.log) {
         logger.AddLog("[%05d] [%s] Update beta: \n", ImGui::GetFrameCount(), logger.cat[0]);
         ClusterApp::AddVectorToLog(beta, logger);

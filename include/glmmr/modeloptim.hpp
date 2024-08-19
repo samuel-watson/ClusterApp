@@ -97,6 +97,7 @@ public:
   std::pair<double,double>  current_likelihood_values();
   std::pair<double,double>  u_diagnostic();
   void            reset_fn_counter();
+  void            set_quantile(const double& q);
   // functions to optimise
   double          log_likelihood_beta(const dblvec &beta);
   double          log_likelihood_beta_with_gradient(const VectorXd &beta, VectorXd& g);
@@ -115,6 +116,7 @@ protected:
   dblvec    lower_bound_theta;
   dblvec    upper_bound_theta; // bounds for beta
   bool      beta_bounded = false;
+  double    quantile = 0.5;
   
   // functions
   void            calculate_var_par();
@@ -286,9 +288,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_all(){
   } else if constexpr (std::is_same_v<algo,NEWUOA>) {
     set_newuoa_control(op);
   } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    #ifdef R_BUILD
-      Rcpp::stop("L-BFGS not available for beta & theta optimisation");
-    #endif
+    throw std::runtime_error("L-BFGS not available for beta & theta optimisation");
   }
   dblvec lower = get_lower_values(true,true,false);
   dblvec upper = get_upper_values(true,true,false);
@@ -391,9 +391,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta()
     } else if constexpr (std::is_same_v<algo,NEWUOA>) {
       set_newuoa_control(op);
     } else if constexpr (std::is_same_v<algo,LBFGS>) {
-      #ifdef R_BUILD
-        Rcpp::stop("L-BFGS not available for Laplace theta optimisation");
-      #endif
+      throw std::runtime_error("L-BFGS not available for Laplace theta optimisation");
     }
     op.set_bounds(lower,upper);
     if constexpr (std::is_same_v<modeltype,bits>)
@@ -427,9 +425,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
   } else if constexpr (std::is_same_v<algo,NEWUOA>) {
     set_newuoa_control(op);
   } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    #ifdef R_BUILD
-      Rcpp::stop("L-BFGS not available for Laplace beta-theta optimisation");
-    #endif
+    throw std::runtime_error("L-BFGS not available for Laplace beta-theta optimisation");
   }
   op.set_bounds(lower,upper);
   if constexpr (std::is_same_v<modeltype,bits>)
@@ -463,6 +459,13 @@ inline void glmmr::ModelOptim<modeltype>::reset_fn_counter()
 {
   fn_counter.first = 0;
   fn_counter.second = 0;
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_quantile(const double& q)
+{
+  if(q <= 0 || q >= 1)throw std::runtime_error("q !in [0,1]");
+  quantile = q;
 }
 
 template<typename modeltype>
@@ -924,7 +927,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol ) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                              model.data.variance(i)/model.data.weights(i),
-                                             model.family.family,model.family.link);
+                                             model.family);
         }
       }
     } else {
@@ -932,7 +935,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
 #pragma omp parallel for
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-                                   model.data.variance(i),model.family.family,model.family.link);
+                                   model.data.variance(i),model.family);
         }
       }
       ll_current.col(llcol) *= model.data.weights.sum()/model.n();
@@ -942,8 +945,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
 #pragma omp parallel for
       for(int i = 0; i<model.n(); i++){
         ll_current(j,llcol) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-                                           model.data.variance(i),model.family.family,
-                                           model.family.link);
+                                           model.data.variance(i),model.family);
       }
     }
   }
@@ -988,9 +990,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower)
 {
-#ifdef R_BUILD
-  if(bound.size()!=P())Rcpp::stop("Bound not equal to number of parameters");
-#endif
+  if(static_cast<int>(bound.size())!=P())throw std::runtime_error("Bound not equal to number of parameters");
   if(lower){
     if(lower_bound.size() != bound.size())lower_bound.resize(P());
     lower_bound = bound; 
@@ -1180,7 +1180,7 @@ inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
-  if(model.family.family==Fam::gaussian){
+  if(model.family.family==Fam::gaussian || model.family.family==Fam::quantile_scaled){
     // revise this for beta and Gamma re residuals
     int niter = re.u(false).cols();
     ArrayXd sigmas(niter);
@@ -1216,7 +1216,7 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
                                                              double tol,
                                                              int max_iter){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(C.size()!=P())Rcpp::stop("C is wrong size");
+  if(C.size()!=P())throw std::runtime_error("C is wrong size");
 #endif 
   
   VectorXd Cvec(C);

@@ -179,9 +179,7 @@ inline int glmmr::Covariance::parse(){
   strvec2d re_par_names_;
   intvec3d re_pars_;
   // now process each step of the random effect terms
-  #ifdef R_BUILD
-  if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
-  #endif 
+  if(static_cast<int>(colnames_.size())!= data_.cols())throw std::runtime_error("colnames length != data columns");
   
   int nre = form_.re_.size();
   
@@ -206,9 +204,7 @@ inline int glmmr::Covariance::parse(){
         while(getline(check3, intermediate3, ',')){
           auto colidx = std::find(colnames_.begin(),colnames_.end(),intermediate3);
           if(colidx == colnames_.end()){
-            #ifdef R_BUILD
-            Rcpp::stop("variable "+intermediate3+" not in data");
-            #endif 
+            throw std::runtime_error("variable "+intermediate3+" not in data");
           } else {
             int newidx = colidx - colnames_.begin();
             fnvars[iter].push_back(newidx);
@@ -217,9 +213,7 @@ inline int glmmr::Covariance::parse(){
       } else {
         auto colidx = std::find(colnames_.begin(),colnames_.end(),intermediate2);
         if(colidx == colnames_.end()){
-          #ifdef R_BUILD
-          Rcpp::stop("variable "+intermediate2+" not in data");
-          #endif
+          throw std::runtime_error("variable "+intermediate2+" not in data");
         } else {
           int newidx = colidx - colnames_.begin();
           fnvars[iter].push_back(newidx);
@@ -239,9 +233,7 @@ inline int glmmr::Covariance::parse(){
     } else {
       auto idxz = std::find(colnames_.begin(),colnames_.end(),form_.z_[i]);
       if(idxz == colnames_.end()){
-        #ifdef R_BUILD
-        Rcpp::stop("z variable "+form_.z_[i]+" not in column names");
-        #endif
+        throw std::runtime_error("z variable "+form_.z_[i]+" not in column names");
       } else {
         zcol = idxz - colnames_.begin();
       }
@@ -298,9 +290,7 @@ inline int glmmr::Covariance::parse(){
     for(j = 0; j < groups.size(); j++){
       fn_.emplace_back();
       for(const auto& fnvalue: fn){
-#ifdef R_BUILD
-        if(glmmr::validate_fn(fnvalue))Rcpp::stop("Function " + fnvalue + " not valid");
-#endif
+        if(glmmr::validate_fn(fnvalue))throw std::runtime_error("Function " + fnvalue + " not valid");
         fn_.back().push_back(str_to_covfunc.at(fnvalue));
       }
       z_.push_back(zcol);
@@ -517,9 +507,7 @@ inline int glmmr::Covariance::B() const
 
 inline int glmmr::Covariance::Q() const
 {
-#ifdef R_BUILD
-  if(Q_==0)Rcpp::stop("Random effects not initialised");
-#endif
+  if(Q_==0)throw std::runtime_error("Random effects not initialised");
   return Q_;
 }
 
@@ -563,9 +551,7 @@ inline void glmmr::Covariance::update_parameters(const dblvec& parameters)
 
 inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters)
 {
-  #ifdef R_BUILD
-  if(parameters.size()!=npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
-  #endif
+  if(static_cast<int>(parameters.size())!=npar())throw std::runtime_error(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
   if(parameters_.size()==0){
     parameters_.resize(npar());
   }
@@ -594,9 +580,7 @@ inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters)
     update_parameters_in_calculators();
     update_ax();
   } else {
-#ifdef R_BUILD
-    Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(parameters_.size())+" required");
-#endif
+    throw std::runtime_error(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(parameters_.size())+" required");
   }
 };
 
@@ -660,9 +644,7 @@ inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper)
 
 inline VectorXd glmmr::Covariance::sim_re()
 {
-  #ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no parameters, cannot simulate random effects");
-  #endif
+  if(parameters_.size()==0)throw std::runtime_error("no parameters, cannot simulate random effects");
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nSim";
 #endif
@@ -762,10 +744,7 @@ inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
 }
 
 inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
-#ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log likelihood");
-#endif
-  
+  if(parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot calculate log likelihood");
   double logdet_val=0.0;
   double loglik_val=0.0;
   int obs_counter=0;
@@ -807,9 +786,7 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
 }
 
 inline double glmmr::Covariance::log_determinant(){
-#ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log determinant");
-#endif
+  if(parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot calculate log determinant");
   int blocksize;
   double logdet_val = 0.0;
   if(!isSparse){
@@ -829,9 +806,7 @@ inline double glmmr::Covariance::log_determinant(){
 
 
 inline void glmmr::Covariance::make_sparse(){
-#ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot make sparse");
-#endif
+  if(parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot make sparse");
   int dim;
   double val;
   int col_counter=0;

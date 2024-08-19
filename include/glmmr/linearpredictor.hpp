@@ -63,9 +63,7 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   if(!calc.any_nonlinear){
     X_ = calc.jacobian();
-  #ifdef R_BUILD
-    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
-  #endif 
+    if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
   } else {
     X_.setZero();
   }
@@ -87,9 +85,7 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
-#ifdef R_BUILD
-  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
-#endif 
+  if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
@@ -108,9 +104,7 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
-#ifdef R_BUILD
-  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
-#endif 
+  if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
@@ -126,9 +120,7 @@ inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& lin
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
-#ifdef R_BUILD
-  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
-#endif 
+  if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
@@ -139,10 +131,8 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
   for(const auto& i: parameters_)Rcpp::Rcout << i << " ";
 #endif
   
-  #ifdef R_BUILD
-  if(parameters_.size()!=P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
-  if(parameters_.size()!=calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
-  #endif
+  if(static_cast<int>(parameters_.size())!=P())throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(static_cast<int>(parameters_.size())!=calc.parameter_count)throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   
   if(parameters.size()==0){
     parameters.resize(P_);
@@ -154,9 +144,7 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
   if(!x_set){
     X_ = calc.jacobian();
     x_set = true;
-#ifdef R_BUILD
-    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
-#endif 
+    if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
   }
 };
 

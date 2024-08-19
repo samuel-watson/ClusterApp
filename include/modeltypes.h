@@ -60,7 +60,8 @@ namespace ClusterApp {
         binomial = 2,
         poisson = 3,
         beta = 4,
-        gamma = 5
+        gamma = 5,
+        quantile = 6
     };
 
     enum class Link {

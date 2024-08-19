@@ -160,9 +160,7 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
     if(!(expidx == this->fn_[0].end())){
       sq_exp = false;
     } else {
-      #ifdef R_BUILD
-      Rcpp::stop("HSGP only allows exp and sqexp currently.");
-      #endif
+      throw std::runtime_error("HSGP only allows exp and sqexp currently.");
     }
   }
 }
@@ -271,9 +269,7 @@ inline MatrixXd glmmr::hsgpCovariance::D(bool chol, bool upper){
 }
 
 inline VectorXd glmmr::hsgpCovariance::sim_re(){
-  #ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
-  #endif
+  if(parameters_.size()==0)throw std::runtime_error("no parameters");
   VectorXd samps(this->Q_);
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
     generator(boost::mt19937(time(0)),

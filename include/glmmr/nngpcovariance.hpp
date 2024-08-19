@@ -122,9 +122,7 @@ inline MatrixXd glmmr::nngpCovariance::Lu(const MatrixXd& u){
 }
 
 inline VectorXd glmmr::nngpCovariance::sim_re(){
-#ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
-#endif
+  if(parameters_.size()==0)throw std::runtime_error("no parameters");
   VectorXd samps(this->Q_);
   MatrixXd L = D(true,false);
   boost::variate_generator<boost::mt19937, boost::normal_distribution<> >

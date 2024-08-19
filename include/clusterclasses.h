@@ -124,6 +124,7 @@ namespace ClusterApp {
         void                    update_beta(ClusterApp::design& design);
         void                    set_beta_random(const double m, const double s);
         float                   alpha = 0.05;
+        float                   quantile = 0.5;
     };
 
     struct modelSummary {

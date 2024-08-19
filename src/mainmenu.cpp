@@ -357,8 +357,8 @@ namespace ClusterApp {
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
                     ImGui::Text("(c) Sam Watson 2024");
-                    ImGui::Text("Version: 0.5.1");
-                    ImGui::Text("glmmrBase Version: 0.8.1");
+                    ImGui::Text("Version: 0.5.2");
+                    ImGui::Text("glmmrBase Version: 0.10.3");
                     ImGui::Text("SparseChol Version: 0.2.2");
 
                     ImGui::Text("License: GNU GPLv3");
@@ -372,6 +372,8 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.5.2");
+                    ImGui::BulletText("Updated to glmmrBase v0.10.3.");
                     ImGui::Text("Version 0.5.1");
                     ImGui::BulletText("Added varying cluster sizes generation.");
                     ImGui::BulletText("Added stepped-wedge with implementation period design.");

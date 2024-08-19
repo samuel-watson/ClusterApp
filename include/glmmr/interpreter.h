@@ -174,23 +174,12 @@ inline intvec interpret_re_par(const CovFunc& fn,
     addA();
     B.push_back(par_idx[1]);
     break;
-  case CovFunc::fexp0: case CovFunc::bessel:
+  case CovFunc::fexp0: case CovFunc::bessel: case CovFunc::sqexp0:
     B.push_back(par_idx[0]);
     addA();
     break;
-  case CovFunc::fexp:
+  case CovFunc::fexp: case CovFunc::sqexp:
     B.push_back(par_idx[1]);
-    addA();
-    B.push_back(par_idx[0]);
-    break;
-  case CovFunc::sqexp0:
-    addPar2(0);
-    addA();
-    addA();
-    break;
-  case CovFunc::sqexp:
-    addPar2(1);
-    addA();
     addA();
     B.push_back(par_idx[0]);
     break;
@@ -261,9 +250,7 @@ inline void re_log_likelihood(glmmr::calculator& calc,
     calc.instructions.insert(calc.instructions.end(),re_seq.begin(),re_seq.end());
     auto uidx = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"v_"+std::to_string(i));
     if(uidx == calc.parameter_names.end()){
-      #ifdef R_BUILD
-      Rcpp::stop("Error finding name of random effect in calculator");
-      #endif
+      throw std::runtime_error("Error finding name of random effect in calculator");
     } else {
       int idx_to_add = uidx - calc.parameter_names.begin();
       calc.indexes.push_back(idx_to_add);
@@ -317,114 +304,114 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
   calc.instructions = out;
 }
 
-// many of these could be optimised better!
-inline void link_to_likelihood(glmmr::calculator& calc,
-                               const Fam family){
-  using instructs = std::vector<Do>;
-  instructs out;
-  intvec idx;
-  
-  switch (family){
-    case Fam::gaussian:
-      {
-        instructs gaus_instruct = {Do::PushY,Do::Subtract,Do::Square,Do::Divide,Do::Half,
-                                   Do::Multiply,Do::HalfLog2Pi,Do::Add,
-                                   Do::PushVariance,Do::Log,Do::Half,
-                                   Do::Multiply,Do::Add,Do::Negate};
-        out.push_back(Do::PushVariance);
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
-        break;
-      }
-    case Fam::bernoulli:
-      {
-        instructs binom_instruct = {Do::Log,Do::Multiply,Do::PushY,Do::Int1,Do::Subtract};
-        instructs binom_instruct2 = {Do::Int1,Do::Subtract,Do::Log,Do::Multiply,Do::Add};
-        out.push_back(Do::PushY);
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
-        break;
-      }
-    case Fam::poisson:
-      {
-        out.push_back(Do::PushY);
-        out.push_back(Do::LogFactorialApprox);
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.push_back(Do::Log);
-        out.push_back(Do::PushY);
-        out.push_back(Do::Multiply);
-        out.push_back(Do::Subtract);
-        out.push_back(Do::Subtract);
-        break;
-      }
-    case Fam::gamma:
-      {
-        instructs gamma_instruct = {Do::PushVariance,Do::PushY,Do::Multiply,Do::Divide};
-        instructs gamma_instruct2 = {Do::Log,Do::PushVariance,Do::Log,Do::Subtract,
-                                     Do::PushVariance,Do::Multiply,Do::PushY,Do::Log,
-                                     Do::Int1,Do::PushVariance,
-                                     Do::Subtract,Do::Multiply,Do::Add,Do::Subtract};
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
-        break;
-      }
-    case Fam::beta:
-      {
-        instructs beta_instruct = {Do::PushVariance,Do::Subtract,Do::PushY,Do::Log,Do::Multiply,
-                                   Do::Int1};
-        instructs beta_instruct2 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Subtract,
-                                    Do::PushY,Do::Int1,Do::Subtract,Do::Log,
-                                    Do::Multiply,Do::Add};
-        instructs beta_instruct3 = {Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,Do::Negate,Do::Add};
-        instructs beta_instruct4 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,
-                                    Do::Negate,Do::Add,Do::PushVariance,
-                                    Do::Gamma,Do::Log,Do::Add};
-        out.push_back(Do::Int1);
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),beta_instruct2.begin(),beta_instruct2.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),beta_instruct3.begin(),beta_instruct3.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),beta_instruct4.begin(),beta_instruct4.end());
-        break;
-      }
-    case Fam::binomial:
-      {
-        instructs binom_instruct = {Do::PushY,Do::LogFactorialApprox,Do::PushY,Do::PushVariance,
-                                    Do::Subtract,Do::Add,Do::PushVariance,
-                                    Do::LogFactorialApprox,Do::Add};
-        instructs binom_instruct2 = {Do::Log,Do::PushY,Do::Multiply,Do::Add};
-        instructs binom_instruct3 = {Do::Int1,Do::Subtract,Do::Log,Do::PushY,Do::PushVariance,
-                                     Do::Subtract,Do::Multiply,Do::Add};
-        out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
-        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
-        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),binom_instruct3.begin(),binom_instruct3.end());
-      }
-  }
-  calc.instructions = out;
-  calc.indexes = idx;
-}
+// // many of these could be optimised better!
+// inline void link_to_likelihood(glmmr::calculator& calc,
+//                                const Fam family){
+//   using instructs = std::vector<Do>;
+//   instructs out;
+//   intvec idx;
+//   
+//   switch (family){
+//     case Fam::gaussian:
+//       {
+//         instructs gaus_instruct = {Do::PushY,Do::Subtract,Do::Square,Do::Divide,Do::Half,
+//                                    Do::Multiply,Do::HalfLog2Pi,Do::Add,
+//                                    Do::PushVariance,Do::Log,Do::Half,
+//                                    Do::Multiply,Do::Add,Do::Negate};
+//         out.push_back(Do::PushVariance);
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
+//         break;
+//       }
+//     case Fam::bernoulli:
+//       {
+//         instructs binom_instruct = {Do::Log,Do::Multiply,Do::PushY,Do::Int1,Do::Subtract};
+//         instructs binom_instruct2 = {Do::Int1,Do::Subtract,Do::Log,Do::Multiply,Do::Add};
+//         out.push_back(Do::PushY);
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
+//         break;
+//       }
+//     case Fam::poisson:
+//       {
+//         out.push_back(Do::PushY);
+//         out.push_back(Do::LogFactorialApprox);
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.push_back(Do::Log);
+//         out.push_back(Do::PushY);
+//         out.push_back(Do::Multiply);
+//         out.push_back(Do::Subtract);
+//         out.push_back(Do::Subtract);
+//         break;
+//       }
+//     case Fam::gamma:
+//       {
+//         instructs gamma_instruct = {Do::PushVariance,Do::PushY,Do::Multiply,Do::Divide};
+//         instructs gamma_instruct2 = {Do::Log,Do::PushVariance,Do::Log,Do::Subtract,
+//                                      Do::PushVariance,Do::Multiply,Do::PushY,Do::Log,
+//                                      Do::Int1,Do::PushVariance,
+//                                      Do::Subtract,Do::Multiply,Do::Add,Do::Subtract};
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
+//         break;
+//       }
+//     case Fam::beta:
+//       {
+//         instructs beta_instruct = {Do::PushVariance,Do::Subtract,Do::PushY,Do::Log,Do::Multiply,
+//                                    Do::Int1};
+//         instructs beta_instruct2 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Subtract,
+//                                     Do::PushY,Do::Int1,Do::Subtract,Do::Log,
+//                                     Do::Multiply,Do::Add};
+//         instructs beta_instruct3 = {Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,Do::Negate,Do::Add};
+//         instructs beta_instruct4 = {Do::Int1,Do::Subtract,Do::PushVariance,Do::Multiply,Do::Gamma,Do::Log,
+//                                     Do::Negate,Do::Add,Do::PushVariance,
+//                                     Do::Gamma,Do::Log,Do::Add};
+//         out.push_back(Do::Int1);
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),beta_instruct2.begin(),beta_instruct2.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),beta_instruct3.begin(),beta_instruct3.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),beta_instruct4.begin(),beta_instruct4.end());
+//         break;
+//       }
+//     case Fam::binomial:
+//       {
+//         instructs binom_instruct = {Do::PushY,Do::LogFactorialApprox,Do::PushY,Do::PushVariance,
+//                                     Do::Subtract,Do::Add,Do::PushVariance,
+//                                     Do::LogFactorialApprox,Do::Add};
+//         instructs binom_instruct2 = {Do::Log,Do::PushY,Do::Multiply,Do::Add};
+//         instructs binom_instruct3 = {Do::Int1,Do::Subtract,Do::Log,Do::PushY,Do::PushVariance,
+//                                      Do::Subtract,Do::Multiply,Do::Add};
+//         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
+//         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+//         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+//         out.insert(out.end(),binom_instruct3.begin(),binom_instruct3.end());
+//       }
+//   }
+//   calc.instructions = out;
+//   calc.indexes = idx;
+// }
 
 }
