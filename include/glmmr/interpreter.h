@@ -5,6 +5,105 @@
 
 namespace glmmr {
 
+
+enum class CovFunc {
+  gr = 0,
+    ar = 1,
+    fexp0 = 2,
+    fexp = 3,
+    sqexp0 = 4,
+    sqexp = 5,
+    bessel = 6,
+    matern = 7,
+    truncpow2 = 8,
+    truncpow3 = 9,
+    truncpow4 = 10,
+    cauchy = 11,
+    cauchy3 = 12,
+    truncpow20 = 13,
+    truncpow30 = 14,
+    truncpow40 = 15,
+    cauchy0 = 16,
+    cauchy30 = 17,
+    ar0 = 18,
+    ar1 = 19,
+    dist = 20
+};
+
+const std::map<str, CovFunc> str_to_covfunc = {
+  {"gr", CovFunc::gr},
+  {"ar", CovFunc::ar},
+  {"fexp0", CovFunc::fexp0},
+  {"fexp", CovFunc::fexp},
+  {"sqexp0",CovFunc::sqexp0},
+  {"sqexp",CovFunc::sqexp},
+  {"bessel",CovFunc::bessel},
+  {"matern",CovFunc::matern},
+  {"truncpow2",CovFunc::truncpow2},
+  {"truncpow3",CovFunc::truncpow3},
+  {"truncpow4",CovFunc::truncpow4},
+  {"cauchy",CovFunc::cauchy},
+  {"cauchy3",CovFunc::cauchy3},
+  {"truncpow20",CovFunc::truncpow20},
+  {"truncpow30",CovFunc::truncpow30},
+  {"truncpow40",CovFunc::truncpow40},
+  {"cauchy0",CovFunc::cauchy0},
+  {"cauchy30",CovFunc::cauchy30},
+  {"ar0", CovFunc::ar0},
+  {"ar1", CovFunc::ar1},
+  {"dist",CovFunc::dist}
+};
+
+// unfortunately need bidirectional map so need to duplicate this unless there's
+// a better way??
+const std::map<CovFunc, str> covfunc_to_str = {
+  {CovFunc::gr, "gr"},
+  {CovFunc::ar, "ar"},
+  {CovFunc::fexp0, "fexp0"},
+  {CovFunc::fexp, "fexp"},
+  {CovFunc::sqexp0, "sqexp0"},
+  {CovFunc::sqexp, "sqexp"},
+  {CovFunc::bessel, "bessel"},
+  {CovFunc::matern, "matern"},
+  {CovFunc::truncpow2, "truncpow2"},
+  {CovFunc::truncpow3, "truncpow3"},
+  {CovFunc::truncpow4, "truncpow4"},
+  {CovFunc::cauchy, "cauchy"},
+  {CovFunc::cauchy3, "cauchy3"},
+  {CovFunc::truncpow20, "truncpow20"},
+  {CovFunc::truncpow30, "truncpow30"},
+  {CovFunc::truncpow40, "truncpow40"},
+  {CovFunc::cauchy0, "cauchy0"},
+  {CovFunc::cauchy30, "cauchy30"},
+  {CovFunc::ar0, "ar0"},
+  {CovFunc::ar1, "ar1"},
+  {CovFunc::dist, "dist"}
+};
+
+const std::map<CovFunc, int> covfunc_to_nvar = {
+  {CovFunc::gr, 1},
+  {CovFunc::ar, 2},
+  {CovFunc::fexp0, 1},
+  {CovFunc::fexp, 2},
+  {CovFunc::sqexp0, 1},
+  {CovFunc::sqexp, 2},
+  {CovFunc::bessel, 1},
+  {CovFunc::matern, 2},
+  {CovFunc::truncpow2, 2},
+  {CovFunc::truncpow3, 2},
+  {CovFunc::truncpow4, 2},
+  {CovFunc::cauchy, 3},
+  {CovFunc::cauchy3, 2},
+  {CovFunc::truncpow20, 1},
+  {CovFunc::truncpow30, 1},
+  {CovFunc::truncpow40, 1},
+  {CovFunc::cauchy0, 2},
+  {CovFunc::cauchy30, 1},
+  {CovFunc::ar0, 1},
+  {CovFunc::ar1, 1},
+  {CovFunc::dist, 0}
+};
+
 inline std::vector<Do> interpret_re(const CovFunc& fn){
   using instructs = std::vector<Do>;
   instructs B;

@@ -1,6 +1,4 @@
 #include "clusterclasses.h"
-#include "glmmr/maths.h"
-
 
 void ClusterApp::glmmModel::update_formula() {
     std::string new_formula = "int";
@@ -77,9 +75,9 @@ void ClusterApp::glmmModel::update_formula() {
     case ClusterApp::Family::beta:
         family = "beta";
         break;
-    case ClusterApp::Family::quantile:
-        family = "quantile_scaled";     
-        break;
+    //case ClusterApp::Family::quantile:
+     //   family = "quantile_scaled";     
+     //   break;
     }
     switch (statmodel.link) {
     case ClusterApp::Link::identity:
@@ -291,10 +289,10 @@ void ClusterApp::glmmModel::update_parameters() {
 
     (*model).update_beta(beta);
     (*model).update_theta(theta);
-    if(statmodel.family == ClusterApp::Family::quantile){
+    /*if(statmodel.family == ClusterApp::Family::quantile){
         (*model).model.family.set_quantile(statmodel.quantile);
         if (option.log)logger.AddLog("[%05d] [%s] Update quantile: %f \n", ImGui::GetFrameCount(), logger.cat[0], statmodel.quantile);
-    }
+    }*/
     if (option.log) {
         logger.AddLog("[%05d] [%s] Update beta: \n", ImGui::GetFrameCount(), logger.cat[0]);
         ClusterApp::AddVectorToLog(beta, logger);
@@ -339,16 +337,37 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
             logger.AddLog("[%05d] [%s] Information matrix: \n", ImGui::GetFrameCount(), logger.cat[0]);
             ClusterApp::AddMatrixToLog(M, logger);
         }
+        // add gee - independence working correlation
+        Eigen::MatrixXd XtX1 = (*model).model.linear_predictor.X().transpose() *  (*model).model.linear_predictor.X(); //(((*model).matrix.W.W_.array().inverse() * (*model).model.data.weights).matrix().asDiagonal()) *
+        Eigen::MatrixXd XtX2 = (*model).model.linear_predictor.X().transpose() * (*model).matrix.Sigma() * (*model).model.linear_predictor.X();
+        // if(statmodel.family == ClusterApp::Family::gaussian) XtX1 *= (1.0/((*model).model.data.var_par));
+        if (option.log && logger.ShowMatrix) {
+            logger.AddLog("[%05d] [%s] XtX: \n", ImGui::GetFrameCount(), logger.cat[0]);
+            ClusterApp::AddMatrixToLog(XtX1, logger);
+            logger.AddLog("[%05d] [%s] XtVX: \n", ImGui::GetFrameCount(), logger.cat[0]);
+            ClusterApp::AddMatrixToLog(XtX2, logger);
+        }
+        XtX1 = XtX1.llt().solve(Eigen::MatrixXd::Identity(XtX1.rows(),XtX1.cols()));
+        Eigen::MatrixXd XtX = XtX1 * XtX2 * XtX1;
+        if (option.log && logger.ShowMatrix) {
+            logger.AddLog("[%05d] [%s] GEE Robust: \n", ImGui::GetFrameCount(), logger.cat[0]);
+            ClusterApp::AddMatrixToLog(XtX, logger);
+        }
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval;
+        double zval, zval_gee;
         double bvar = M(idx, idx);
+        double bvar_gee = XtX(idx, idx);
         if (!isnan(bvar) && bvar > 0) {
             zval = abs(statmodel.te_pars[0] / sqrt(bvar));
+            zval_gee = abs(statmodel.te_pars[0] / sqrt(bvar_gee));
             summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
             summary.dof = (*model).model.n();
             summary.se = sqrt(M(idx, idx));
             summary.ci_width = zcutoff * summary.se;
+            summary.power_gee_indep = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+            summary.se_gee_indep = sqrt(bvar_gee);
+            summary.ci_width_gee_indep = zcutoff * summary.se_gee_indep;
         }
         else {
             if (option.log) {
@@ -358,15 +377,23 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
             summary.dof = 0;
             summary.se = 0;
             summary.ci_width = 0;
+            summary.power_gee_indep = 909;
+            summary.se_gee_indep = 0;
+            summary.ci_width_gee_indep = 0;
         }
         if (option.two_treatments) {
             bvar = M(idx + 1, idx + 1);
+            bvar_gee = XtX(idx+1, idx+1);
             if (!isnan(bvar) && bvar > 0) {
                 zval = abs(statmodel.te_pars[1] / sqrt(bvar));
+                zval_gee = abs(statmodel.te_pars[1] / sqrt(bvar_gee));
                 summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
                 summary.dof_2 = (*model).model.n();
                 summary.se_2 = sqrt(M(idx + 1, idx + 1));
                 summary.ci_width_2 = zcutoff * summary.se_2;
+                summary.power_gee_indep_2 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+                summary.se_gee_indep_2 = sqrt(bvar_gee);
+                summary.ci_width_gee_indep_2 = zcutoff * summary.se_gee_indep_2;
             }
             else {
                 if (option.log) {
@@ -376,14 +403,22 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
                 summary.dof_2 = 0;
                 summary.se_2 = 0;
                 summary.ci_width_2 = 0;
+                summary.power_gee_indep_2 = 909;
+                summary.se_gee_indep_2 = 0;
+                summary.ci_width_gee_indep_2 = 0;
             }
             bvar = M(idx + 2, idx + 2);
+            bvar_gee = XtX(idx+2, idx+2);
             if (!isnan(bvar) && bvar > 0) {
                 zval = abs(statmodel.te_pars[2] / sqrt(bvar));
+                zval_gee = abs(statmodel.te_pars[2] / sqrt(bvar_gee));
                 summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
                 summary.dof_12 = (*model).model.n();
                 summary.se_12 = sqrt(M(idx + 2, idx + 2));
                 summary.ci_width_12 = zcutoff * summary.se_12;
+                summary.power_gee_indep_12 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+                summary.se_gee_indep_12 = sqrt(bvar_gee);
+                summary.ci_width_gee_indep_12 = zcutoff * summary.se_gee_indep_12;
             }
             else {
                 if (option.log) {
@@ -393,6 +428,9 @@ void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
                 summary.dof_12 = 0;
                 summary.se_12 = 0;
                 summary.ci_width_12 = 0;
+                summary.power_gee_indep_12 = 909;
+                summary.se_gee_indep_12 = 0;
+                summary.ci_width_gee_indep_12 = 0;
             }
             
         }
@@ -438,7 +476,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
         bool with_improved = false;
         if (statmodel.covariance != Covariance::exchangeable && statmodel.covariance != Covariance::nested_exchangeable) {
             with_improved = true;
-            CorrectionData<glmmr::SE::KRBoth> res = (*model).matrix.small_sample_correction<glmmr::SE::KRBoth>();
+            CorrectionData<glmmr::SE::KRBoth> res = (*model).matrix.template small_sample_correction<glmmr::SE::KRBoth, glmmr::IM::EIM>();
             dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
             bvar[0] = res.vcov_beta(idx, idx);
             bvar2[0] = res.vcov_beta_second(idx, idx);
@@ -458,7 +496,7 @@ void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
             }
         }
         else {
-            CorrectionData<glmmr::SE::KR> res = (*model).matrix.small_sample_correction<glmmr::SE::KR>();
+            CorrectionData<glmmr::SE::KR> res = (*model).matrix.template small_sample_correction<glmmr::SE::KR, glmmr::IM::EIM>();
             dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
             bvar[0] = res.vcov_beta(idx, idx);
             bvar2[0] = 0;
@@ -599,53 +637,78 @@ void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
     if (model) {
         zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
         Eigen::MatrixXd M = (*model).matrix.information_matrix();
+        
+
+        Eigen::MatrixXd XtX1 = (*model).model.linear_predictor.X().transpose() * (*model).model.linear_predictor.X(); //(((*model).matrix.W.W_.array().inverse() * (*model).model.data.weights).matrix().asDiagonal()) *
+        Eigen::MatrixXd XtX2 = (*model).model.linear_predictor.X().transpose() * (*model).matrix.Sigma() * (*model).model.linear_predictor.X();
+        // if(statmodel.family == ClusterApp::Family::gaussian) XtX1 *= (1.0/((*model).model.data.var_par));
+        XtX1 = XtX1.llt().solve(Eigen::MatrixXd::Identity(XtX1.rows(),XtX1.cols()));
+        Eigen::MatrixXd XtX = XtX1 * XtX2 * XtX1;
         M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval;
+        double zval, zval_gee;
         double bvar = M(idx, idx);        
         double dofbw = dof - (*model).model.linear_predictor.P();
+        double bvar_gee = XtX(idx, idx);
         dofbw = dofbw > 1 ? dofbw : 1.0;
         boost::math::students_t dist(dofbw);
         double tcutoff = boost::math::quantile(dist, 0.975);
         if (option.log)logger.AddLog("[%05d] [%s] Calculate GLS-BW power, SE %.3f DoF %.1f te %.3f \n", ImGui::GetFrameCount(), logger.cat[0], (float)sqrt(bvar), (float)dofbw, statmodel.te_pars[0]);
         if (!isnan(bvar) && bvar > 0) {
-            zval = abs(statmodel.te_pars[0] / sqrt(bvar));                         
+            zval = abs(statmodel.te_pars[0] / sqrt(bvar));
+            zval_gee = abs(statmodel.te_pars[0] / sqrt(bvar_gee));                         
             summary.power_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
             summary.dof_bw = dof - (*model).model.linear_predictor.P();
             summary.ci_width_bw = tcutoff * summary.se;
+            summary.power_gee_indep_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+            summary.ci_width_gee_indep_bw = tcutoff * sqrt(bvar_gee);
         }
         else {
             if (option.log) {
                 logger.AddLog("[%05d] [%s] (B-W) GLS Matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
             }
-            summary.power_bw = 0;
+            summary.power_bw = 909;
             summary.dof_bw = 0;
             summary.ci_width_bw = 0;
+            summary.power_gee_indep_bw = 0;
+            summary.ci_width_gee_indep_bw = 0;
         }
         if (option.two_treatments) {
             bvar = M(idx + 1, idx + 1);
+            bvar_gee = XtX(idx + 1, idx + 1);
             if (!isnan(bvar) && bvar > 0) {
                 zval = abs(statmodel.te_pars[1] / sqrt(bvar));
+                zval_gee = abs(statmodel.te_pars[1] / sqrt(bvar_gee));      
                 summary.power_bw_2 = boost::math::cdf(dist, zval - tcutoff) * 100;
                 summary.dof_bw_2 = dofbw;
                 summary.ci_width_bw_2 = tcutoff * summary.se_2;
+                summary.power_gee_indep_bw_2 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+                summary.ci_width_gee_indep_bw_2 = tcutoff * sqrt(bvar_gee);
             }
             else {
                 summary.power_bw_2 = 909;
                 summary.dof_bw_2 = 0;
                 summary.ci_width_bw_2 = 0;
+                summary.power_gee_indep_bw_2 = 909;
+                summary.ci_width_gee_indep_bw_2 = 0;
             }            
             bvar = M(idx + 2, idx + 2);
+            bvar_gee = XtX(idx + 2, idx + 2);
             if (!isnan(bvar) && bvar > 0) {
                 zval = abs(statmodel.te_pars[2] / sqrt(M(idx + 2, idx + 2)));
+                zval_gee = abs(statmodel.te_pars[2] / sqrt(bvar_gee));  
                 summary.power_bw_12 = boost::math::cdf(dist, zval - tcutoff) * 100;
                 summary.dof_bw_12 = dofbw;
                 summary.ci_width_bw_12 = tcutoff * summary.se_12;
+                summary.power_gee_indep_bw_12 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+                summary.ci_width_gee_indep_bw_12 = tcutoff * sqrt(bvar_gee);
             }
             else {
                 summary.power_bw_12 = 909;
                 summary.dof_bw_12 = 0;
                 summary.ci_width_bw_12 = 0;
+                summary.power_gee_indep_bw_12 = 909;
+                summary.ci_width_gee_indep_bw_12 = 0;
             }
             
         }

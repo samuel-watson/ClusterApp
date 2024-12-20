@@ -1,19 +1,35 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
-
-#include "openmpheader.h"
-#include "general.h"
+#include <sstream>
 #include "maths.h"
-#include "algo.h"
 #include "interpreter.h"
 #include "formula.hpp"
 #include "sparse.h"
 #include "calculator.hpp"
+#include "linearpredictor.hpp"
 
 using namespace Eigen;
 
 namespace glmmr {
+
+inline bool validate_fn(const str& fn){
+  bool not_fn = str_to_covfunc.find(fn) == str_to_covfunc.end();
+  return not_fn;
+}
+
+inline bool is_compact_fn(const CovFunc& fn){
+  bool compact = false;
+  if(fn == CovFunc::truncpow2 || fn == CovFunc::truncpow3 || fn == CovFunc::truncpow4 || fn == CovFunc::truncpow20 || fn == CovFunc::truncpow30
+       || fn == CovFunc::truncpow40 || fn == CovFunc::cauchy || fn == CovFunc::cauchy3 || fn == CovFunc::cauchy0  || fn == CovFunc::cauchy30) compact = true;
+  return compact;
+}
+
+struct ZNonZero {
+  int     col;
+  intvec  rows;
+  int     xcol;
+};
 
 class Covariance {
 public:
@@ -59,15 +75,17 @@ public:
   intvec            parameter_fn_index() const;
   virtual intvec    re_count() const;
   virtual sparse    ZL_sparse();
-  virtual sparse    Z_sparse() const;
+  virtual sparse    Z_sparse();
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
   virtual VectorXd  log_gradient(const MatrixXd &umat, double& logl);
+  void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
  
 protected:
   // data
   std::vector<glmmr::calculator>      calc_;
   std::vector<std::vector<CovFunc> >  fn_;
+  glmmr::LinearPredictor*             linpred_ptr = nullptr;
   intvec                              re_fn_par_link_;
   intvec                              re_count_;
   intvec                              re_order_;
@@ -86,17 +104,24 @@ protected:
   bool                                isSparse = true;
   sparse                              matL;
   SparseChol                          spchol;
+  
   // functions
-  void      update_parameters_in_calculators();
-  MatrixXd  get_block(int b);
-  MatrixXd  get_chol_block(int b,bool upper = false);
-  MatrixXd  D_builder(int b,bool chol = false,bool upper = false);
-  void      update_ax();
-  void      L_constructor();
-  void      Z_constructor();
-  MatrixXd  D_sparse_builder(bool chol = false,bool upper = false);
-  bool      sparse_initialised = false;
-  bool      use_amd_permute = true;
+  void                            update_parameters_in_calculators();
+  MatrixXd                        get_block(int b);
+  MatrixXd                        get_chol_block(int b,bool upper = false);
+  MatrixXd                        D_builder(int b,bool chol = false,bool upper = false);
+  void                            update_ax();
+  void                            L_constructor();
+  void                            Z_constructor();
+  void                            Z_updater();
+  MatrixXd                        D_sparse_builder(bool chol = false, bool upper = false);
+  // logical flags
+  bool                            sparse_initialised = false;
+  bool                            use_amd_permute = true;
+public:
+  bool                            z_requires_update = false;
+protected:
+  std::vector<ZNonZero>           z_nonzero;
 };
 
 }
@@ -113,7 +138,7 @@ inline glmmr::Covariance::Covariance(const str& formula,
 inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
            const ArrayXXd &data,
            const strvec& colnames) :
-  form_(form), data_(data), colnames_(colnames),  
+  form_(form), data_(data), colnames_(colnames),
   Q_(parse()),matZ(), dmat_matrix(max_block_dim(),max_block_dim()),
   zquad(max_block_dim()) {
     Z_constructor();
@@ -134,7 +159,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
            const ArrayXXd &data,
            const strvec& colnames,
            const dblvec& parameters) :
-  form_(form), data_(data), colnames_(colnames), parameters_(parameters), 
+  form_(form), data_(data), colnames_(colnames), parameters_(parameters),
   Q_(parse()), matZ(), dmat_matrix(max_block_dim(),max_block_dim()),
   zquad(max_block_dim()) {
     make_sparse();
@@ -146,7 +171,8 @@ inline glmmr::Covariance::Covariance(const str& formula,
            const strvec& colnames,
            const ArrayXd& parameters) :
   form_(formula), data_(data), colnames_(colnames),
-  parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(parse()), matZ(),
+  parameters_(parameters.data(),parameters.data()+parameters.size()),
+  Q_(parse()), matZ(),
   dmat_matrix(max_block_dim(),max_block_dim()),
   zquad(max_block_dim()) {
     make_sparse();
@@ -233,7 +259,14 @@ inline int glmmr::Covariance::parse(){
     } else {
       auto idxz = std::find(colnames_.begin(),colnames_.end(),form_.z_[i]);
       if(idxz == colnames_.end()){
-        throw std::runtime_error("z variable "+form_.z_[i]+" not in column names");
+        auto idxzpar = std::find(form_.fe_parameter_names_.begin(),form_.fe_parameter_names_.end(),form_.z_[i]);
+        if(idxzpar== form_.fe_parameter_names_.end()){
+          throw std::runtime_error("z variable "+form_.z_[i]+" not in column or parameter names");
+        } else {
+          z_requires_update = true;
+          zcol = idxzpar - form_.fe_parameter_names_.begin();
+          zcol = -1*(zcol+2);
+        }
       } else {
         zcol = idxz - colnames_.begin();
       }
@@ -445,6 +478,12 @@ inline void glmmr::Covariance::Z_constructor()
     dblvec vals(block_nvar[i]);
     dblvec valscomp(block_nvar[i]);
     for(int j = 0; j < block_size[i]; j++){
+      ZNonZero nonzero;
+      if (z_[i]< -1){
+        nonzero.col = zcount;
+        int xidx = -1*(z_[i]+2);
+        nonzero.xcol = xidx;
+      } 
       for(int m = 0; m < block_nvar[i]; m++){
         valscomp[m] = re_temp_data_[i][j][m];
       }
@@ -453,16 +492,42 @@ inline void glmmr::Covariance::Z_constructor()
           vals[m] = data_(k,re_cols_data_[i][j][m]);
         }
         if(valscomp==vals){
-          insertval = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
+          if(z_[i]==-1){
+            insertval = 1.0;
+          } else if (z_[i]< -1){
+            insertval = 999.0;
+            nonzero.rows.push_back(k);
+          } else {
+            insertval = data_(k,z_[i]); 
+          }
           matZ.insert(k,zcount,insertval);
         }
       }
       zcount++;
+      if (z_[i]< -1) z_nonzero.push_back(nonzero);
     }
   }
   re_temp_data_.clear();
 }
 
+inline void glmmr::Covariance::linear_predictor_ptr(glmmr::LinearPredictor* ptr){
+  linpred_ptr = ptr;
+  if(z_requires_update)Z_updater();
+}
+
+inline void glmmr::Covariance::Z_updater(){
+  if(z_nonzero.size() > 0)z_requires_update = true;
+  if(z_requires_update){
+    if(linpred_ptr == nullptr)throw std::runtime_error("Linpred ptr not initialised");
+    MatrixXd X = linpred_ptr->X();
+    if(z_nonzero.size() == 0)throw std::runtime_error("Non non-zero data");
+    for(int i = 0; i < z_nonzero.size(); i++){
+      for(int j = 0; j < z_nonzero[i].rows.size(); j++){
+        matZ.insert(z_nonzero[i].rows[j],z_nonzero[i].col,X(z_nonzero[i].rows[j],z_nonzero[i].xcol));
+      }
+    }
+  }
+}
 
 inline void glmmr::Covariance::update_parameters_in_calculators(){
   for(int i = 0; i < B_; i++){
@@ -618,6 +683,7 @@ inline MatrixXd glmmr::Covariance::get_block(int b)
 
 inline MatrixXd glmmr::Covariance::Z()
 {
+  Z_updater();
   return sparse_to_dense(matZ,false,true);
 }
 
@@ -696,13 +762,15 @@ inline MatrixXd glmmr::Covariance::D_builder(int b, bool chol, bool upper)
 
 inline sparse glmmr::Covariance::ZL_sparse() 
 {
+  Z_updater();
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nZL multiplication: Z: " << matZ.m << " x " << matZ.n << "L: " << matL.m << " x " << matL.n;
 #endif
   return matZ * matL;
 }
 
-inline sparse glmmr::Covariance::Z_sparse() const{
+inline sparse glmmr::Covariance::Z_sparse() {
+  Z_updater();
   return matZ;
 }
 
@@ -1005,7 +1073,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
           size_B_array[b] += -0.5*log(var) -0.5*log(2*M_PI) - 0.5*umat(obs_counter,i)*umat(obs_counter,i)/(var);
         }
         size_B_array[b] *= 1.0/(double)niter;   
-        for(int i = 0; i < npars; i++) dlogdet_vals[i] += derivs[i](obs_counter,obs_counter) / var;        
+        for(int i = 0; i < npars; i++) dlogdet_vals[i] += derivs[i+1](obs_counter,obs_counter) / var;        
       } else {
         zquad.setZero();
         dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);

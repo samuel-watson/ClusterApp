@@ -99,8 +99,11 @@ void loop()
   ClusterApp::ShowMainMenu(windows, designs, updater, results);
   ClusterApp::AppDockSpace(&windows.dockspace);
   ImGui::SetNextWindowSize(ImVec2(750,500), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos(ImVec2(400, 50), ImGuiCond_FirstUseEver);
   ClusterApp::RenderDesigner(designs, updater, windows);
+  ImGui::SetNextWindowSize(ImVec2(400,800), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_FirstUseEver);
+  ClusterApp::RenderMenuBar(designs, model, checker, windows);
 
   if (windows.sample_size) {
       ClusterApp::RenderSampleSize(designs);
@@ -114,7 +117,7 @@ void loop()
       
   if (windows.results) {
       ImGui::SetNextWindowSize(ImVec2(750, 300), ImGuiCond_FirstUseEver);
-      ImGui::SetNextWindowPos(ImVec2(0, 550), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2(400, 550), ImGuiCond_FirstUseEver);
       ClusterApp::RenderResults(checker, windows);
   }
       

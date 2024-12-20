@@ -29,7 +29,7 @@ namespace ClusterApp {
         static float control_mean = 0.5;
         static float treatment_mean = 0.5;
         static int simple_interface = 1;
-        static float quantile_q = 0.5;
+        //static float quantile_q = 0.5;
 
         ImGui::Text("Options: "); ImGui::SameLine();
         ImGui::RadioButton("Simplified", &simple_interface, 1); ImGui::SameLine();
@@ -39,11 +39,11 @@ namespace ClusterApp {
         ImGui::Text("Statistical Model");
         ImGui::SetNextItemWidth(200);
             ImGui::Combo("Family", &family_item_current, family_items, IM_ARRAYSIZE(family_items));
-            if(family_item_current == 5){
+            /*if(family_item_current == 5){
                 ImGui::SetNextItemWidth(100);
                 ImGui::DragFloat("Quantile", &quantile_q, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_None);
                 model.quantile = quantile_q;
-            }
+            }*/
 
             switch (family_item_current) {
             case 0:
@@ -185,7 +185,7 @@ namespace ClusterApp {
 
 
                     switch (model.family) {
-                    case ClusterApp::Family::gaussian: case ClusterApp::Family::quantile:
+                    case ClusterApp::Family::gaussian: // case ClusterApp::Family::quantile:
                         ImGui::SetNextItemWidth(200);
                         ImGui::DragFloat("Control group mean", &control_mean, 0.01f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
                         ImGui::SetNextItemWidth(200);

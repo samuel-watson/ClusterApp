@@ -183,9 +183,9 @@ inline void glmmr::ModelMCMC<modeltype>::sample(int warmup_,
     } else {
       unew = new_proposal(unew,false,i+1,prob);
     }
-    // if(verbose && i%refresh== 0){
-    //   Rcpp::Rcout << "\nWarmup: Iter " << i << " of " << totalsamps;
-    // }
+    if(verbose && i%refresh== 0){
+      //Rcpp::Rcout << "\nWarmup: Iter " << i << " of " << totalsamps;
+    }
   }
   re.u_.col(0) = unew;
   //sampling

@@ -458,6 +458,38 @@ void ClusterApp::plotData::extract_y(ClusterApp::modelSummary& summary, int i, i
 		}
 		break;
 	}
+	case ClusterApp::YAxis::power_gee_indep:
+	{
+		glmm.power(summary);
+		switch (s) {
+		case 0:
+			y_data_1[i] = summary.power_gee_indep;
+			break;
+		case 1:
+			y_data_2[i] = summary.power_gee_indep;
+			break;
+		case 2:
+			y_data_3[i] = summary.power_gee_indep;
+			break;
+		}
+		break;
+	}
+	case ClusterApp::YAxis::ci_width_gee_indep:
+	{
+		glmm.power(summary);
+		switch (s) {
+		case 0:
+			y_data_1[i] = summary.ci_width_gee_indep;
+			break;
+		case 1:
+			y_data_2[i] = summary.ci_width_gee_indep;
+			break;
+		case 2:
+			y_data_3[i] = summary.ci_width_gee_indep;
+			break;
+		}
+		break;
+	}
 	}
 
 }

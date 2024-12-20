@@ -1,10 +1,42 @@
 #pragma once
 
-#include "algo.h"
+#include <boost/math/distributions/normal.hpp>
+#include <boost/random.hpp>
 #include "general.h"
+#include "algo.h"
 #include "family.hpp"
 
 // [[Rcpp::depends(RcppEigen)]]
+
+struct VectorMatrix {
+public:
+  VectorXd vec;
+  MatrixXd mat;
+  VectorMatrix(int n): vec(n), mat(n,n) {};
+  VectorMatrix(const VectorMatrix& x) : vec(x.vec), mat(x.mat) {};
+  VectorMatrix& operator=(VectorMatrix x){
+    vec = x.vec;
+    mat = x.mat;
+    return *this;
+  };
+};
+
+struct MatrixMatrix {
+public:
+  MatrixXd mat1;
+  MatrixXd mat2;
+  double a = 0;
+  double b = 0;
+  MatrixMatrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
+  MatrixMatrix(const MatrixMatrix& x) : mat1(x.mat1), mat2(x.mat2) {};
+  MatrixMatrix& operator=(MatrixMatrix x){
+    mat1 = x.mat1;
+    mat2 = x.mat2;
+    a = x.a;
+    b = x.b;
+    return *this;
+  };
+};
 
 namespace glmmr {
 
@@ -226,6 +258,8 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
           p = p.square().inverse();
           break;
         }
+      
+      // p *= (family.quantile * family.quantile)/(1 + pow(family.quantile,4));
       break;
     }
   }
@@ -450,7 +484,7 @@ inline double log_factorial_approx(double n){
 inline double log_likelihood(const double y,
                              const double mu,
                              const double var_par,
-                             const glmmr::Family family) {
+                             const glmmr::Family& family) {
   double logl = 0;
   switch(family.family){
   case Fam::poisson:
@@ -594,10 +628,9 @@ inline double log_likelihood(const double y,
   }
   case Fam::quantile: case Fam::quantile_scaled:
   {
-    double resid = y;
-    resid -= mod_inv_func(mu,family.link);
-    if(family.family == Fam::quantile_scaled) resid *= 1/sqrt(var_par);
-    logl = log(family.quantile) + log(1.0 - family.quantile) - 0.5*log(var_par) - 0.5*(abs(resid) + (2*family.quantile - 1.0)*resid);
+    double resid = y - mod_inv_func(mu,family.link);
+    // if(family.family == Fam::quantile_scaled) resid *= (1.0/var_par);
+    logl = resid <= 0 ? resid*(1.0 - family.quantile) : -1.0*resid*family.quantile;
     break;
   }
   }

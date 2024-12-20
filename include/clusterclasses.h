@@ -124,7 +124,7 @@ namespace ClusterApp {
         void                    update_beta(ClusterApp::design& design);
         void                    set_beta_random(const double m, const double s);
         float                   alpha = 0.05;
-        float                   quantile = 0.5;
+        //float                   quantile = 0.5;
     };
 
     struct modelSummary {
@@ -135,14 +135,19 @@ namespace ClusterApp {
         double power_bw = 0;
         double power_box = 0;
         double power_sat = 0;
+        double power_gee_indep = 0;
+        double power_gee_indep_bw = 0;
         double ci_width = 0;
         double ci_width_kr = 0;
         double ci_width_kr2 = 0;
         double ci_width_bw = 0;
         double ci_width_sat = 0;
+        double ci_width_gee_indep = 0;
+        double ci_width_gee_indep_bw = 0;
         double se = 1;
         double se_kr = 1;
         double se_kr2 = 1;
+        double se_gee_indep = 1;
         double dof = 1;
         double dof_kr = 1;
         double dof_bw = 1;
@@ -155,14 +160,19 @@ namespace ClusterApp {
         double power_bw_2 = 0;
         double power_box_2 = 0;
         double power_sat_2 = 0;
+        double power_gee_indep_2 = 0;
+        double power_gee_indep_bw_2 = 0;
         double ci_width_2 = 0;
         double ci_width_kr_2 = 0;
         double ci_width_kr2_2 = 0;
         double ci_width_bw_2 = 0;
         double ci_width_sat_2 = 0;
+        double ci_width_gee_indep_2 = 0;
+        double ci_width_gee_indep_bw_2 = 0;
         double se_2 = 1;
         double se_kr_2 = 1;
         double se_kr2_2 = 1;
+        double se_gee_indep_2 = 1;
         double dof_2 = 1;
         double dof_kr_2 = 1;
         double dof_bw_2 = 1;
@@ -174,14 +184,19 @@ namespace ClusterApp {
         double power_bw_12 = 0;
         double power_box_12 = 0;
         double power_sat_12 = 0;
+        double power_gee_indep_12 = 0;
+        double power_gee_indep_bw_12 = 0;
         double ci_width_12 = 0;
         double ci_width_kr_12 = 0;
         double ci_width_kr2_12 = 0;
         double ci_width_bw_12 = 0;
         double ci_width_sat_12 = 0;
+        double ci_width_gee_indep_12 = 0;
+        double ci_width_gee_indep_bw_12 = 0;
         double se_12 = 1;
         double se_kr_12 = 1;
         double se_kr2_12 = 1;
+        double se_gee_indep_12 = 1;
         double dof_12 = 1;
         double dof_kr_12 = 1;
         double dof_bw_12 = 1;

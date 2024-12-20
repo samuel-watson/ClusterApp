@@ -33,7 +33,13 @@ public:
   
   T operator()(int i) const
   {
+    if(i >= data.size()) throw std::runtime_error("Accessing index out of range matrix field");
     return *(data[i]);
+  }
+  
+  void sum(int i, const Eigen::MatrixXd& A)
+  {
+    *(data[i]) += A;
   }
   
   Eigen::RowVectorXd get_row(int n, int i) const{

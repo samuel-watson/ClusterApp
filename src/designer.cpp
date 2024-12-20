@@ -30,14 +30,6 @@ namespace ClusterApp {
             large_dim = small_dim;
         }
 
-        if (ImGui::TreeNode("How to use the designer")){
-            ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
-            "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
-            ImGui::TreePop();
-        }
-        
-        
-        
         enum Mode
         {
             Mode_Copy,
@@ -46,14 +38,27 @@ namespace ClusterApp {
         };
         static int mode = 2;
 
-        // View options for the designer
-        if (ImGui::TreeNode("Drag and drop mode")) {            
-            ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
-            if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
-            if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
-            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
+        if (ImGui::TreeNode("How to use the designer")){
+            ImGui::TextWrapped("Design the trial below. Rows are sequences, columns are time periods. Click + to add new sequences or time periods. Select cells to edit their details or you can drag and drop them to new positions. Select row or column headers to change the numbers of clusters."); ImGui::SameLine(); HelpMarker(
+            "You can change what the cell buttons show with the buttons below. Red and blue indicate intervention and control status, respectively. Where there are two treatments, yellow is used for treatment 2, and yellow-red for both treatments");
+            
+            if (ImGui::TreeNode("Drag and drop mode")) {            
+                ImGui::Text("Drag and drop mode: "); ImGui::SameLine();
+                if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
+                if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
+                if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
+                ImGui::TreePop();
+            }
+            
             ImGui::TreePop();
         }
+        
+        
+        
+        
+
+        // View options for the designer
+        
 
         ImGui::Spacing();
 

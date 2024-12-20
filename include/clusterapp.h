@@ -25,6 +25,8 @@ namespace ClusterApp {
 
     void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option);
 
+    void RenderMenuBar(ClusterApp::design& design, ClusterApp::statisticalModel& model,ClusterApp::modelChecker& checker, ClusterApp::options& option);
+
     void RenderResults(ClusterApp::modelChecker& checker, ClusterApp::options& option);
 
     void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option);

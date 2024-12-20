@@ -32,10 +32,10 @@ inline void glmmr::MatrixW<modeltype>::update(){
   ArrayXd nvar_par(model.n());
   ArrayXd xb(model.n());
   switch(model.family.family){
-  case Fam::gaussian:
+  case Fam::gaussian: 
     nvar_par = model.data.variance;
     break;
-  case Fam::gamma:
+  case Fam::gamma: 
     nvar_par = model.data.variance.inverse();
     break;
   case Fam::beta:
@@ -46,10 +46,8 @@ inline void glmmr::MatrixW<modeltype>::update(){
     break;
   case Fam::quantile: case Fam::quantile_scaled:
     {
-      double quantile_sq = model.family.quantile;
-      quantile_sq *= quantile_sq;
-      double qvar = (1 - 2*model.family.quantile + 2*quantile_sq)/(quantile_sq + (1-model.family.quantile)*(1-model.family.quantile));
-      if(model.family.family == Fam::quantile_scaled) qvar *= model.data.var_par;
+      double qvar = (1 - 2*model.family.quantile + 2*model.family.quantile*model.family.quantile)/(model.family.quantile*model.family.quantile*(1-model.family.quantile)*(1-model.family.quantile));
+      if(model.family.family == Fam::quantile_scaled) qvar *= model.data.var_par*model.data.var_par;
       nvar_par.setConstant(qvar);
       break;
     }

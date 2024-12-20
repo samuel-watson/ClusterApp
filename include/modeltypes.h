@@ -35,7 +35,7 @@ namespace ClusterApp {
         bool dose_effect = false;
         bool heterogeneous_te = false;
         bool time_averaged_te = false;
-        bool model = true;
+        bool model = false;
         bool results = true;
         bool optimiser = false;
         bool light_mode = true;
@@ -60,8 +60,7 @@ namespace ClusterApp {
         binomial = 2,
         poisson = 3,
         beta = 4,
-        gamma = 5,
-        quantile = 6
+        gamma = 5
     };
 
     enum class Link {
@@ -125,7 +124,9 @@ namespace ClusterApp {
         power_kr = 6,
         ci_width_kr = 7,
         power_de = 8,
-        ci_width_de = 9
+        ci_width_de = 9,
+        power_gee_indep = 10,
+        ci_width_gee_indep = 11
     };
 
     struct CRC {

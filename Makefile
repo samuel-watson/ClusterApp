@@ -12,7 +12,7 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui
 SOURCES += ./src/mainmenu.cpp ./src/designer.cpp ./src/samplesize.cpp ./src/model.cpp
 SOURCES += ./src/results.cpp ./src/optimiser.cpp ./src/plotter.cpp
 SOURCES += ./src/sequenceperiod.cpp ./src/multiColorButton.cpp  ./src/design.cpp
-SOURCES += ./src/statisticalmodel.cpp ./src/glmmmodel.cpp ./src/modelupdater.cpp ./src/plotdata.cpp 
+SOURCES += ./src/statisticalmodel.cpp ./src/menubar.cpp ./src/glmmmodel.cpp ./src/modelupdater.cpp ./src/plotdata.cpp 
 SOURCES += ./src/modelchecker.cpp ./src/krigingdata.cpp ./src/krigger.cpp ./src/datasimulate.cpp  
 SOURCES += ./src/applog.cpp ./src/logger.cpp 
 SOURCES += $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_items.cpp
@@ -31,4 +31,3 @@ $(OUTPUT): $(SOURCES)
 	$(CXX)  $(SOURCES) -std=c++20 -o $(OUTPUT) $(LIBS) $(WEBGL_VER) -Os -g2 -fno-math-errno -s NO_DISABLE_EXCEPTION_CATCHING --preload-file data $(USE_WASM) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends $(LDFLAGS) $(CPPFLAGS) 
 clean:
 	rm -f $(OUTPUT)
-

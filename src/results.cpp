@@ -33,485 +33,496 @@ matrix, which can usually be resolved by fiddling with the parameter values and 
             }
         static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_NoHostExtendX;
 
-        if (ImGui::TreeNode("Model-based results")) {
-            if (ImGui::BeginTable("results", 6, flags))
-            {
-                ImGui::TableSetupColumn("Statistic");
-                ImGui::TableSetupColumn("GLS");
-                ImGui::TableSetupColumn("GLS (B-W)");
-                ImGui::TableSetupColumn("Satterthwaite");
-                ImGui::TableSetupColumn("Kenward-Roger");
-                ImGui::TableSetupColumn("Kenward-Roger (improved)");
-                //if(option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
-                ImGui::TableHeadersRow();
-                ImGui::TableNextColumn();
+        // make this into collapsible headers
+        if(ImGui::CollapsingHeader("Power (%)")){
 
-                ImGui::Text("Power (%%)");
-                ImGui::TableNextColumn();
-                ImGui::Text("%.1f", checker.updater.summary.power);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.1f", checker.updater.summary.power_bw);
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_sat == 909) {
+            ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+            ImGui::Text("%.1f", checker.updater.summary.power);
+            ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+            ImGui::Text("%.1f", checker.updater.summary.power_bw);
+            ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+            if (checker.updater.summary.power_sat == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.power_sat);
+            }
+            ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+            if (checker.updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.power_kr);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.power_gee_indep);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.power_gee_indep_bw);
+            }
+            if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr2 == 909) {
                     ImGui::Text("ERR");
                 }
                 else {
-                    ImGui::Text("%.1f", checker.updater.summary.power_sat);
+                    ImGui::Text("%.1f", checker.updater.summary.power_kr2);
                 }
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_kr == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.1f", checker.updater.summary.power_kr);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                    if (checker.updater.summary.power_kr2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.power_kr2);
-                    }
-                    
-                }
-                else {
-                    ImGui::Text("N/A");
-                }
-                ImGui::TableNextColumn();
-                /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                    ImGui::Text("N/A");
-                    ImGui::TableNextColumn();
-                }*/
-
-                ImGui::Text("95%% CI half-width");
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", checker.updater.summary.ci_width);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", checker.updater.summary.ci_width_bw);
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.ci_width_sat == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_sat);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_kr == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_kr);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                    if (checker.updater.summary.power_kr2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.ci_width_kr2);
-                    }
-                }
-                else {
-                    ImGui::Text("N/A");
-                }
-                ImGui::TableNextColumn();
-                /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                    ImGui::Text("N/A");
-                    ImGui::TableNextColumn();
-                }*/
-
-                ImGui::Text("Standard error");
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", checker.updater.summary.se);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", checker.updater.summary.se);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.3f", checker.updater.summary.se);
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_kr == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.3f", checker.updater.summary.se_kr);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                    if (checker.updater.summary.power_kr2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.se_kr2);
-                    }
-                }
-                else {
-                    ImGui::Text("N/A");
-                }
-                ImGui::TableNextColumn();
-                /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                    ImGui::Text("N/A");
-                    ImGui::TableNextColumn();
-                }*/
-
-                ImGui::Text("DoF");
-                ImGui::TableNextColumn();
-                ImGui::Text("%.1f", checker.updater.summary.dof);
-                ImGui::TableNextColumn();
-                ImGui::Text("%.1f", checker.updater.summary.dof_bw);
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_kr == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.1f", checker.updater.summary.dof_kr);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.summary.power_kr == 909) {
-                    ImGui::Text("ERR");
-                }
-                else {
-                    ImGui::Text("%.1f", checker.updater.summary.dof_kr);
-                }
-                ImGui::TableNextColumn();
-                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                    if (checker.updater.summary.power_kr2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.dof_kr);
-                    }
-                }
-                else {
-                    ImGui::Text("N/A");
-                }
-                ImGui::TableNextColumn();
-                /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                    ImGui::Text("%.3f", checker.updater.summary.dof_box);
-                    ImGui::TableNextColumn();
-                }*/
-
-                ImGui::EndTable();
             }
 
-
-
-            if (option.two_treatments) {
+            if(option.two_treatments){
                 ImGui::Text("Treatment 2");
-                if (ImGui::BeginTable("results 2", 6, flags))
-                {
-                    ImGui::TableSetupColumn("Statistic");
-                    ImGui::TableSetupColumn("GLS");
-                    ImGui::TableSetupColumn("GLS (B-W)");
-                    ImGui::TableSetupColumn("Satterthwaite");
-                    ImGui::TableSetupColumn("Kenward-Roger");
-                    ImGui::TableSetupColumn("Kenward-Roger (improved)");
-                    //if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
-                    ImGui::TableHeadersRow();
-                    ImGui::TableNextColumn();
-
-                    ImGui::Text("Power (%%)");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.power_2);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.power_bw_2);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_sat_2 == 909) {
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.power_2);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.power_bw_2);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_sat_2);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_kr_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_gee_indep_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_gee_indep_bw_2);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_2 == 909) {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", checker.updater.summary.power_sat_2);
+                        ImGui::Text("%.1f", checker.updater.summary.power_kr2_2);
                     }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.power_kr_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_2 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.1f", checker.updater.summary.power_kr2_2);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("95%% half-width");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_2);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_bw_2);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.ci_width_sat_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.ci_width_sat_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.ci_width_kr_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_2 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.ci_width_kr2_2);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("Standard error");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.se_2);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.se_2);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.se_kr_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_2 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.se_kr2_2);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("Degrees of freedom");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.dof_2);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.dof_bw_2);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_2 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_2);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_2 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.dof_kr_2);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("%.3f", checker.updater.summary.dof_box_2);
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::EndTable();
                 }
 
-                ImGui::Text("Interaction");
-                if (ImGui::BeginTable("results interaction", 6, flags))
-                {
-                    ImGui::TableSetupColumn("Statistic");
-                    ImGui::TableSetupColumn("GLS");
-                    ImGui::TableSetupColumn("GLS (B-W)");
-                    ImGui::TableSetupColumn("Satterthwaite");
-                    ImGui::TableSetupColumn("Kenward-Roger");
-                    ImGui::TableSetupColumn("Kenward-Roger (improved)");
-                    //if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity)ImGui::TableSetupColumn("Box");
-                    ImGui::TableHeadersRow();
-                    ImGui::TableNextColumn();
-
-                    ImGui::Text("Power (%%)");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.power_12);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.power_bw_12);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_sat_12 == 909) {
+                ImGui::Text("Treatment Interaction");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.power_12);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.power_bw_12);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_sat_12);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_kr_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_gee_indep_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.power_gee_indep_bw_12);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_12 == 909) {
                         ImGui::Text("ERR");
                     }
                     else {
-                        ImGui::Text("%.1f", checker.updater.summary.power_sat_12);
+                        ImGui::Text("%.1f", checker.updater.summary.power_kr2_12);
                     }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.power_kr_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_12 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.1f", checker.updater.summary.power_kr2_12);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("95%% half-width");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_12);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.ci_width_bw_12);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.ci_width_sat_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.ci_width_sat_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.ci_width_kr_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_12 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.ci_width_kr2_12);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("Standard error");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.se_12);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.3f", checker.updater.summary.se_12);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.3f", checker.updater.summary.se_kr_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_12 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.se_kr2_12);
-                        }
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                   /* if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("N/A");
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::Text("Degrees of freedom");
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.dof_12);
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.1f", checker.updater.summary.dof_bw_12);
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.summary.power_kr_12 == 909) {
-                        ImGui::Text("ERR");
-                    }
-                    else {
-                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_12);
-                    }
-                    ImGui::TableNextColumn();
-                    if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable) {
-                        if (checker.updater.summary.power_kr2_12 == 909) {
-                            ImGui::Text("ERR");
-                        }
-                        else {
-                            ImGui::Text("%.3f", checker.updater.summary.dof_kr_12);
-                        }
-                        ImGui::TableNextColumn();
-                    }
-                    else {
-                        ImGui::Text("N/A");
-                    }
-                    ImGui::TableNextColumn();
-                    /*if (option.show_box && checker.updater.model.family == Family::gaussian && checker.updater.model.link == Link::identity) {
-                        ImGui::Text("%.3f", checker.updater.summary.dof_box_12);
-                        ImGui::TableNextColumn();
-                    }*/
-
-                    ImGui::EndTable();
                 }
             }
-            ImGui::TreePop();
+        }
+
+
+        if(ImGui::CollapsingHeader("Minimum detectable effect size")){
+
+            ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+            ImGui::Text("%.2f", checker.updater.summary.ci_width);
+            ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+            ImGui::Text("%.2f", checker.updater.summary.ci_width_bw);
+            ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+            if (checker.updater.summary.power_sat == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_sat);
+            }
+            ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+            if (checker.updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_kr);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep_bw);
+            }
+            if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_kr2);
+                }
+            }
+
+            if(option.two_treatments){
+                ImGui::Text("Treatment 2");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_2);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_bw_2);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_sat_2);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_kr_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep_bw_2);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.2f", checker.updater.summary.ci_width_kr2_2);
+                    }
+                }
+
+                ImGui::Text("Treatment Interaction");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_12);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.2f", checker.updater.summary.ci_width_bw_12);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_sat_12);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_kr_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust, t-test: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.2f", checker.updater.summary.ci_width_gee_indep_bw_12);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.2f", checker.updater.summary.ci_width_kr2_12);
+                    }
+                }
+            }
+        }
+
+        if(ImGui::CollapsingHeader("Standard errors")){
+
+            ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+            ImGui::Text("%.3f", checker.updater.summary.se);
+            ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+            ImGui::Text("%.3f", checker.updater.summary.se);
+            ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+            if (checker.updater.summary.power_sat == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.3f", checker.updater.summary.se);
+            }
+            ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+            if (checker.updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.3f", checker.updater.summary.se_kr);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.3f", checker.updater.summary.se_gee_indep);
+            }
+            if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_kr2);
+                }
+            }
+
+            if(option.two_treatments){
+                ImGui::Text("Treatment 2");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.3f", checker.updater.summary.se_2);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.3f", checker.updater.summary.se_2);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_2);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_kr_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_gee_indep_2);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", checker.updater.summary.se_kr2_2);
+                    }
+                }
+
+                ImGui::Text("Treatment Interaction");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.3f", checker.updater.summary.se_12);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.3f", checker.updater.summary.se_12);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_12);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_kr_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.3f", checker.updater.summary.se_gee_indep_12);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.3f", checker.updater.summary.se_kr2_12);
+                    }
+                }
+            }
+        }
+
+        if(ImGui::CollapsingHeader("Degrees of freedom")){
+
+            ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+            ImGui::Text("%.1f", checker.updater.summary.dof);
+            ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+            ImGui::Text("%.1f", checker.updater.summary.dof_bw);
+            ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+            if (checker.updater.summary.power_sat == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.dof_kr);
+            }
+            ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+            if (checker.updater.summary.power_kr == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.dof_kr);
+            }
+            ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+            if (checker.updater.summary.power_gee_indep == 909) {
+                ImGui::Text("ERR");
+            }
+            else {
+                ImGui::Text("%.1f", checker.updater.summary.dof);
+            }
+            if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_kr);
+                }
+            }
+
+            if(option.two_treatments){
+                ImGui::Text("Treatment 2");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.dof_2);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.dof_bw_2);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_kr_2);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_kr_2);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_2 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_2);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_2 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_2);
+                    }
+                }
+
+                ImGui::Text("Treatment Interaction");
+                ImGui::BulletText("Mixed model: "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.dof_12);
+                ImGui::BulletText("Mixed model t-test (between-within): "); ImGui::SameLine();
+                ImGui::Text("%.1f", checker.updater.summary.dof_12);
+                ImGui::BulletText("Satterthwaite: "); ImGui::SameLine();
+                if (checker.updater.summary.power_sat_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_kr_12);
+                }
+                ImGui::BulletText("Kenward-Roger: "); ImGui::SameLine();
+                if (checker.updater.summary.power_kr_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_kr_12);
+                }
+                ImGui::BulletText("GEE Independence working correlation, robust: "); ImGui::SameLine();
+                if (checker.updater.summary.power_gee_indep_12 == 909) {
+                    ImGui::Text("ERR");
+                }
+                else {
+                    ImGui::Text("%.1f", checker.updater.summary.dof_12);
+                }
+                if (checker.updater.model.covariance != Covariance::exchangeable && checker.updater.model.covariance != Covariance::nested_exchangeable){
+                    ImGui::BulletText("Kenward-Roger (improved): "); ImGui::SameLine();
+                    if (checker.updater.summary.power_kr2_12 == 909) {
+                        ImGui::Text("ERR");
+                    }
+                    else {
+                        ImGui::Text("%.1f", checker.updater.summary.dof_kr_12);
+                    }
+                }
+            }
         }
 
         enum Dmethod {
@@ -522,7 +533,7 @@ matrix, which can usually be resolved by fiddling with the parameter values and 
         static int de_mode_curr_state = 0;
 
         if (!option.two_treatments && (checker.updater.model.covariance == ClusterApp::Covariance::exchangeable || checker.updater.model.covariance == ClusterApp::Covariance::nested_exchangeable)) {
-            if (ImGui::TreeNode("Design Effects")) {
+            if (ImGui::CollapsingHeader("Design Effects")) {
                 ImGui::Text("Design Effect Analysis"); ImGui::SameLine(); HelpMarker(
                     "For comparison we report the power and confidence interval half-width for exchangeable and nested exchangeable models using an adapted approach of Hooper et al (2016). Use of ICC, CAC, and IAC values for non - Gaussian - identity models uses the mean individual - level variance, which is approximated using the GLM weights, to convert to covariance parameter values.");
 
@@ -574,10 +585,15 @@ matrix, which can usually be resolved by fiddling with the parameter values and 
                     }
                 }
 
-                ImGui::TreePop();
             }
 
         }
+
+
+
+        
+
+        
         }
 
         

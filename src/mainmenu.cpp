@@ -321,23 +321,25 @@ namespace ClusterApp {
                 ImGui::EndMenu();
             }
 
+            if (ImGui::BeginMenu("Windows")) {
+                ImGui::Checkbox("Light mode", &windows.light_mode);
+                ImGui::Checkbox("Sample size", &windows.sample_size);
+                ImGui::Checkbox("Statistical model", &windows.model);
+                ImGui::Checkbox("Results", &windows.results);
+                ImGui::Checkbox("Optimal design", &windows.optimiser);
+                ImGui::Checkbox("Plotting", &windows.plotter);
+                ImGui::Checkbox("Sample minimiser", &windows.krigger);
+                ImGui::Checkbox("Data simulate", &windows.simulate);
+                ImGui::Checkbox("Dockspace", &windows.dockspace);
+                
+                //ImGui::Checkbox("Debug Info", &windows.debug_info);
+                ImGui::Checkbox("Show Box Correction", &windows.show_box);
+                ImGui::EndMenu();
+            }
+
             if (ImGui::BeginMenu("Options"))
             {
-                if (ImGui::BeginMenu("Windows")) {
-                    ImGui::Checkbox("Light mode", &windows.light_mode);
-                    ImGui::Checkbox("Sample size", &windows.sample_size);
-                    ImGui::Checkbox("Statistical model", &windows.model);
-                    ImGui::Checkbox("Results", &windows.results);
-                    ImGui::Checkbox("Optimal design", &windows.optimiser);
-                    ImGui::Checkbox("Plotting", &windows.plotter);
-                    ImGui::Checkbox("Sample minimiser", &windows.krigger);
-                    ImGui::Checkbox("Data simulate", &windows.simulate);
-                    ImGui::Checkbox("Dockspace", &windows.dockspace);
-                    
-                    //ImGui::Checkbox("Debug Info", &windows.debug_info);
-                    ImGui::Checkbox("Show Box Correction", &windows.show_box);
-                    ImGui::EndMenu();
-                }
+                
                 if (ImGui::BeginMenu("Designer")) {
                     ImGui::Checkbox("Show cluster-period count (n)", &windows.show_n_period); 
                     ImGui::Checkbox("Show intervention status", &windows.show_status_period); ImGui::SameLine(); HelpMarker("This will show a 1/0 for intervention control or the dose for a dose response design.");
@@ -356,10 +358,10 @@ namespace ClusterApp {
                     ImGui::OpenPopup("About");
                 if (ImGui::BeginPopupModal("About", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
-                    ImGui::Text("(c) Sam Watson 2024");
-                    ImGui::Text("Version: 0.5.2");
-                    ImGui::Text("glmmrBase Version: 0.10.3");
-                    ImGui::Text("SparseChol Version: 0.2.2");
+                    ImGui::Text("(c) Sam Watson 2025");
+                    ImGui::Text("Version: 0.6.1");
+                    ImGui::Text("glmmrBase Version: 0.11.3");
+                    ImGui::Text("SparseChol Version: 0.2.3");
 
                     ImGui::Text("License: GNU GPLv3");
 
@@ -372,6 +374,10 @@ namespace ClusterApp {
                     ImGui::OpenPopup("Version info");
                 if (ImGui::BeginPopupModal("Version info", NULL, ImGuiWindowFlags_AlwaysAutoResize))
                 {
+                    ImGui::Text("Version 0.6.1");
+                    ImGui::BulletText("Updated to glmmrBase v0.11.3.");
+                    ImGui::BulletText("Reworked the initial menu");
+                    ImGui::BulletText("Added GEE independence working correlation");
                     ImGui::Text("Version 0.5.2");
                     ImGui::BulletText("Updated to glmmrBase v0.10.3.");
                     ImGui::Text("Version 0.5.1");

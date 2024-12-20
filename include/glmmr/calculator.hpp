@@ -1,7 +1,12 @@
 #pragma once
 
-#include "general.h"
-#include "openmpheader.h"
+#include <stack>
+#include <boost/math/special_functions/bessel.hpp>
+#include <boost/math/special_functions/polygamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/special_functions/digamma.hpp>
+#include <boost/math/special_functions/erf.hpp>
+#include "maths.h"
 #include "instructions.h"
 
 enum class CalcDyDx {

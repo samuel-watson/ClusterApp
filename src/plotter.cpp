@@ -10,7 +10,7 @@ namespace ClusterApp {
         const char* xaxis_items_other[] = { "Clusters", "N per cluster-period", "ICC", "Treatment effect", "Baseline", "CAC" };
         static int xaxis_item_current = 2;
         static int series_item_current = 4;
-        const char* yaxis_items[] = { "Power (GLS)", "CI width (GLS)", "Power (GLS-BW)", "CI width (GLS-BW)", "Power (Sat)", "CI width (Sat)", "Power (KR)", "CI width (KR)", "Power (Design effect)", "CI width (Design effect)" };
+        const char* yaxis_items[] = { "Power (GLS)", "Minimum detectable effect (GLS)", "Power (GLS-BW)", "Minimum detectable effect (GLS-BW)", "Power (Sat)", "Minimum detectable effect (Sat)", "Power (KR)", "Minimum detectable effect (KR)", "Power (Design effect)", "Minimum detectable effect (Design effect)", "Power (GEE; Independence)", "Minimum detectable effect (GEE; Independence)" };
         static int yaxis_item_current = 0;
         static int series_clusters[] = { 1,2,3 };
         static int series_n[] = { 10,20,30 };
@@ -102,7 +102,7 @@ namespace ClusterApp {
             break;
         case 1:
             plot.yaxis = ClusterApp::YAxis::ci_width;
-            ylabel = "95%% CI half-width";
+            ylabel = "Minimum detectable effect";
             break;
         case 2:
             plot.yaxis = ClusterApp::YAxis::power_bw;
@@ -110,7 +110,7 @@ namespace ClusterApp {
             break;
         case 3:
             plot.yaxis = ClusterApp::YAxis::ci_width_bw;
-            ylabel = "95%% CI half-width";
+            ylabel = "Minimum detectable effect";
             break;
         case 4:
             plot.yaxis = ClusterApp::YAxis::power_sat;
@@ -118,7 +118,7 @@ namespace ClusterApp {
             break;
         case 5:
             plot.yaxis = ClusterApp::YAxis::ci_width_sat;
-            ylabel = "95%% CI half-width";
+            ylabel = "Minimum detectable effect";
             break;
         case 6:
             plot.yaxis = ClusterApp::YAxis::power_kr;
@@ -126,7 +126,7 @@ namespace ClusterApp {
             break;
         case 7:
             plot.yaxis = ClusterApp::YAxis::ci_width_kr;
-            ylabel = "95%% CI half-width";
+            ylabel = "Minimum detectable effect";
             break;
         case 8:
             plot.yaxis = ClusterApp::YAxis::power_de;
@@ -134,7 +134,15 @@ namespace ClusterApp {
             break;
         case 9:
             plot.yaxis = ClusterApp::YAxis::ci_width_de;
-            ylabel = "95%% CI half-width";
+            ylabel = "Minimum detectable effect";
+            break;
+        case 10:
+            plot.yaxis = ClusterApp::YAxis::power_gee_indep;
+            ylabel = "Power (%%)";
+            break;
+        case 11:
+            plot.yaxis = ClusterApp::YAxis::ci_width_gee_indep;
+            ylabel = "Minimum detectable effect";
             break;
         }
 

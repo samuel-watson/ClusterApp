@@ -5,6 +5,22 @@
 
 namespace glmmr{
 
+inline bool is_number(const std::string& s)
+{
+  bool isnum = true;
+  try {
+    float a = std::stod(s);
+  }
+  catch (std::invalid_argument const& ex)
+  {
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    Rcpp::Rcout << " Not double: " << ex.what() << '\n';
+#endif
+    isnum = false;
+  }
+  return isnum;
+}
+
 inline bool check_data(str& formula,
                        glmmr::calculator& calc,
                        const ArrayXXd& data,

@@ -11,6 +11,12 @@ namespace glmmr {
 
 using namespace Eigen;
 
+enum class MarginType {
+  DyDx = 0,
+    Diff = 1,
+    Ratio = 2
+};
+
 template<class>
 struct check_type : std::false_type {};
 
@@ -44,6 +50,7 @@ public:
                              const strvec& average,
                              const RandomEffectMargin re_type,
                              const SE se_type,
+                             const IM im_type,
                              const dblpair& xvals,
                              const dblvec& atvals,
                              const dblvec& atrevals);
@@ -171,6 +178,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
                                                  const strvec& average,
                                                  const RandomEffectMargin re_type,
                                                  const SE se_type,
+                                                 const IM im_type,
                                                  const dblpair& xvals,
                                                  const dblvec& atvals,
                                                  const dblvec& atrevals){
@@ -269,23 +277,43 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   switch(se_type){
     case SE::KR:
       {
-      CorrectionData<SE::KR> kdata = matrix.template small_sample_correction<SE::KR>();
-      M = kdata.vcov_beta;
+        if(im_type == IM::EIM){
+          CorrectionData<SE::KR> kdata = matrix.template small_sample_correction<SE::KR, IM::EIM>();
+          M = kdata.vcov_beta;
+        } else {
+          CorrectionData<SE::KR> kdata = matrix.template small_sample_correction<SE::KR, IM::OIM>();
+          M = kdata.vcov_beta;
+        }
+      
       break;
       }
     case SE::KR2:
     {
-      CorrectionData<SE::KR2> kdata = matrix.template small_sample_correction<SE::KR2>();
-      M = kdata.vcov_beta;
+      if(im_type == IM::EIM){
+        CorrectionData<SE::KR2> kdata = matrix.template small_sample_correction<SE::KR2, IM::EIM>();
+        M = kdata.vcov_beta;
+      } else {
+        CorrectionData<SE::KR2> kdata = matrix.template small_sample_correction<SE::KR2, IM::OIM>();
+        M = kdata.vcov_beta;
+      }
       break;
     }
     case SE::Robust:
       M = matrix.sandwich_matrix();
       break;
     default:
-      M = matrix.information_matrix();
-      M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
-      break;
+      {
+        if(im_type == IM::EIM){
+          M = matrix.information_matrix();
+          M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
+        } else {
+          MatrixXd Moim = matrix.template observed_information_matrix<IM::OIM>();
+          Moim = Moim.llt().solve(MatrixXd::Identity(Moim.rows(),Moim.cols()));
+          M = Moim.topLeftCorner(M.rows(),M.cols());
+        }
+        
+        break;
+      }
   }
   
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
