@@ -74,7 +74,7 @@ void ClusterApp::krigingData::generate_data() {
 				}
 			}
 			glmm.update_model_data(updater.generate_data());
-			glmm.power(summary);
+			glmm.power(summary, updater.model.powertype);
 			power.push_back(summary.power);
 		}
 		int counter = 0;

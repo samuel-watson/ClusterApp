@@ -24,8 +24,11 @@ namespace ClusterApp {
         BW = 1,
         Sat = 2,
         KR = 3,
-        DesignEff = 4,
-        KR2 = 5
+        Sand = 4,
+        SandBW = 5,
+        DesignEffGLM = 6,
+        DesignEffNP = 7,
+        Box = 8
     };
 
     class sequencePeriod {
@@ -124,89 +127,37 @@ namespace ClusterApp {
         void                    update_beta(ClusterApp::design& design);
         void                    set_beta_random(const double m, const double s);
         float                   alpha = 0.05;
+        ClusterApp::PowerType   powertype = ClusterApp::PowerType::GLS;
+        float                   target_power = 80.0;
+        float                   cv_size = 0;
+        float                   cv_size_within = 0;
+        int                     mean_size = 10;
         //float                   quantile = 0.5;
     };
 
     struct modelSummary {
     public:
         double power = 0;
-        double power_kr = 0;
-        double power_kr2 = 0;
-        double power_bw = 0;
-        double power_box = 0;
-        double power_sat = 0;
-        double power_gee_indep = 0;
-        double power_gee_indep_bw = 0;
         double ci_width = 0;
-        double ci_width_kr = 0;
-        double ci_width_kr2 = 0;
-        double ci_width_bw = 0;
-        double ci_width_sat = 0;
-        double ci_width_gee_indep = 0;
-        double ci_width_gee_indep_bw = 0;
         double se = 1;
-        double se_kr = 1;
-        double se_kr2 = 1;
-        double se_gee_indep = 1;
         double dof = 1;
-        double dof_kr = 1;
-        double dof_bw = 1;
-        double dof_box = 1;
+        double min_eff = 0;
         int total_n = 20;
 
         double power_2 = 0;
-        double power_kr_2 = 0;
-        double power_kr2_2 = 0;
-        double power_bw_2 = 0;
-        double power_box_2 = 0;
-        double power_sat_2 = 0;
-        double power_gee_indep_2 = 0;
-        double power_gee_indep_bw_2 = 0;
         double ci_width_2 = 0;
-        double ci_width_kr_2 = 0;
-        double ci_width_kr2_2 = 0;
-        double ci_width_bw_2 = 0;
-        double ci_width_sat_2 = 0;
-        double ci_width_gee_indep_2 = 0;
-        double ci_width_gee_indep_bw_2 = 0;
         double se_2 = 1;
-        double se_kr_2 = 1;
-        double se_kr2_2 = 1;
-        double se_gee_indep_2 = 1;
         double dof_2 = 1;
-        double dof_kr_2 = 1;
-        double dof_bw_2 = 1;
-        double dof_box_2 = 1;
+        double min_eff_2 = 0;
 
         double power_12 = 0;
-        double power_kr_12 = 0;
-        double power_kr2_12 = 0;
-        double power_bw_12 = 0;
-        double power_box_12 = 0;
-        double power_sat_12 = 0;
-        double power_gee_indep_12 = 0;
-        double power_gee_indep_bw_12 = 0;
         double ci_width_12 = 0;
-        double ci_width_kr_12 = 0;
-        double ci_width_kr2_12 = 0;
-        double ci_width_bw_12 = 0;
-        double ci_width_sat_12 = 0;
-        double ci_width_gee_indep_12 = 0;
-        double ci_width_gee_indep_bw_12 = 0;
         double se_12 = 1;
-        double se_kr_12 = 1;
-        double se_kr2_12 = 1;
-        double se_gee_indep_12 = 1;
         double dof_12 = 1;
-        double dof_kr_12 = 1;
-        double dof_bw_12 = 1;
-        double dof_box_12 = 1;
+        double min_eff_12 = 0;
 
         double design_effect = 0;
         double individual_se = 0;
-        double power_de = 0;
-        double ci_width_de = 0;
-        double se_de = 1;
         double individual_n = 1;
         double individual_var = 1;
 
@@ -249,17 +200,15 @@ namespace ClusterApp {
         void                    update_parameters();
         void                    update_model_data(const Eigen::ArrayXXd& data);
         std::vector<double>     sim_data();
-        void                    power(ClusterApp::modelSummary& summary);
-        void                    power_kr(ClusterApp::modelSummary& summary);
-        void                    power_box(ClusterApp::modelSummary& summary);
-        void                    power_bw(ClusterApp::modelSummary& summary);
+        void                    power(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype);
         void                    optimum(int N);
         float                   individual_n();
         double                  design_effect();
-        void                    power_de(ClusterApp::modelSummary& summary, int type);
         double                  mean_individual_variance(bool weighted = true);
         std::pair<double,double> mean_outcome();
         std::vector<int>        round_weights(std::vector<float> w, int n);
+    private:
+        void                    power_(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype, const float var_inflate);
     };
 
     class modelUpdater {
@@ -276,8 +225,10 @@ namespace ClusterApp {
         std::vector<std::vector<double> >   optimum_data = { {0.5},{0.5} };
         std::vector<std::vector<int> >      optimum_n = { {10},{10} };
         bool                            requires_update = false;
+        bool                            is_updating = false;
         bool                            plot_requires_update = false;
         bool                            initialized = false;
+
         modelUpdater(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelSummary& summary_,
@@ -290,6 +241,7 @@ namespace ClusterApp {
         void                update_parameters();
         void                update_summary_statistics();
         void                update_optimum();
+        int                 sample_size_search(const bool& clusters, const ClusterApp::PowerType& powertype);
     };
 
     class plotData {
@@ -373,6 +325,7 @@ namespace ClusterApp {
         bool                            dcheck = false;
         std::pair<bool, bool>           mcheck = {false, false};
         bool                            pcheck = false;
+        bool                            plotopen = false;
         modelChecker(ClusterApp::design& designs_,
             ClusterApp::statisticalModel& model_,
             ClusterApp::modelUpdater& updater_,
@@ -384,6 +337,61 @@ namespace ClusterApp {
         void update();
         void check_time();
     };
+
+    class appModel {
+    public:
+        ClusterApp::options&            option;
+        ClusterApp::AppLog&             logger;
+        ClusterApp::design              designs;
+        ClusterApp::statisticalModel    model;
+        ClusterApp::modelSummary        summary;
+        ClusterApp::glmmModel           glmm;
+        ClusterApp::modelUpdater        updater;
+        ClusterApp::plotData            plot;
+        ClusterApp::krigingData         krig;
+        ClusterApp::modelChecker        checker;
+        const int                       id;
+        // specific values for menu bars
+        int     family_item_current = 0;
+        int     estimator_item_current = 0;
+        int     link_item_current = 0;
+        int     outcome_item_current = 0;
+        bool    designopen = false;
+        bool    modelopen = false;
+        bool    optimalopen = false;
+        bool    kriggeropen = false;
+        bool    openkrig = false;
+        bool    samplesizeopen = false;
+        int     target_ind_size = 0;
+        int     target_cl_size  = 0;
+        bool    find_period_size_trigger = false;
+        bool    find_clusters_trigger = false;
+
+        appModel(ClusterApp::options& option_, ClusterApp::AppLog& logger_, const int id_);
+    };
+    
+    /*
+    class Model {
+        public:
+            ClusterApp::options            option;
+            ClusterApp::AppLog             logger;            
+
+            int size();
+            ClusterApp::appModel& operator[](const int index);
+
+            void add();
+            void remove(const int index);
+            bool active(const int index);
+
+            Model();
+
+        private:
+            std::array<bool, 3>  isin{true,false,false};
+            ClusterApp::appModel model1 = ClusterApp::appModel(option, logger, 0);
+            ClusterApp::appModel model2 = ClusterApp::appModel(option, logger, 1);
+            ClusterApp::appModel model3 = ClusterApp::appModel(option, logger, 2);
+            //std::array<ClusterApp::appModel, 3> models_ = {(option, logger), (option, logger), (option, logger)};
+    };*/
 
     // Prints a matrix to the log
     inline void AddMatrixToLog(const Eigen::MatrixXd& mat, ClusterApp::AppLog& log) {

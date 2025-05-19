@@ -348,8 +348,6 @@ var __ATINIT__ = [];
 
 var __ATMAIN__ = [];
 
-var __ATEXIT__ = [];
-
 var __ATPOSTRUN__ = [];
 
 var runtimeInitialized = false;
@@ -567,6 +565,11 @@ function canvas_get_height() {
 
 function resizeCanvas() {
  js_resizeCanvas();
+}
+
+function ImGui_ImplGlfw_EmscriptenOpenURL(url) {
+ url = url ? UTF8ToString(url) : null;
+ if (url) window.open(url, "_blank");
 }
 
 function ExitStatus(status) {
@@ -4041,191 +4044,6 @@ function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop) {
  setMainLoop(browserIterationFunc, fps, simulateInfiniteLoop);
 }
 
-var JSEvents = {
- inEventHandler: 0,
- removeAllEventListeners: function() {
-  for (var i = JSEvents.eventHandlers.length - 1; i >= 0; --i) {
-   JSEvents._removeHandler(i);
-  }
-  JSEvents.eventHandlers = [];
-  JSEvents.deferredCalls = [];
- },
- registerRemoveEventListeners: function() {
-  if (!JSEvents.removeEventListenersRegistered) {
-   __ATEXIT__.push(JSEvents.removeAllEventListeners);
-   JSEvents.removeEventListenersRegistered = true;
-  }
- },
- deferredCalls: [],
- deferCall: function(targetFunction, precedence, argsList) {
-  function arraysHaveEqualContent(arrA, arrB) {
-   if (arrA.length != arrB.length) return false;
-   for (var i in arrA) {
-    if (arrA[i] != arrB[i]) return false;
-   }
-   return true;
-  }
-  for (var i in JSEvents.deferredCalls) {
-   var call = JSEvents.deferredCalls[i];
-   if (call.targetFunction == targetFunction && arraysHaveEqualContent(call.argsList, argsList)) {
-    return;
-   }
-  }
-  JSEvents.deferredCalls.push({
-   targetFunction: targetFunction,
-   precedence: precedence,
-   argsList: argsList
-  });
-  JSEvents.deferredCalls.sort(function(x, y) {
-   return x.precedence < y.precedence;
-  });
- },
- removeDeferredCalls: function(targetFunction) {
-  for (var i = 0; i < JSEvents.deferredCalls.length; ++i) {
-   if (JSEvents.deferredCalls[i].targetFunction == targetFunction) {
-    JSEvents.deferredCalls.splice(i, 1);
-    --i;
-   }
-  }
- },
- canPerformEventHandlerRequests: function() {
-  if (navigator.userActivation) {
-   return navigator.userActivation.isActive;
-  }
-  return JSEvents.inEventHandler && JSEvents.currentEventHandler.allowsDeferredCalls;
- },
- runDeferredCalls: function() {
-  if (!JSEvents.canPerformEventHandlerRequests()) {
-   return;
-  }
-  for (var i = 0; i < JSEvents.deferredCalls.length; ++i) {
-   var call = JSEvents.deferredCalls[i];
-   JSEvents.deferredCalls.splice(i, 1);
-   --i;
-   call.targetFunction.apply(null, call.argsList);
-  }
- },
- eventHandlers: [],
- removeAllHandlersOnTarget: function(target, eventTypeString) {
-  for (var i = 0; i < JSEvents.eventHandlers.length; ++i) {
-   if (JSEvents.eventHandlers[i].target == target && (!eventTypeString || eventTypeString == JSEvents.eventHandlers[i].eventTypeString)) {
-    JSEvents._removeHandler(i--);
-   }
-  }
- },
- _removeHandler: function(i) {
-  var h = JSEvents.eventHandlers[i];
-  h.target.removeEventListener(h.eventTypeString, h.eventListenerFunc, h.useCapture);
-  JSEvents.eventHandlers.splice(i, 1);
- },
- registerOrRemoveHandler: function(eventHandler) {
-  if (!eventHandler.target) {
-   return -4;
-  }
-  var jsEventHandler = function jsEventHandler(event) {
-   ++JSEvents.inEventHandler;
-   JSEvents.currentEventHandler = eventHandler;
-   JSEvents.runDeferredCalls();
-   eventHandler.handlerFunc(event);
-   JSEvents.runDeferredCalls();
-   --JSEvents.inEventHandler;
-  };
-  if (eventHandler.callbackfunc) {
-   eventHandler.eventListenerFunc = jsEventHandler;
-   eventHandler.target.addEventListener(eventHandler.eventTypeString, jsEventHandler, eventHandler.useCapture);
-   JSEvents.eventHandlers.push(eventHandler);
-   JSEvents.registerRemoveEventListeners();
-  } else {
-   for (var i = 0; i < JSEvents.eventHandlers.length; ++i) {
-    if (JSEvents.eventHandlers[i].target == eventHandler.target && JSEvents.eventHandlers[i].eventTypeString == eventHandler.eventTypeString) {
-     JSEvents._removeHandler(i--);
-    }
-   }
-  }
-  return 0;
- },
- getNodeNameForTarget: function(target) {
-  if (!target) return "";
-  if (target == window) return "#window";
-  if (target == screen) return "#screen";
-  return target && target.nodeName ? target.nodeName : "";
- },
- fullscreenEnabled: function() {
-  return document.fullscreenEnabled || document.webkitFullscreenEnabled;
- }
-};
-
-var specialHTMLTargets = [ 0, typeof document != "undefined" ? document : 0, typeof window != "undefined" ? window : 0 ];
-
-function getBoundingClientRect(e) {
- return specialHTMLTargets.indexOf(e) < 0 ? e.getBoundingClientRect() : {
-  "left": 0,
-  "top": 0
- };
-}
-
-function fillMouseEventData(eventStruct, e, target) {
- HEAPF64[eventStruct >> 3] = e.timeStamp;
- var idx = eventStruct >> 2;
- HEAP32[idx + 2] = e.screenX;
- HEAP32[idx + 3] = e.screenY;
- HEAP32[idx + 4] = e.clientX;
- HEAP32[idx + 5] = e.clientY;
- HEAP32[idx + 6] = e.ctrlKey;
- HEAP32[idx + 7] = e.shiftKey;
- HEAP32[idx + 8] = e.altKey;
- HEAP32[idx + 9] = e.metaKey;
- HEAP16[idx * 2 + 20] = e.button;
- HEAP16[idx * 2 + 21] = e.buttons;
- HEAP32[idx + 11] = e["movementX"];
- HEAP32[idx + 12] = e["movementY"];
- var rect = getBoundingClientRect(target);
- HEAP32[idx + 13] = e.clientX - rect.left;
- HEAP32[idx + 14] = e.clientY - rect.top;
-}
-
-function maybeCStringToJsString(cString) {
- return cString > 2 ? UTF8ToString(cString) : cString;
-}
-
-function findEventTarget(target) {
- target = maybeCStringToJsString(target);
- var domElement = specialHTMLTargets[target] || (typeof document != "undefined" ? document.querySelector(target) : undefined);
- return domElement;
-}
-
-function registerWheelEventCallback(target, userData, useCapture, callbackfunc, eventTypeId, eventTypeString, targetThread) {
- if (!JSEvents.wheelEvent) JSEvents.wheelEvent = _malloc(104);
- var wheelHandlerFunc = function(e = event) {
-  var wheelEvent = JSEvents.wheelEvent;
-  fillMouseEventData(wheelEvent, e, target);
-  HEAPF64[wheelEvent + 72 >> 3] = e["deltaX"];
-  HEAPF64[wheelEvent + 80 >> 3] = e["deltaY"];
-  HEAPF64[wheelEvent + 88 >> 3] = e["deltaZ"];
-  HEAP32[wheelEvent + 96 >> 2] = e["deltaMode"];
-  if (getWasmTableEntry(callbackfunc)(eventTypeId, wheelEvent, userData)) e.preventDefault();
- };
- var eventHandler = {
-  target: target,
-  allowsDeferredCalls: true,
-  eventTypeString: eventTypeString,
-  callbackfunc: callbackfunc,
-  handlerFunc: wheelHandlerFunc,
-  useCapture: useCapture
- };
- return JSEvents.registerOrRemoveHandler(eventHandler);
-}
-
-function _emscripten_set_wheel_callback_on_thread(target, userData, useCapture, callbackfunc, targetThread) {
- target = findEventTarget(target);
- if (!target) return -4;
- if (typeof target.onwheel != "undefined") {
-  return registerWheelEventCallback(target, userData, useCapture, callbackfunc, 9, "wheel", targetThread);
- } else {
-  return -1;
- }
-}
-
 var ENV = {};
 
 var getExecutableName = () => thisProgram || "./this.program";
@@ -5080,6 +4898,56 @@ function _glGetShaderiv(shader, pname, p) {
  } else {
   HEAP32[p >> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname);
  }
+}
+
+function _glGetString(name_) {
+ var ret = GL.stringCache[name_];
+ if (!ret) {
+  switch (name_) {
+  case 7939:
+   var exts = GLctx.getSupportedExtensions() || [];
+   exts = exts.concat(exts.map(function(e) {
+    return "GL_" + e;
+   }));
+   ret = stringToNewUTF8(exts.join(" "));
+   break;
+
+  case 7936:
+  case 7937:
+  case 37445:
+  case 37446:
+   var s = GLctx.getParameter(name_);
+   if (!s) {
+    GL.recordError(1280);
+   }
+   ret = s && stringToNewUTF8(s);
+   break;
+
+  case 7938:
+   var glVersion = GLctx.getParameter(7938);
+   if (GL.currentContext.version >= 2) glVersion = "OpenGL ES 3.0 (" + glVersion + ")"; else {
+    glVersion = "OpenGL ES 2.0 (" + glVersion + ")";
+   }
+   ret = stringToNewUTF8(glVersion);
+   break;
+
+  case 35724:
+   var glslVersion = GLctx.getParameter(35724);
+   var ver_re = /^WebGL GLSL ES ([0-9]\.[0-9][0-9]?)(?:$| .*)/;
+   var ver_num = glslVersion.match(ver_re);
+   if (ver_num !== null) {
+    if (ver_num[1].length == 3) ver_num[1] = ver_num[1] + "0";
+    glslVersion = "OpenGL ES GLSL ES " + ver_num[1] + " (" + glslVersion + ")";
+   }
+   ret = stringToNewUTF8(glslVersion);
+   break;
+
+  default:
+   GL.recordError(1280);
+  }
+  GL.stringCache[name_] = ret;
+ }
+ return ret;
 }
 
 var jstoi_q = str => parseInt(str);
@@ -6974,214 +6842,214 @@ for (var i = 0; i < 288; ++i) {
 }
 
 var wasmImports = {
- e: ___assert_fail,
+ Ic: ImGui_ImplGlfw_EmscriptenOpenURL,
+ d: ___assert_fail,
  v: ___cxa_begin_catch,
  x: ___cxa_end_catch,
  a: ___cxa_find_matching_catch_2,
  k: ___cxa_find_matching_catch_3,
- Ic: ___cxa_find_matching_catch_4,
- Za: ___cxa_rethrow,
+ Hc: ___cxa_find_matching_catch_4,
+ Ya: ___cxa_rethrow,
  l: ___cxa_throw,
- Hc: ___cxa_uncaught_exceptions,
+ Gc: ___cxa_uncaught_exceptions,
  g: ___resumeException,
- Ya: ___syscall_fcntl64,
- Gc: ___syscall_ioctl,
- Fc: ___syscall_openat,
- Bc: __emscripten_get_now_is_monotonic,
- qb: __gmtime_js,
- pb: __localtime_js,
- ob: __mktime_js,
- nb: __timegm_js,
- Ac: __tzset_js,
+ Xa: ___syscall_fcntl64,
+ Fc: ___syscall_ioctl,
+ Ec: ___syscall_openat,
+ Ac: __emscripten_get_now_is_monotonic,
+ pb: __gmtime_js,
+ ob: __localtime_js,
+ nb: __mktime_js,
+ mb: __timegm_js,
+ zc: __tzset_js,
  ga: _abort,
- Va: canvas_get_height,
- Ua: canvas_get_width,
- zc: _emscripten_date_now,
- yc: _emscripten_get_now,
- xc: _emscripten_memcpy_big,
- wc: _emscripten_resize_heap,
- vc: _emscripten_set_main_loop,
- uc: _emscripten_set_wheel_callback_on_thread,
- Ec: _environ_get,
- Dc: _environ_sizes_get,
- Xa: _fd_close,
- Cc: _fd_read,
- rb: _fd_seek,
- Wa: _fd_write,
- Ta: _glActiveTexture,
- Sa: _glAttachShader,
+ Ua: canvas_get_height,
+ Ta: canvas_get_width,
+ yc: _emscripten_date_now,
+ xc: _emscripten_get_now,
+ wc: _emscripten_memcpy_big,
+ vc: _emscripten_resize_heap,
+ uc: _emscripten_set_main_loop,
+ Dc: _environ_get,
+ Cc: _environ_sizes_get,
+ Wa: _fd_close,
+ Bc: _fd_read,
+ qb: _fd_seek,
+ Va: _fd_write,
+ Sa: _glActiveTexture,
+ Ra: _glAttachShader,
  W: _glBindBuffer,
  O: _glBindTexture,
  fa: _glBindVertexArrayOES,
  tc: _glBlendEquation,
  sc: _glBlendEquationSeparate,
- Ra: _glBlendFuncSeparate,
+ Qa: _glBlendFuncSeparate,
  V: _glBufferData,
- Qa: _glBufferSubData,
- Pa: _glClear,
- Oa: _glClearColor,
- Na: _glCompileShader,
+ Pa: _glBufferSubData,
+ Oa: _glClear,
+ Na: _glClearColor,
+ Ma: _glCompileShader,
  rc: _glCreateProgram,
- Ma: _glCreateShader,
- La: _glDeleteShader,
+ La: _glCreateShader,
+ Ka: _glDeleteShader,
  qc: _glDeleteVertexArraysOES,
- Ka: _glDetachShader,
+ Ja: _glDetachShader,
  G: _glDisable,
  pc: _glDrawElements,
  I: _glEnable,
  ea: _glEnableVertexAttribArray,
- Ja: _glGenBuffers,
+ Ia: _glGenBuffers,
  oc: _glGenTextures,
  nc: _glGenVertexArraysOES,
  da: _glGetAttribLocation,
  w: _glGetIntegerv,
  mc: _glGetProgramInfoLog,
- Ia: _glGetProgramiv,
+ Ha: _glGetProgramiv,
  lc: _glGetShaderInfoLog,
- Ha: _glGetShaderiv,
- Ga: _glGetUniformLocation,
+ Ga: _glGetShaderiv,
+ kc: _glGetString,
+ Fa: _glGetUniformLocation,
  N: _glIsEnabled,
- kc: _glIsProgram,
- jc: _glLinkProgram,
- Fa: _glScissor,
- Ea: _glShaderSource,
- ic: _glTexImage2D,
- Da: _glTexParameteri,
- hc: _glUniform1i,
- gc: _glUniformMatrix4fv,
+ jc: _glIsProgram,
+ ic: _glLinkProgram,
+ Ea: _glScissor,
+ Da: _glShaderSource,
+ hc: _glTexImage2D,
+ U: _glTexParameteri,
+ gc: _glUniform1i,
+ fc: _glUniformMatrix4fv,
  Ca: _glUseProgram,
  ca: _glVertexAttribPointer,
  ba: _glViewport,
  E: _glfwCreateStandardCursor,
  Ba: _glfwCreateWindow,
- fc: _glfwDestroyWindow,
- ec: _glfwFocusWindow,
- dc: _glfwGetClipboardString,
- cc: _glfwGetCursorPos,
+ ec: _glfwDestroyWindow,
+ dc: _glfwFocusWindow,
+ cc: _glfwGetClipboardString,
+ bc: _glfwGetCursorPos,
  Aa: _glfwGetFramebufferSize,
- U: _glfwGetInputMode,
- bc: _glfwGetJoystickAxes,
- ac: _glfwGetJoystickButtons,
+ ac: _glfwGetInputMode,
+ $b: _glfwGetJoystickAxes,
+ _b: _glfwGetJoystickButtons,
  F: _glfwGetKey,
- $b: _glfwGetMonitorContentScale,
- _b: _glfwGetMonitorPos,
- Zb: _glfwGetMonitorWorkarea,
- Yb: _glfwGetMonitors,
- Xb: _glfwGetTime,
- Wb: _glfwGetVideoMode,
- za: _glfwGetWindowAttrib,
- aa: _glfwGetWindowPos,
- ya: _glfwGetWindowSize,
- Vb: _glfwInit,
+ Zb: _glfwGetMonitorContentScale,
+ Yb: _glfwGetMonitorPos,
+ Xb: _glfwGetMonitorWorkarea,
+ Wb: _glfwGetMonitors,
+ Vb: _glfwGetTime,
+ Ub: _glfwGetVideoMode,
+ aa: _glfwGetWindowAttrib,
+ $: _glfwGetWindowPos,
+ za: _glfwGetWindowSize,
+ Tb: _glfwInit,
  L: _glfwMakeContextCurrent,
- Ub: _glfwPollEvents,
- xa: _glfwSetCharCallback,
- Tb: _glfwSetClipboardString,
- Sb: _glfwSetCursor,
- wa: _glfwSetCursorEnterCallback,
- Rb: _glfwSetCursorPos,
- va: _glfwSetCursorPosCallback,
- ua: _glfwSetErrorCallback,
- Qb: _glfwSetInputMode,
- ta: _glfwSetKeyCallback,
- sa: _glfwSetMonitorCallback,
- ra: _glfwSetMouseButtonCallback,
- qa: _glfwSetScrollCallback,
- Pb: _glfwSetWindowCloseCallback,
- pa: _glfwSetWindowFocusCallback,
- Ob: _glfwSetWindowOpacity,
- oa: _glfwSetWindowPos,
- Nb: _glfwSetWindowPosCallback,
- na: _glfwSetWindowSize,
- Mb: _glfwSetWindowSizeCallback,
- Lb: _glfwSetWindowTitle,
- Kb: _glfwShowWindow,
- Jb: _glfwSwapBuffers,
- Ib: _glfwSwapInterval,
- ma: _glfwTerminate,
+ Sb: _glfwPollEvents,
+ ya: _glfwSetCharCallback,
+ Rb: _glfwSetClipboardString,
+ Qb: _glfwSetCursor,
+ xa: _glfwSetCursorEnterCallback,
+ Pb: _glfwSetCursorPos,
+ wa: _glfwSetCursorPosCallback,
+ va: _glfwSetErrorCallback,
+ Ob: _glfwSetInputMode,
+ ua: _glfwSetKeyCallback,
+ ta: _glfwSetMonitorCallback,
+ sa: _glfwSetMouseButtonCallback,
+ ra: _glfwSetScrollCallback,
+ Nb: _glfwSetWindowCloseCallback,
+ qa: _glfwSetWindowFocusCallback,
+ Mb: _glfwSetWindowOpacity,
+ pa: _glfwSetWindowPos,
+ Lb: _glfwSetWindowPosCallback,
+ oa: _glfwSetWindowSize,
+ Kb: _glfwSetWindowSizeCallback,
+ Jb: _glfwSetWindowTitle,
+ Ib: _glfwShowWindow,
+ Hb: _glfwSwapBuffers,
+ Gb: _glfwSwapInterval,
+ na: _glfwTerminate,
  K: _glfwWindowHint,
- $: invoke_ddddi,
- _: invoke_ddddii,
- Hb: invoke_dddi,
- Gb: invoke_ddi,
+ _: invoke_ddddi,
+ Fb: invoke_dddi,
+ Eb: invoke_ddi,
  T: invoke_di,
  n: invoke_dii,
  r: invoke_diii,
- la: invoke_ffffff,
+ ma: invoke_ffffff,
  M: invoke_fii,
- ka: invoke_fiii,
+ la: invoke_fiii,
  u: invoke_i,
  h: invoke_ii,
- Fb: invoke_iid,
+ Db: invoke_iid,
  Z: invoke_iif,
  b: invoke_iii,
- B: invoke_iiifffii,
- Eb: invoke_iiifii,
- i: invoke_iiii,
+ C: invoke_iiifffii,
+ j: invoke_iiii,
  m: invoke_iiiii,
- ja: invoke_iiiiid,
+ ka: invoke_iiiiid,
  y: invoke_iiiiii,
- Db: invoke_iiiiiiffffi,
- D: invoke_iiiiiii,
+ Cb: invoke_iiiiiiffffi,
+ B: invoke_iiiiiii,
  q: invoke_iiiiiiii,
+ Bb: invoke_iiiiiiiid,
  S: invoke_iiiiiiiiiiii,
- Cb: invoke_iiiiiiiiiiiiiiiii,
- mb: invoke_iiiiijj,
- lb: invoke_iijj,
- kb: invoke_j,
- jb: invoke_ji,
- ib: invoke_jiiii,
+ Ab: invoke_iiiiiiiiiiiiiiiii,
+ lb: invoke_iiiiijj,
+ kb: invoke_iijj,
+ jb: invoke_j,
+ ib: invoke_ji,
+ hb: invoke_jiiii,
  p: invoke_v,
- Bb: invoke_vf,
- j: invoke_vi,
+ i: invoke_vi,
  R: invoke_vid,
- d: invoke_vii,
- Ab: invoke_viid,
- zb: invoke_viididi,
- yb: invoke_viidiiii,
- xb: invoke_viif,
+ e: invoke_vii,
+ zb: invoke_viid,
+ yb: invoke_viididi,
+ xb: invoke_viidiiii,
+ ja: invoke_viif,
  Y: invoke_viiffiiii,
  wb: invoke_viifiiii,
  f: invoke_viii,
  ia: invoke_viiid,
  vb: invoke_viiidi,
+ ub: invoke_viiiff,
  H: invoke_viiiffff,
- ub: invoke_viiifffffffff,
- tb: invoke_viiifi,
+ tb: invoke_viiifffffffff,
+ sb: invoke_viiifi,
  c: invoke_viiii,
  A: invoke_viiiii,
- t: invoke_viiiiid,
- sb: invoke_viiiiifi,
- s: invoke_viiiiii,
+ s: invoke_viiiiid,
+ rb: invoke_viiiiifi,
+ t: invoke_viiiiii,
  o: invoke_viiiiiii,
- C: invoke_viiiiiiii,
+ D: invoke_viiiiiiii,
  X: invoke_viiiiiiiii,
  J: invoke_viiiiiiiiii,
  ha: invoke_viiiiiiiiiii,
  Q: invoke_viiiiiiiiiiii,
  P: invoke_viiiiiiiiiiiiiii,
- hb: invoke_viijj,
- gb: invoke_viijji,
- fb: invoke_viijjiiii,
- eb: invoke_vijj,
- db: invoke_vijjii,
- cb: invoke_vijjiii,
- bb: invoke_vijjjj,
- ab: invoke_vijjjjii,
+ gb: invoke_viijj,
+ fb: invoke_viijji,
+ eb: invoke_viijjiiii,
+ db: invoke_vijj,
+ cb: invoke_vijjii,
+ bb: invoke_vijjiii,
+ ab: invoke_vijjjj,
+ $a: invoke_vijjjjii,
  z: _llvm_eh_typeid_for,
- $a: resizeCanvas,
- _a: _strftime_l
+ _a: resizeCanvas,
+ Za: _strftime_l
 };
 
 var asm = createWasm();
 
 var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["Kc"])();
 
-var _free = a0 => (_free = wasmExports["Lc"])(a0);
-
-var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["Mc"])(a0, a1);
+var _main = Module["_main"] = (a0, a1) => (_main = Module["_main"] = wasmExports["Lc"])(a0, a1);
 
 var ___cxa_free_exception = a0 => (___cxa_free_exception = wasmExports["__cxa_free_exception"])(a0);
+
+var _free = a0 => (_free = wasmExports["Mc"])(a0);
 
 var _malloc = a0 => (_malloc = wasmExports["Nc"])(a0);
 
@@ -7231,25 +7099,14 @@ var dynCall_iiiiijj = Module["dynCall_iiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a
 
 var dynCall_jiiii = Module["dynCall_jiiii"] = (a0, a1, a2, a3, a4) => (dynCall_jiiii = Module["dynCall_jiiii"] = wasmExports["jd"])(a0, a1, a2, a3, a4);
 
-var ___start_em_js = Module["___start_em_js"] = 319504;
+var ___start_em_js = Module["___start_em_js"] = 464880;
 
-var ___stop_em_js = Module["___stop_em_js"] = 319610;
+var ___stop_em_js = Module["___stop_em_js"] = 465086;
 
 function invoke_viiiii(index, a1, a2, a3, a4, a5) {
  var sp = stackSave();
  try {
   getWasmTableEntry(index)(a1, a2, a3, a4, a5);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_vii(index, a1, a2) {
- var sp = stackSave();
- try {
-  getWasmTableEntry(index)(a1, a2);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7279,65 +7136,10 @@ function invoke_vi(index, a1) {
  }
 }
 
-function invoke_iiiii(index, a1, a2, a3, a4) {
+function invoke_vii(index, a1, a2) {
  var sp = stackSave();
  try {
-  return getWasmTableEntry(index)(a1, a2, a3, a4);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_ddi(index, a1, a2) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1, a2);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_ii(index, a1) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_viiii(index, a1, a2, a3, a4) {
- var sp = stackSave();
- try {
-  getWasmTableEntry(index)(a1, a2, a3, a4);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_iiifii(index, a1, a2, a3, a4, a5) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1, a2, a3, a4, a5);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_v(index) {
- var sp = stackSave();
- try {
-  getWasmTableEntry(index)();
+  getWasmTableEntry(index)(a1, a2);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7356,6 +7158,17 @@ function invoke_viii(index, a1, a2, a3) {
  }
 }
 
+function invoke_ii(index, a1) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
 function invoke_iiii(index, a1, a2, a3) {
  var sp = stackSave();
  try {
@@ -7367,10 +7180,10 @@ function invoke_iiii(index, a1, a2, a3) {
  }
 }
 
-function invoke_iid(index, a1, a2) {
+function invoke_viiii(index, a1, a2, a3, a4) {
  var sp = stackSave();
  try {
-  return getWasmTableEntry(index)(a1, a2);
+  getWasmTableEntry(index)(a1, a2, a3, a4);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7415,6 +7228,28 @@ function invoke_di(index, a1) {
  var sp = stackSave();
  try {
   return getWasmTableEntry(index)(a1);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_iiiii(index, a1, a2, a3, a4) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2, a3, a4);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_iid(index, a1, a2) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7510,6 +7345,17 @@ function invoke_viiiiiiiiiiii(index, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a1
  }
 }
 
+function invoke_v(index) {
+ var sp = stackSave();
+ try {
+  getWasmTableEntry(index)();
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
 function invoke_iiiiiiii(index, a1, a2, a3, a4, a5, a6, a7) {
  var sp = stackSave();
  try {
@@ -7565,17 +7411,6 @@ function invoke_viif(index, a1, a2, a3) {
  }
 }
 
-function invoke_vf(index, a1) {
- var sp = stackSave();
- try {
-  getWasmTableEntry(index)(a1);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
 function invoke_iiiiiiffffi(index, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10) {
  var sp = stackSave();
  try {
@@ -7620,10 +7455,32 @@ function invoke_ffffff(index, a1, a2, a3, a4, a5) {
  }
 }
 
+function invoke_viiiff(index, a1, a2, a3, a4, a5) {
+ var sp = stackSave();
+ try {
+  getWasmTableEntry(index)(a1, a2, a3, a4, a5);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
 function invoke_viiifffffffff(index, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12) {
  var sp = stackSave();
  try {
   getWasmTableEntry(index)(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_iiiiiii(index, a1, a2, a3, a4, a5, a6) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2, a3, a4, a5, a6);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7664,6 +7521,17 @@ function invoke_i(index) {
  }
 }
 
+function invoke_iif(index, a1, a2) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
 function invoke_viifiiii(index, a1, a2, a3, a4, a5, a6, a7) {
  var sp = stackSave();
  try {
@@ -7679,39 +7547,6 @@ function invoke_viidiiii(index, a1, a2, a3, a4, a5, a6, a7) {
  var sp = stackSave();
  try {
   getWasmTableEntry(index)(a1, a2, a3, a4, a5, a6, a7);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_iif(index, a1, a2) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1, a2);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_iiiiiii(index, a1, a2, a3, a4, a5, a6) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1, a2, a3, a4, a5, a6);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_ddddii(index, a1, a2, a3, a4, a5) {
- var sp = stackSave();
- try {
-  return getWasmTableEntry(index)(a1, a2, a3, a4, a5);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7742,6 +7577,28 @@ function invoke_viididi(index, a1, a2, a3, a4, a5, a6) {
 }
 
 function invoke_fii(index, a1, a2) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_iiiiiiiid(index, a1, a2, a3, a4, a5, a6, a7, a8) {
+ var sp = stackSave();
+ try {
+  return getWasmTableEntry(index)(a1, a2, a3, a4, a5, a6, a7, a8);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_ddi(index, a1, a2) {
  var sp = stackSave();
  try {
   return getWasmTableEntry(index)(a1, a2);

@@ -97,14 +97,14 @@ void ClusterApp::modelUpdater::update_parameters() {
 }
 
 void ClusterApp::modelUpdater::update_summary_statistics() {
-    glmm.power(summary);
-    glmm.power_kr(summary);
-    glmm.power_bw(summary);
-    if(glmm.option.show_box) glmm.power_box(summary);
-    if (model.covariance == Covariance::exchangeable || model.covariance == Covariance::nested_exchangeable) {
-        glmm.power_de(summary, de_mode);
-    }    
-    summary.dof = (double)designs.total_n();
+    glmm.power(summary, model.powertype);
+    //glmm.power_kr(summary);
+    //glmm.power_bw(summary);
+    // if(glmm.option.show_box) glmm.power_box(summary);
+    //if (model.covariance == Covariance::exchangeable || model.covariance == Covariance::nested_exchangeable) {
+    //    glmm.power_de(summary, de_mode);
+    //}    
+    // summary.dof = (double)designs.total_n();
     if(!manual_n_optim) summary.total_n = designs.total_n();
 }
 
@@ -158,3 +158,96 @@ void ClusterApp::modelUpdater::update_optimum() {
     }
 }
 
+int ClusterApp::modelUpdater::sample_size_search(const bool& clusters, const ClusterApp::PowerType& powertype){
+    // save original size
+    ClusterApp::modelSummary summary(designs);
+    int m = glmm.statmodel.mean_size;
+    int J = designs.total_clusters();
+    const int lower = clusters ? designs.sequences : 2;
+    const int upper = 200;
+    int current = clusters ? J : m; 
+    int test = current;
+    glmm.power(summary, powertype);
+    float current_power = summary.power;
+    float target = glmm.statmodel.target_power / 100.0;
+    int diff = clusters ? (int)J*2 : 100;
+    diff = diff < 20 ? 20 : diff;
+    bool decrease_n = true;
+
+    std::vector<float> n_weights;
+    n_weights.resize(designs.sequences);
+    for (int i = 0; i < designs.sequences; i++) {
+        n_weights[i] = (float)(*designs.n_clusters(i)) / (float)J;
+    }
+
+    Eigen::ArrayXd weights(glmm.model->model.n());
+    int iter = 0;
+    
+    while(diff > 1){
+        // direction
+        decrease_n = current_power > glmm.statmodel.target_power;
+
+        if(decrease_n){
+            test = current - diff < lower ? lower : current - diff;
+        } else {
+            test = current + diff > upper ? upper : current + diff;
+        }
+
+        if(!clusters){
+            weights.setConstant((double)test);
+
+            if (glmm.statmodel.family == ClusterApp::Family::gaussian) {
+                glmm.model->set_weights(weights);
+            }
+            else if (glmm.statmodel.family == ClusterApp::Family::binomial) {
+                glmm.model->model.data.set_variance(weights);
+            }
+            else if (glmm.statmodel.family == ClusterApp::Family::poisson) {
+                glmm.model->set_offset(weights);
+            }
+            glmm.model->matrix.W.update();
+        } else {
+            std::vector<int> new_n_cl = glmm.round_weights(n_weights, test);
+            for (int k = 0; k < designs.sequences; k++) {
+				*designs.n_clusters(k) = new_n_cl[k];
+			}
+            glmm.update_model_data(generate_data());
+        }
+        
+        glmm.power(summary, powertype);
+
+        if(abs(summary.power - glmm.statmodel.target_power) < abs(current_power - glmm.statmodel.target_power)){
+            current = test;
+            current_power = summary.power;
+        }
+        if (glmm.option.log)log.AddLog("[%05d] [%s] Linesearch (iter %d): current val %d diff %d test %d current power %.2f \n", ImGui::GetFrameCount(), log.cat[0], iter, current, diff, test, current_power);
+        diff = (int)diff*0.5;
+        iter++;
+    }
+
+    if (glmm.option.log && abs(current_power - glmm.statmodel.target_power) > 0.1 )log.AddLog("[%05d] [%s] Linesearch terminated without finding target power, starting difference likely too large \n", ImGui::GetFrameCount(), log.cat[1]);
+    
+    if(!clusters){
+        weights.setConstant((double)m);
+        if (glmm.statmodel.family == ClusterApp::Family::gaussian) {
+            glmm.model->set_weights(weights);
+        }
+        else if (glmm.statmodel.family == ClusterApp::Family::binomial) {
+            glmm.model->model.data.set_variance(weights);
+        }
+        else if (glmm.statmodel.family == ClusterApp::Family::poisson) {
+            glmm.model->set_offset(weights);
+        }
+        glmm.model->matrix.W.update();
+    } else {
+        std::vector<int> new_n_cl = glmm.round_weights(n_weights, J);
+        for (int k = 0; k < designs.sequences; k++) {
+            *designs.n_clusters(k) = new_n_cl[k];
+        }
+        glmm.update_model_data(generate_data());
+    }
+    
+
+    return current;
+    
+}

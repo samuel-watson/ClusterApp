@@ -8,8 +8,15 @@ std::pair<bool, bool> ClusterApp::statisticalModel::check() {
     crc(static_cast<int>(covariance));
     crc(static_cast<int>(linearpredictor));
     crc(static_cast<int>(sampling));
+    crc(static_cast<int>(powertype));
+    crc(mean_size);
+    crc(cv_size);
+    crc(cv_size_within);
+    crc(option.use_exact_cell_sizes);
     crc(option.heterogeneous_te);
+    crc(option.one_arm_clustering);
     crc(include_intercept);    
+    crc(target_power);
     for (int i = 0; i < te_pars.size(); i++)crc2(te_pars[i]);
     for (int i = 0; i < ixx_pars.size(); i++)crc2(ixx_pars[i]);
     for (int i = 0; i < cov_pars.size(); i++)crc2(cov_pars[i]);

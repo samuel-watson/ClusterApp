@@ -17,6 +17,13 @@ namespace ClusterApp {
         return char_array;
     }
 
+    inline char* int_to_char(const std::string& str, const int& i) {
+        std::string label = str + std::to_string(i);
+        char* char_array = new char[label.length() + 1];
+        strcpy(char_array, label.c_str());
+        return char_array;
+    }
+
     static void HelpMarker(const char* desc)
     {
         ImGui::TextDisabled("(?)");
@@ -35,6 +42,7 @@ namespace ClusterApp {
         bool dose_effect = false;
         bool heterogeneous_te = false;
         bool time_averaged_te = false;
+        bool one_arm_clustering = false;
         bool model = false;
         bool results = true;
         bool optimiser = false;
@@ -44,13 +52,15 @@ namespace ClusterApp {
         bool krigger = false;
         bool simulate = false;
         bool log = false;
-        bool show_n_period = true;
-        bool show_status_period = false;
+        bool show_n_period = false;
+        bool show_status_period = true;
         bool show_J_seq = true;
         bool use_icc_for_non_gaussian = true;
         bool debug_info = false;
         bool show_box = false;
         bool auto_update = false;
+        int use_exact_cell_sizes = 0;
+        bool show_global_options = false;
         options() {};
         ~options() = default;
     };
@@ -116,6 +126,11 @@ namespace ClusterApp {
 
     enum class YAxis {
         power = 0,
+        min_eff = 1
+    };
+
+    /*enum class YAxis {
+        power = 0,
         ci_width = 1,
         power_bw = 2,
         ci_width_bw = 3,
@@ -127,7 +142,7 @@ namespace ClusterApp {
         ci_width_de = 9,
         power_gee_indep = 10,
         ci_width_gee_indep = 11
-    };
+    };*/
 
     struct CRC {
         boost::crc_32_type crc;

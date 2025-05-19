@@ -2,7 +2,7 @@
 
 void ClusterApp::glmmModel::update_formula() {
     std::string new_formula = "int";
-    std::string re_string = option.heterogeneous_te ? "int" : "1";
+    std::string re_string = option.heterogeneous_te || option.one_arm_clustering ? "int" : "1";
     if (option.two_treatments) {
         new_formula += "+int2+int12";
     }
@@ -310,10 +310,10 @@ void ClusterApp::glmmModel::update_model_data(const Eigen::ArrayXXd& data) {
     Eigen::ArrayXd weights(data.rows());
     for (int i = 0; i < data.rows(); i++) {
         if (statmodel.family == ClusterApp::Family::poisson) {
-            weights(i) = log(data(i, 2));
+            weights(i) = option.use_exact_cell_sizes ? log(data(i, 2)) : log(statmodel.mean_size);
         }
         else {
-            weights(i) = data(i, 2);
+            weights(i) = option.use_exact_cell_sizes ? data(i, 2) : statmodel.mean_size;
         }
     }
     if (statmodel.family == ClusterApp::Family::gaussian) {
@@ -328,390 +328,565 @@ void ClusterApp::glmmModel::update_model_data(const Eigen::ArrayXXd& data) {
     update_parameters();
 };
 
-void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary) {
-    if (option.log)logger.AddLog("[%05d] [%s] Calculate GLS power \n", ImGui::GetFrameCount(), logger.cat[0]);
+void ClusterApp::glmmModel::power(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype){
+    float inflation = 1.0;
+    if(!option.use_exact_cell_sizes && (statmodel.cv_size > 0 || (statmodel.cv_size_within > 0 && designs.time > 1))){
+        // get sample size inflation factor
+        int idx = statmodel.include_intercept == 1 ? 1 : 0;
+        Eigen::MatrixXd M = (*model).matrix.information_matrix();
+        M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
+        float meanvar = (float)M(idx, idx);
+        MatrixXd Sigma = (*model).matrix.Sigma();
+        float sumcv = statmodel.cv_size + statmodel.cv_size_within;
+        MatrixXd iden = MatrixXd::Identity((*model).model.n(),(*model).model.n());
+        MatrixXd Wvar = iden * (1.0/((*model).model.data.var_par * sumcv * sumcv / statmodel.mean_size));
+        MatrixXd Wmix = Sigma * Wvar + iden;
+        Wmix = Wmix.llt().solve(iden);
+        Sigma = Sigma.llt().solve(iden);
+        Sigma *= (iden - Wmix);
+        MatrixXd X = (*model).model.linear_predictor.X();
+        MatrixXd Mnew = X.transpose() * Sigma * X;
+        Mnew = Mnew.llt().solve(Eigen::MatrixXd::Identity(Mnew.rows(), Mnew.cols()));
+        float newvar = (float)Mnew(idx,idx);
+        inflation = newvar/meanvar;
+        if (option.log)logger.AddLog("[%05d] [%s] Calculate inflation factor, var %.3f inf-var %.3f ratio %.3f \n", ImGui::GetFrameCount(), logger.cat[0], (float)meanvar, (float)newvar, inflation);
+    }
+    power_(summary, powertype, inflation);                        
+}
+
+void ClusterApp::glmmModel::power_(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype, const float var_inflate) {
+    if (option.log)logger.AddLog("[%05d] [%s] Calculate power: estimator: %d \n", ImGui::GetFrameCount(), logger.cat[0], static_cast<int>(powertype));
     if (model) {
         zcutoff = boost::math::quantile(norm, 1-statmodel.alpha/2);
-        Eigen::MatrixXd M = (*model).matrix.information_matrix();
-        if (option.log && logger.ShowMatrix) {
-            logger.AddLog("[%05d] [%s] Information matrix: \n", ImGui::GetFrameCount(), logger.cat[0]);
-            ClusterApp::AddMatrixToLog(M, logger);
-        }
-        // add gee - independence working correlation
-        Eigen::MatrixXd XtX1 = (*model).model.linear_predictor.X().transpose() *  (*model).model.linear_predictor.X(); //(((*model).matrix.W.W_.array().inverse() * (*model).model.data.weights).matrix().asDiagonal()) *
-        Eigen::MatrixXd XtX2 = (*model).model.linear_predictor.X().transpose() * (*model).matrix.Sigma() * (*model).model.linear_predictor.X();
-        // if(statmodel.family == ClusterApp::Family::gaussian) XtX1 *= (1.0/((*model).model.data.var_par));
-        if (option.log && logger.ShowMatrix) {
-            logger.AddLog("[%05d] [%s] XtX: \n", ImGui::GetFrameCount(), logger.cat[0]);
-            ClusterApp::AddMatrixToLog(XtX1, logger);
-            logger.AddLog("[%05d] [%s] XtVX: \n", ImGui::GetFrameCount(), logger.cat[0]);
-            ClusterApp::AddMatrixToLog(XtX2, logger);
-        }
-        XtX1 = XtX1.llt().solve(Eigen::MatrixXd::Identity(XtX1.rows(),XtX1.cols()));
-        Eigen::MatrixXd XtX = XtX1 * XtX2 * XtX1;
-        if (option.log && logger.ShowMatrix) {
-            logger.AddLog("[%05d] [%s] GEE Robust: \n", ImGui::GetFrameCount(), logger.cat[0]);
-            ClusterApp::AddMatrixToLog(XtX, logger);
-        }
-        M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
+        double powercutoff = boost::math::quantile(norm, statmodel.target_power/100.0);
         int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval, zval_gee;
-        double bvar = M(idx, idx);
-        double bvar_gee = XtX(idx, idx);
-        if (!isnan(bvar) && bvar > 0) {
-            zval = abs(statmodel.te_pars[0] / sqrt(bvar));
-            zval_gee = abs(statmodel.te_pars[0] / sqrt(bvar_gee));
-            summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
-            summary.dof = (*model).model.n();
-            summary.se = sqrt(M(idx, idx));
-            summary.ci_width = zcutoff * summary.se;
-            summary.power_gee_indep = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
-            summary.se_gee_indep = sqrt(bvar_gee);
-            summary.ci_width_gee_indep = zcutoff * summary.se_gee_indep;
-        }
-        else {
-            if (option.log) {
-                logger.AddLog("[%05d] [%s] GLS information matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+        if(powertype == ClusterApp::PowerType::GLS || powertype == ClusterApp::PowerType::BW){
+            double dofbw = designs.total_cluster_periods() - (*model).model.linear_predictor.P();
+            boost::math::students_t dist(dofbw);
+            double tcutoff = boost::math::quantile(dist, 0.975);
+            double tpowercutoff = boost::math::quantile(dist, statmodel.target_power/100.0);
+            Eigen::MatrixXd M = (*model).matrix.information_matrix();
+            if (option.log && logger.ShowMatrix) {
+                logger.AddLog("[%05d] [%s] Information matrix (GLS): \n", ImGui::GetFrameCount(), logger.cat[0]);
+                ClusterApp::AddMatrixToLog(M, logger);
             }
-            summary.power = 909;
-            summary.dof = 0;
-            summary.se = 0;
-            summary.ci_width = 0;
-            summary.power_gee_indep = 909;
-            summary.se_gee_indep = 0;
-            summary.ci_width_gee_indep = 0;
-        }
-        if (option.two_treatments) {
-            bvar = M(idx + 1, idx + 1);
-            bvar_gee = XtX(idx+1, idx+1);
+            M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
+            double zval;
+            double bvar = M(idx, idx);
+            
             if (!isnan(bvar) && bvar > 0) {
-                zval = abs(statmodel.te_pars[1] / sqrt(bvar));
-                zval_gee = abs(statmodel.te_pars[1] / sqrt(bvar_gee));
-                summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
-                summary.dof_2 = (*model).model.n();
+                zval = abs(statmodel.te_pars[0] / sqrt(bvar * var_inflate));
+                summary.se = sqrt(M(idx, idx));
+                if(powertype == ClusterApp::PowerType::GLS){
+                    summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
+                    summary.dof = designs.total_n();
+                    summary.ci_width = zcutoff * summary.se;
+                    summary.min_eff = (zcutoff + powercutoff) * summary.se;
+                    if (option.log)logger.AddLog("[%05d] [%s] Calculate GLS power, SE %.3f DoF %.1f te %.3f \n", ImGui::GetFrameCount(), logger.cat[0], (float)sqrt(bvar), (float)summary.dof, statmodel.te_pars[0]);
+                } else {
+                    summary.power = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
+                    summary.dof = dofbw;
+                    summary.ci_width = tcutoff * summary.se;
+                    summary.min_eff = (tcutoff + tpowercutoff) * summary.se;
+                    if (option.log)logger.AddLog("[%05d] [%s] Calculate GLS-BW power, SE %.3f DoF %.1f te %.3f \n", ImGui::GetFrameCount(), logger.cat[0], (float)sqrt(bvar), (float)dofbw, statmodel.te_pars[0]);
+                }
+            } else {
+                if (option.log) {
+                    logger.AddLog("[%05d] [%s] GLS information matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                }
+                summary.power = 909;
+                summary.dof = 0;
+                summary.se = 0;
+                summary.ci_width = 0;
+                summary.min_eff = 0;
+            }
+
+            if (option.two_treatments) {
+                bvar = M(idx + 1, idx + 1);
                 summary.se_2 = sqrt(M(idx + 1, idx + 1));
-                summary.ci_width_2 = zcutoff * summary.se_2;
-                summary.power_gee_indep_2 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
-                summary.se_gee_indep_2 = sqrt(bvar_gee);
-                summary.ci_width_gee_indep_2 = zcutoff * summary.se_gee_indep_2;
+                if (!isnan(bvar) && bvar > 0) {
+                    zval = abs(statmodel.te_pars[1] / sqrt(bvar * var_inflate));
+                    if(powertype == ClusterApp::PowerType::GLS){
+                        summary.power_2 = boost::math::cdf(norm, zval - zcutoff) * 100;
+                        summary.dof_2 = (*model).model.n();
+                        summary.ci_width_2 = zcutoff * summary.se_2;
+                        summary.min_eff_2 = (zcutoff + powercutoff) * summary.se_2;
+                    } else {
+                        summary.power_2 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
+                        summary.dof_2 = dof - (*model).model.linear_predictor.P();
+                        summary.ci_width_2 = tcutoff * summary.se_2;
+                        summary.min_eff_2 = (tcutoff + tpowercutoff) * summary.se_2;
+                    }
+                    
+                }
+                else {
+                    if (option.log) {
+                        logger.AddLog("[%05d] [%s] GLS information matrix (2nd treatment) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                    }
+                    summary.power_2 = 909;
+                    summary.dof_2 = 0;
+                    summary.se_2 = 0;
+                    summary.ci_width_2 = 0;
+                    summary.min_eff_2 = 0;
+                }
+                bvar = M(idx + 2, idx + 2);
+                summary.se_12 = sqrt(M(idx + 2, idx + 2));
+                if (!isnan(bvar) && bvar > 0) {
+                    zval = abs(statmodel.te_pars[2] / sqrt(bvar * var_inflate));
+                    if(powertype == ClusterApp::PowerType::GLS){
+                        summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
+                        summary.dof_12 = (*model).model.n();
+                        summary.ci_width_12 = zcutoff * summary.se_12;
+                        summary.min_eff_12 = (zcutoff + powercutoff) * summary.se_12;
+                    } else {
+                        summary.power_12 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
+                        summary.dof_12 = dof - (*model).model.linear_predictor.P();
+                        summary.ci_width_12 = tcutoff * summary.se_12;
+                        summary.min_eff_12 = (tcutoff + tpowercutoff) * summary.se_12;
+                    }
+                }
+                else {
+                    if (option.log) {
+                        logger.AddLog("[%05d] [%s] GLS information matrix (interaction) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                    }
+                    summary.power_12 = 909;
+                    summary.dof_12 = 0;
+                    summary.se_12 = 0;
+                    summary.ci_width_12 = 0;
+                    summary.min_eff_12 = 0;
+                }
+                
+            }
+
+        } else if(powertype == ClusterApp::PowerType::Sand || powertype == ClusterApp::PowerType::SandBW) {
+            double dofbw = designs.total_cluster_periods() - (*model).model.linear_predictor.P();
+            boost::math::students_t dist(dofbw);
+            double tcutoff = boost::math::quantile(dist, 0.975);
+            double tpowercutoff = boost::math::quantile(dist, statmodel.target_power/100.0);
+            // add gee - independence working correlation
+            Eigen::MatrixXd XtX1 = (*model).model.linear_predictor.X().transpose() *  (*model).model.linear_predictor.X(); //(((*model).matrix.W.W_.array().inverse() * (*model).model.data.weights).matrix().asDiagonal()) *
+            Eigen::MatrixXd XtX2 = (*model).model.linear_predictor.X().transpose() * (*model).matrix.Sigma() * (*model).model.linear_predictor.X();
+            if (option.log && logger.ShowMatrix) {
+                logger.AddLog("[%05d] [%s] XtX: \n", ImGui::GetFrameCount(), logger.cat[0]);
+                ClusterApp::AddMatrixToLog(XtX1, logger);
+                logger.AddLog("[%05d] [%s] XtVX: \n", ImGui::GetFrameCount(), logger.cat[0]);
+                ClusterApp::AddMatrixToLog(XtX2, logger);
+            }
+            XtX1 = XtX1.llt().solve(Eigen::MatrixXd::Identity(XtX1.rows(),XtX1.cols()));
+            Eigen::MatrixXd XtX = XtX1 * XtX2 * XtX1;
+            if (option.log && logger.ShowMatrix) {
+                logger.AddLog("[%05d] [%s] GEE Robust: \n", ImGui::GetFrameCount(), logger.cat[0]);
+                ClusterApp::AddMatrixToLog(XtX, logger);
+            }
+            double zval_gee;
+            double bvar_gee = XtX(idx, idx);
+            if (!isnan(bvar_gee) && bvar_gee > 0) {
+                zval_gee = abs(statmodel.te_pars[0] / sqrt(bvar_gee * var_inflate));
+                summary.se = sqrt(bvar_gee);
+                if(powertype == ClusterApp::PowerType::Sand){
+                    summary.dof = designs.total_n();
+                    summary.power = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+                    summary.ci_width = zcutoff * summary.se;
+                    summary.min_eff = (zcutoff + powercutoff) * summary.se;
+                } else {
+                    summary.power = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+                    summary.dof = dofbw;
+                    summary.ci_width = tcutoff * summary.se;
+                    summary.min_eff = (tcutoff + tpowercutoff) * summary.se;
+                }
+                
+            } else {
+                if (option.log) {
+                    logger.AddLog("[%05d] [%s] GLS information matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                }
+                summary.power = 909;
+                summary.dof = 0;
+                summary.se = 0;
+                summary.ci_width = 0;
+                summary.min_eff = 0;
+            }
+
+            if (option.two_treatments) {
+                bvar_gee = XtX(idx+1, idx+1);
+                if (!isnan(bvar_gee) && bvar_gee > 0) {
+                    zval_gee = abs(statmodel.te_pars[1] / sqrt(bvar_gee * var_inflate));
+                    summary.se_2 = sqrt(bvar_gee);
+                    if(powertype == ClusterApp::PowerType::Sand){
+                        summary.dof_2 = designs.total_n();
+                        summary.power_2 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+                        summary.ci_width_2 = zcutoff * summary.se_2;
+                        summary.min_eff_2 = (zcutoff + powercutoff) * summary.se_2;
+                    } else {
+                        summary.power_2 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+                        summary.dof_2 = dofbw;
+                        summary.ci_width_2 = tcutoff * summary.se_2;
+                        summary.min_eff_2 = (tcutoff + tpowercutoff) * summary.se_2;
+                    }
+                    
+                }
+                else {
+                    if (option.log) {
+                        logger.AddLog("[%05d] [%s] GLS information matrix (2nd treatment) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                    }
+                    summary.power_2 = 909;
+                    summary.dof_2 = 0;
+                    summary.se_2 = 0;
+                    summary.ci_width_2 = 0;
+                    summary.min_eff_2 = 0;
+                }
+                bvar_gee = XtX(idx+2, idx+2);
+                if (!isnan(bvar_gee) && bvar_gee > 0) {
+                    zval_gee = abs(statmodel.te_pars[2] / sqrt(bvar_gee * var_inflate));
+                    summary.se_12 = sqrt(bvar_gee);
+                    if(powertype == ClusterApp::PowerType::Sand){
+                        summary.dof_12 = designs.total_n();
+                        summary.power_12 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
+                        summary.ci_width_12 = zcutoff * summary.se_12;
+                        summary.min_eff_12 = (zcutoff + powercutoff) * summary.se_12;
+                    } else {
+                        summary.power_12 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
+                        summary.dof_12 = dofbw;
+                        summary.ci_width_12 = tcutoff * summary.se_12;
+                        summary.min_eff_12 = (zcutoff + powercutoff) * summary.se_12;
+                    }
+                    
+                }
+                else {
+                    if (option.log) {
+                        logger.AddLog("[%05d] [%s] GLS information matrix (interaction) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                    }
+                    summary.power_12 = 909;
+                    summary.dof_12 = 0;
+                    summary.se_12 = 0;
+                    summary.ci_width_12 = 0;
+                    summary.min_eff_12 = 0;
+                }
+                
+            }
+        } else if (powertype == ClusterApp::PowerType::KR || powertype == ClusterApp::PowerType::Sat) {
+            if (option.log)logger.AddLog("[%05d] [%s] Calculate Kenward-Roger/Satterthwaite power \n", ImGui::GetFrameCount(), logger.cat[0]);
+            int valsize = option.two_treatments ? 3 : 1;
+            dblvec dofkr(valsize);
+            dblvec bvar(valsize);
+            dblvec bvar2(valsize);
+            int idx = statmodel.include_intercept == 1 ? 1 : 0;
+            bool with_improved = false;
+            if (statmodel.covariance != Covariance::exchangeable && statmodel.covariance != Covariance::nested_exchangeable) {
+                with_improved = true;
+                CorrectionData<glmmr::SE::KRBoth> res = (*model).matrix.template small_sample_correction<glmmr::SE::KRBoth, glmmr::IM::EIM>();
+                dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
+                bvar[0] = res.vcov_beta(idx, idx);
+                bvar2[0] = res.vcov_beta_second(idx, idx);
+                if (option.log && logger.ShowMatrix) {
+                    logger.AddLog("[%05d] [%s] Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
+                    ClusterApp::AddMatrixToLog(res.vcov_beta, logger);
+                    logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
+                    ClusterApp::AddMatrixToLog(res.vcov_beta_second, logger);
+                }
+                if (option.two_treatments) {
+                    dofkr[1] = res.dof(idx+1) > 1 ? res.dof(idx + 1) : 1.0;
+                    bvar[1] = res.vcov_beta(idx + 1, idx + 1);
+                    bvar2[1] = res.vcov_beta_second(idx + 1, idx + 1);
+                    dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
+                    bvar[2] = res.vcov_beta(idx + 2, idx + 2);
+                    bvar2[2] = res.vcov_beta_second(idx + 2, idx + 2);
+                }
+            } else {
+                CorrectionData<glmmr::SE::KR> res = (*model).matrix.template small_sample_correction<glmmr::SE::KR, glmmr::IM::EIM>();
+                dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
+                bvar[0] = res.vcov_beta(idx, idx);
+                bvar2[0] = 0;
+                if (option.log && logger.ShowMatrix) {
+                    logger.AddLog("[%05d] [%s] Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
+                    ClusterApp::AddMatrixToLog(res.vcov_beta, logger);
+                }
+                
+                if (option.two_treatments) {
+                    dofkr[1] = res.dof(idx + 1) > 1 ? res.dof(idx + 1) : 1.0;
+                    bvar[1] = res.vcov_beta(idx + 1, idx + 1);
+                    bvar2[1] = 0;
+                    dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
+                    bvar[2] = res.vcov_beta(idx + 2, idx + 2);
+                    bvar2[2] = 0;
+                }
+            }        
+            boost::math::students_t dist(dofkr[0]);
+            
+            double tcutoff = boost::math::quantile(dist, 1 - statmodel.alpha / 2);
+            double tpowercutoff = boost::math::quantile(dist, statmodel.target_power/100.0);
+            summary.dof = dofkr[0];
+            double tval, tval_sat, tval2;
+            if(powertype == ClusterApp::PowerType::Sat) {
+                Eigen::MatrixXd M = (*model).matrix.information_matrix();
+                if (option.log && logger.ShowMatrix) {
+                    logger.AddLog("[%05d] [%s] Information matrix (Sat/GLS): \n", ImGui::GetFrameCount(), logger.cat[0]);
+                    ClusterApp::AddMatrixToLog(M, logger);
+                }
+                M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
+                summary.se = sqrt(M(idx,idx)  * var_inflate);
+                tval_sat = abs(statmodel.te_pars[0] / summary.se);
+                int idx = statmodel.include_intercept == 1 ? 1 : 0;
+                summary.power = dofkr[0] > 1 ? boost::math::cdf(dist, tval_sat - tcutoff) * 100 : 0.0;
+                summary.ci_width = tcutoff * summary.se;
+                summary.min_eff = (tcutoff + tpowercutoff) * summary.se;
+                if (option.log)logger.AddLog("[%05d] [%s] Calculate Satterthwaite power SE: %.3f te: %.3f \n", ImGui::GetFrameCount(), logger.cat[0], summary.se, statmodel.te_pars[0]);
+                if (option.two_treatments) {
+                    boost::math::students_t dist2(dofkr[1]);
+                    summary.se_2 = sqrt(M(idx+1, idx+1) * var_inflate);
+                    summary.dof_2 = dofkr[1];
+                    tval_sat = abs(statmodel.te_pars[0] / summary.se_2);
+                    summary.power_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval_sat - tcutoff) * 100 : 0.0;
+                    summary.ci_width_2 = tcutoff * summary.se_2;
+                    summary.min_eff_2 = (tcutoff + tpowercutoff) * summary.se_2;
+                    boost::math::students_t dist3(dofkr[2]);
+                    summary.se_12 = sqrt(M(idx+2, idx+2) * var_inflate);
+                    tval_sat = abs(statmodel.te_pars[2] / summary.se_12);
+                    summary.dof_12 = dofkr[2];
+                    summary.power_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval_sat - tcutoff) * 100 : 0.0;
+                    summary.ci_width_12 = tcutoff * summary.se_12;
+                    summary.min_eff_12 = (tcutoff + tpowercutoff) * summary.se_12;
+                }
+            
+            } else {
+                if(!with_improved){
+                    if (!isnan(bvar[0]) && bvar[0] > 0 && bvar[0] < 1e5) {
+                        tval = abs(statmodel.te_pars[0] / sqrt(bvar[0] * var_inflate));
+                        summary.power = dofkr[0] > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
+                        summary.se = sqrt(bvar[0]);
+                        summary.ci_width = tcutoff * summary.se;  
+                        summary.min_eff = (tcutoff + tpowercutoff) * summary.se;
+                    } else {
+                        if (option.log) {
+                            logger.AddLog("[%05d] [%s] Kenward-Roger Matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                        }
+                        summary.power = 909;
+                        summary.dof = 0;
+                        summary.se = 0;
+                        summary.ci_width = 0;
+                        summary.min_eff = 0;
+                    }
+                } else {
+                    if (!isnan(bvar2[0]) && bvar2[0] > 0 && bvar2[0] < 1e5) {
+                        tval2 = abs(statmodel.te_pars[0] / sqrt(bvar2[0] * var_inflate));
+                        summary.power = dofkr[0] > 1 ? boost::math::cdf(dist, tval2 - tcutoff) * 100 : 0.0;
+                        summary.se = sqrt(bvar2[0]);
+                        summary.ci_width = tcutoff * summary.se;
+                        summary.min_eff = (tcutoff + tpowercutoff) * summary.se;
+                    }
+                    else {
+                        if (option.log) {
+                            logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
+                        }
+                        summary.power = 909;
+                        summary.se = 0;
+                        summary.ci_width = 0;
+                        summary.min_eff = 0;
+                    }
+                }
+                if (option.two_treatments) {
+                    boost::math::students_t dist2(dofkr[1]);
+                    if(!with_improved){
+                        if (!isnan(bvar[1]) && bvar[1] >= 0) {
+                            summary.dof_2 = dofkr[1];
+                            tval = abs(statmodel.te_pars[1] / sqrt(bvar[1] * var_inflate));
+                            summary.power_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval - tcutoff) * 100 : 0.0;
+                            summary.se_2 = sqrt(bvar[1]);
+                            summary.ci_width_2 = tcutoff * summary.se_2;
+                            summary.min_eff_2 = (tcutoff + tpowercutoff) * summary.se_2;
+                        }
+                        else {
+                            if (option.log) {
+                                logger.AddLog("[%05d] [%s] Kenward-Roger Matrix (2nd treatment) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                            }
+                            summary.power_2 = 909;
+                            summary.dof_2 = 0;
+                            summary.se_2 = 0;
+                            summary.ci_width_2 = 0;
+                            summary.min_eff_2 = 0;
+                        }
+                    } else {
+                        if (!isnan(bvar2[1]) && bvar2[1] > 0) {
+                            summary.dof_2 = dofkr[1];
+                            tval2 = abs(statmodel.te_pars[1] / sqrt(bvar2[1] * var_inflate));
+                            summary.power_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval2 - tcutoff) * 100 : 0.0;
+                            summary.se_2 = sqrt(bvar2[1]);
+                            summary.ci_width_2 = tcutoff * summary.se_2;
+                            summary.min_eff_2 = (tcutoff + tpowercutoff) * summary.se_2;
+                        }
+                        else {
+                            if (option.log) {
+                                logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix (2nd treatment) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
+                            }
+                            summary.power_2 = 909;
+                            summary.se_2 = 0;
+                            summary.ci_width_2 = 0;
+                            summary.min_eff_2 = 0;
+                        }
+                    }
+    
+                    boost::math::students_t dist3(dofkr[2]);
+                    summary.dof_12 = dofkr[2];
+                    if(!with_improved){
+                        if (!isnan(bvar[2]) && bvar[2] >= 0) {
+                            tval = abs(statmodel.te_pars[2] / sqrt(bvar[2] * var_inflate));
+                            summary.power_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval - tcutoff) * 100 : 0.0;
+                            summary.se_12 = sqrt(bvar[2]);
+                            summary.ci_width_12 = tcutoff * summary.se_12;
+                            summary.min_eff_12 = (tcutoff + tpowercutoff) * summary.se_12;
+                        }
+                        else {
+                            if (option.log) {
+                                logger.AddLog("[%05d] [%s] Kenward-Roger Matrix (interaction) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
+                            }
+                            summary.power_12 = 909;
+                            summary.dof_12 = 0;
+                            summary.se_12 = 0;
+                            summary.ci_width_12 = 0;
+                            summary.min_eff_12 = 0;
+                        }
+                    } else {
+                        if (!isnan(bvar2[2]) && bvar2[2] > 0) {
+                            tval2 = abs(statmodel.te_pars[2] / sqrt(bvar2[2] * var_inflate));
+                            summary.power_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval2 - tcutoff) * 100 : 0.0;
+                            summary.se_12 = sqrt(bvar2[2]);
+                            summary.ci_width_12 = tcutoff * summary.se_12;
+                            summary.min_eff_12 = (tcutoff + tpowercutoff) * summary.se_12;
+                        }
+                        else {
+                            if (option.log) {
+                                logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix (interaction) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
+                            }
+                            summary.power_12 = 909;
+                            summary.se_12 = 0;
+                            summary.ci_width_12 = 0;
+                            summary.min_eff_12 = 0;
+                        }
+                    }
+
+                    
+                    
+                }
+            } 
+
+            
+        } else if(powertype == ClusterApp::PowerType::DesignEffGLM ||powertype == ClusterApp::PowerType::DesignEffNP){
+            //TYPES: 1 = glm model variance
+            //TYPES: 2 = chi-squared (applicable to binary outcome)
+            //TYPES: 3 = Fisher's exact test
+            //TYPES: 4 = t-test difference in means - not needed as equivalent to linear model
+            // also investigate count data and others.
+            summary.individual_n = individual_n();
+            summary.individual_n *= (1.0 / designs.time);
+            summary.design_effect = design_effect();
+            if (option.log)logger.AddLog("[%05d] [%s] Calculate design effect power \n", ImGui::GetFrameCount(), logger.cat[0]);
+
+            if (powertype == ClusterApp::PowerType::DesignEffGLM) {
+                double individual_var = mean_individual_variance(false);
+                if (!isnan(individual_var) && individual_var > 0) {
+                    zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
+                    summary.individual_var = mean_individual_variance(false);
+                    summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
+                    summary.se = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n);
+                    double zval = abs(statmodel.te_pars[0] / summary.se);
+                    summary.power = boost::math::cdf(norm, zval - zcutoff) * 100;
+                    summary.ci_width = zcutoff * summary.se;
+                    summary.min_eff =( zcutoff + powercutoff) * summary.se;
+                }
+                else {
+                    if (option.log)logger.AddLog("[%05d] [%s] Design effect, individual power is nan or zero: %.3f \n", ImGui::GetFrameCount(), logger.cat[2], (float)individual_var);
+                    summary.individual_var = 0;
+                    summary.individual_n = 0;
+                    summary.design_effect = design_effect();
+                    summary.individual_se = 0;
+                    summary.se = 0;
+                    summary.power = 909;
+                    summary.ci_width = 0;
+                    summary.min_eff = 0;
+                }
             }
             else {
-                if (option.log) {
-                    logger.AddLog("[%05d] [%s] GLS information matrix (2nd treatment) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
+                // chi-squared
+                std::pair<double, double> ymean = mean_outcome();
+                float ratio = designs.randomisation_ratio(1, false);
+                if (ymean.first <= 0 || ymean.first >= 1 || ymean.second <= 0 || ymean.second >= 1 || ratio == 0 || ratio == 1) {
+                    if (option.log)logger.AddLog("[%05d] [%s] Design effect Chi-sq, complete case error [%.2f %.2f] ratio: %.2f  \n", ImGui::GetFrameCount(), logger.cat[2], (float)ymean.first, (float)ymean.second, (float)ratio);
+                    summary.individual_var = 0;
+                    summary.individual_n = 0;
+                    summary.design_effect = design_effect();
+                    summary.individual_se = ratio;
+                    summary.se = ymean.first;
+                    summary.power = 909;
+                    summary.ci_width = ymean.second;
+                    summary.min_eff = 909;
                 }
+                else {
+                    double n = summary.individual_n / summary.design_effect;
+                    double del = ymean.second - ymean.first;
+                    //double non_central_param = del * del * n * ratio * (1-ratio) * (1 / (ymean.first * (1-ymean.first)));
+                    // for test of independence above
+                    double non_central_param = del * del * n / (2 * ymean.first);
+                    boost::math::non_central_chi_squared dist(1, non_central_param);
+                    boost::math::chi_squared chi_dist(1);
+                    double k = boost::math::quantile(chi_dist, 1 - statmodel.alpha / 2);                        
+                    summary.power = (1 - boost::math::cdf(dist, k)) * 100;
+                }       
+                
+            }
+
+            
+            //case 3:
+            //{
+            //    // fishers exact test to add another time - 
+            //    // proposed strategy is to define the hypergeometric distribution under the null,
+            //    // and then calculate probabilities for possible y counts under alternative and 
+            //    // take weighted average using binomial probablities, but likely very slow for 
+            //    // larger sample sizes. Put a cap on sample sizes.
+            //}
+            
+
+            // get sample sizes and design effects - also update summary to include new variables
+    
+        } else if(powertype == ClusterApp::PowerType::Box){
+            if (option.log)logger.AddLog("[%05d] [%s] Calculate Box correction power \n", ImGui::GetFrameCount(), logger.cat[0]);
+            if (statmodel.family == Family::gaussian && statmodel.link == Link::identity) {
+                BoxResults res = model->matrix.box();
+                int idx = statmodel.include_intercept == 1 ? 1 : 0;
+                boost::math::fisher_f fdist(1.0, res.dof[idx]);
+                double fcutoff = boost::math::quantile(fdist, 1 - statmodel.alpha);
+                double fval = res.test_stat[idx] / res.scale[idx];
+                summary.power = res.dof[idx] > 1 ? boost::math::cdf(fdist, fval - fcutoff) * 100 : 0.0;
+                summary.dof = res.dof[idx];
+
+                if (option.two_treatments) {
+                    boost::math::fisher_f fdist2(1.0, res.dof[idx+1]);
+                    fcutoff = boost::math::quantile(fdist2, 1 - statmodel.alpha);
+                    fval = res.test_stat[idx+1] / res.scale[idx+1];
+                    summary.power_2 = res.dof[idx+1] > 1 ? boost::math::cdf(fdist2, fval - fcutoff) * 100 : 0.0;
+                    summary.dof_2 = res.dof[idx+1];
+
+                    boost::math::fisher_f fdist3(1.0, res.dof[idx + 2]);
+                    fcutoff = boost::math::quantile(fdist3, 1 - statmodel.alpha);
+                    fval = res.test_stat[idx + 2] / res.scale[idx + 2];
+                    summary.power_12 = res.dof[idx + 2] > 1 ? boost::math::cdf(fdist3, fval - fcutoff) * 100 : 0.0;
+                    summary.dof_12 = res.dof[idx + 2];
+                }
+            } else {
+                summary.power = 909;
+                summary.dof = 0;
+                summary.se = 0;
+                summary.ci_width = 0;
                 summary.power_2 = 909;
                 summary.dof_2 = 0;
                 summary.se_2 = 0;
                 summary.ci_width_2 = 0;
-                summary.power_gee_indep_2 = 909;
-                summary.se_gee_indep_2 = 0;
-                summary.ci_width_gee_indep_2 = 0;
-            }
-            bvar = M(idx + 2, idx + 2);
-            bvar_gee = XtX(idx+2, idx+2);
-            if (!isnan(bvar) && bvar > 0) {
-                zval = abs(statmodel.te_pars[2] / sqrt(bvar));
-                zval_gee = abs(statmodel.te_pars[2] / sqrt(bvar_gee));
-                summary.power_12 = boost::math::cdf(norm, zval - zcutoff) * 100;
-                summary.dof_12 = (*model).model.n();
-                summary.se_12 = sqrt(M(idx + 2, idx + 2));
-                summary.ci_width_12 = zcutoff * summary.se_12;
-                summary.power_gee_indep_12 = boost::math::cdf(norm, zval_gee - zcutoff) * 100;
-                summary.se_gee_indep_12 = sqrt(bvar_gee);
-                summary.ci_width_gee_indep_12 = zcutoff * summary.se_gee_indep_12;
-            }
-            else {
-                if (option.log) {
-                    logger.AddLog("[%05d] [%s] GLS information matrix (interaction) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
-                }
                 summary.power_12 = 909;
                 summary.dof_12 = 0;
                 summary.se_12 = 0;
                 summary.ci_width_12 = 0;
-                summary.power_gee_indep_12 = 909;
-                summary.se_gee_indep_12 = 0;
-                summary.ci_width_gee_indep_12 = 0;
-            }
-            
-        }
-    }
-}
-
-void ClusterApp::glmmModel::power_box(ClusterApp::modelSummary& summary) {
-    if (option.log)logger.AddLog("[%05d] [%s] Calculate Box correction power \n", ImGui::GetFrameCount(), logger.cat[0]);
-    if (statmodel.family == Family::gaussian && statmodel.link == Link::identity) {
-        BoxResults res = model->matrix.box();
-        int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        boost::math::fisher_f fdist(1.0, res.dof[idx]);
-        double fcutoff = boost::math::quantile(fdist, 1 - statmodel.alpha);
-        double fval = res.test_stat[idx] / res.scale[idx];
-        summary.power_box = res.dof[idx] > 1 ? boost::math::cdf(fdist, fval - fcutoff) * 100 : 0.0;
-        summary.dof_box = res.dof[idx];
-
-        if (option.two_treatments) {
-            boost::math::fisher_f fdist2(1.0, res.dof[idx+1]);
-            fcutoff = boost::math::quantile(fdist2, 1 - statmodel.alpha);
-            fval = res.test_stat[idx+1] / res.scale[idx+1];
-            summary.power_box_2 = res.dof[idx+1] > 1 ? boost::math::cdf(fdist2, fval - fcutoff) * 100 : 0.0;
-            summary.dof_box_2 = res.dof[idx+1];
-
-            boost::math::fisher_f fdist3(1.0, res.dof[idx + 2]);
-            fcutoff = boost::math::quantile(fdist3, 1 - statmodel.alpha);
-            fval = res.test_stat[idx + 2] / res.scale[idx + 2];
-            summary.power_box_12 = res.dof[idx + 2] > 1 ? boost::math::cdf(fdist3, fval - fcutoff) * 100 : 0.0;
-            summary.dof_box_12 = res.dof[idx + 2];
-        }
-    }
-}
-
-void ClusterApp::glmmModel::power_kr(ClusterApp::modelSummary& summary) {
-    if (option.log)logger.AddLog("[%05d] [%s] Calculate Kenward-Roger power \n", ImGui::GetFrameCount(), logger.cat[0]);
-    if (model) {
-        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
-        int valsize = option.two_treatments ? 3 : 1;
-        dblvec dofkr(valsize);
-        dblvec bvar(valsize);
-        dblvec bvar2(valsize);
-        int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        bool with_improved = false;
-        if (statmodel.covariance != Covariance::exchangeable && statmodel.covariance != Covariance::nested_exchangeable) {
-            with_improved = true;
-            CorrectionData<glmmr::SE::KRBoth> res = (*model).matrix.template small_sample_correction<glmmr::SE::KRBoth, glmmr::IM::EIM>();
-            dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
-            bvar[0] = res.vcov_beta(idx, idx);
-            bvar2[0] = res.vcov_beta_second(idx, idx);
-            if (option.log && logger.ShowMatrix) {
-                logger.AddLog("[%05d] [%s] Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
-                ClusterApp::AddMatrixToLog(res.vcov_beta, logger);
-                logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
-                ClusterApp::AddMatrixToLog(res.vcov_beta_second, logger);
-            }
-            if (option.two_treatments) {
-                dofkr[1] = res.dof(idx+1) > 1 ? res.dof(idx + 1) : 1.0;
-                bvar[1] = res.vcov_beta(idx + 1, idx + 1);
-                bvar2[1] = res.vcov_beta_second(idx + 1, idx + 1);
-                dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
-                bvar[2] = res.vcov_beta(idx + 2, idx + 2);
-                bvar2[2] = res.vcov_beta_second(idx + 2, idx + 2);
-            }
-        }
-        else {
-            CorrectionData<glmmr::SE::KR> res = (*model).matrix.template small_sample_correction<glmmr::SE::KR, glmmr::IM::EIM>();
-            dofkr[0] = res.dof(idx) > 1 ? res.dof(idx) : 1.0;
-            bvar[0] = res.vcov_beta(idx, idx);
-            bvar2[0] = 0;
-            if (option.log && logger.ShowMatrix) {
-                logger.AddLog("[%05d] [%s] Kenward-Roger Matrix \n", ImGui::GetFrameCount(), logger.cat[0]);
-                ClusterApp::AddMatrixToLog(res.vcov_beta, logger);
-            }
-            
-            if (option.two_treatments) {
-                dofkr[1] = res.dof(idx + 1) > 1 ? res.dof(idx + 1) : 1.0;
-                bvar[1] = res.vcov_beta(idx + 1, idx + 1);
-                bvar2[1] = 0;
-                dofkr[2] = res.dof(idx + 2) > 1 ? res.dof(idx + 2) : 1.0;
-                bvar[2] = res.vcov_beta(idx + 2, idx + 2);
-                bvar2[2] = 0;
-            }
-        }        
-        boost::math::students_t dist(dofkr[0]);
-        double tval, tcutoff, tval_sat, tval2;
-        tval_sat = abs(statmodel.te_pars[0] / summary.se);
-        tcutoff = boost::math::quantile(dist, 1 - statmodel.alpha / 2);
-        summary.dof_kr = dofkr[0];
-        summary.power_sat = dofkr[0] > 1 ? boost::math::cdf(dist, tval_sat - tcutoff) * 100 : 0.0;
-        summary.ci_width_sat = tcutoff * summary.se;
-        if (option.log)logger.AddLog("[%05d] [%s] Calculate Satterthwaite power SE: %.3f te: %.3f \n", ImGui::GetFrameCount(), logger.cat[0], summary.se, statmodel.te_pars[0]);
-        if (!isnan(bvar[0]) && bvar[0] > 0 && bvar[0] < 1e5) {
-            tval = abs(statmodel.te_pars[0] / sqrt(bvar[0]));
-            summary.power_kr = dofkr[0] > 1 ? boost::math::cdf(dist, tval - tcutoff) * 100 : 0.0;
-            summary.se_kr = sqrt(bvar[0]);
-            summary.ci_width_kr = tcutoff * summary.se_kr;  
-        }
-        else {
-            if (option.log) {
-                logger.AddLog("[%05d] [%s] Kenward-Roger Matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
-            }
-            summary.power_kr = 909;
-            summary.dof_kr = 0;
-            summary.se_kr = 0;
-            summary.ci_width_kr = 0;
-        }
-        if (with_improved) {
-            if (!isnan(bvar2[0]) && bvar2[0] > 0 && bvar2[0] < 1e5) {
-                tval2 = abs(statmodel.te_pars[0] / sqrt(bvar2[0]));
-                summary.power_kr2 = dofkr[0] > 1 ? boost::math::cdf(dist, tval2 - tcutoff) * 100 : 0.0;
-                summary.se_kr2 = sqrt(bvar2[0]);
-                summary.ci_width_kr2 = tcutoff * summary.se_kr2;
-            }
-            else {
-                if (option.log) {
-                    logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
-                }
-                summary.power_kr2 = 909;
-                summary.se_kr2 = 0;
-                summary.ci_width_kr2 = 0;
             }
         }
 
-        if (option.two_treatments) {
-            boost::math::students_t dist2(dofkr[1]);
-            summary.dof_kr_2 = dofkr[1];
-            tval_sat = abs(statmodel.te_pars[0] / summary.se_2);
-            summary.power_sat_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval_sat - tcutoff) * 100 : 0.0;
-            summary.ci_width_sat_2 = tcutoff * summary.se_2;
-            if (!isnan(bvar[1]) && bvar[1] >= 0) {
-                tval = abs(statmodel.te_pars[1] / sqrt(bvar[1]));
-                summary.power_kr_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval - tcutoff) * 100 : 0.0;
-                summary.se_kr_2 = sqrt(bvar[1]);
-                summary.ci_width_kr_2 = tcutoff * summary.se_kr_2;
-            }
-            else {
-                if (option.log) {
-                    logger.AddLog("[%05d] [%s] Kenward-Roger Matrix (2nd treatment) not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
-                }
-                summary.power_kr_2 = 909;
-                summary.dof_kr_2 = 0;
-                summary.se_kr_2 = 0;
-                summary.ci_width_kr_2 = 0;
-            }
-            if (with_improved) {
-                if (!isnan(bvar2[1]) && bvar2[1] > 0) {
-                    tval2 = abs(statmodel.te_pars[1] / sqrt(bvar2[1]));
-                    summary.power_kr2_2 = dofkr[1] > 1 ? boost::math::cdf(dist2, tval2 - tcutoff) * 100 : 0.0;
-                    summary.se_kr2_2 = sqrt(bvar2[1]);
-                    summary.ci_width_kr2_2 = tcutoff * summary.se_kr2_2;
-                }
-                else {
-                    if (option.log) {
-                        logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix (2nd treatment) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
-                    }
-                    summary.power_kr2_2 = 909;
-                    summary.se_kr2_2 = 0;
-                    summary.ci_width_kr2_2 = 0;
-                }
-            }
-
-            boost::math::students_t dist3(dofkr[2]);
-            tval_sat = abs(statmodel.te_pars[2] / summary.se_12);
-            summary.dof_kr_12 = dofkr[2];
-            summary.power_sat_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval_sat - tcutoff) * 100 : 0.0;
-            summary.ci_width_sat_12 = tcutoff * summary.se_12;
-            if (!isnan(bvar[2]) && bvar[2] >= 0) {
-                tval = abs(statmodel.te_pars[2] / sqrt(bvar[2]));
-                summary.power_kr_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval - tcutoff) * 100 : 0.0;
-                summary.se_kr_12 = sqrt(bvar[2]);
-                summary.ci_width_kr_12 = tcutoff * summary.se_kr_12;
-            }
-            else {
-                if (option.log) {
-                    logger.AddLog("[%05d] [%s] Kenward-Roger Matrix (interaction) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
-                }
-                summary.power_kr_12 = 909;
-                summary.dof_kr_12 = 0;
-                summary.se_kr_12 = 0;
-                summary.ci_width_kr_12 = 0;
-            }
-            if (with_improved) {
-                if (!isnan(bvar2[2]) && bvar2[2] > 0) {
-                    tval2 = abs(statmodel.te_pars[2] / sqrt(bvar2[2]));
-                    summary.power_kr2_12 = dofkr[2] > 1 ? boost::math::cdf(dist3, tval2 - tcutoff) * 100 : 0.0;
-                    summary.se_kr2_12 = sqrt(bvar2[2]);
-                    summary.ci_width_kr2_12 = tcutoff * summary.se_kr2_12;
-                }
-                else {
-                    if (option.log) {
-                        logger.AddLog("[%05d] [%s] Improved Kenward-Roger Matrix (interaction) not positive definite or other error \n", ImGui::GetFrameCount(), logger.cat[2]);
-                    }
-                    summary.power_kr2_12 = 909;
-                    summary.se_kr2_12 = 0;
-                    summary.ci_width_kr2_12 = 0;
-                }
-            }
-            
-        }
-    }
-}
-
-void ClusterApp::glmmModel::power_bw(ClusterApp::modelSummary& summary) {
-    if (model) {
-        zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
-        Eigen::MatrixXd M = (*model).matrix.information_matrix();
         
-
-        Eigen::MatrixXd XtX1 = (*model).model.linear_predictor.X().transpose() * (*model).model.linear_predictor.X(); //(((*model).matrix.W.W_.array().inverse() * (*model).model.data.weights).matrix().asDiagonal()) *
-        Eigen::MatrixXd XtX2 = (*model).model.linear_predictor.X().transpose() * (*model).matrix.Sigma() * (*model).model.linear_predictor.X();
-        // if(statmodel.family == ClusterApp::Family::gaussian) XtX1 *= (1.0/((*model).model.data.var_par));
-        XtX1 = XtX1.llt().solve(Eigen::MatrixXd::Identity(XtX1.rows(),XtX1.cols()));
-        Eigen::MatrixXd XtX = XtX1 * XtX2 * XtX1;
-        M = M.llt().solve(Eigen::MatrixXd::Identity(M.rows(), M.cols()));
-        int idx = statmodel.include_intercept == 1 ? 1 : 0;
-        double zval, zval_gee;
-        double bvar = M(idx, idx);        
-        double dofbw = dof - (*model).model.linear_predictor.P();
-        double bvar_gee = XtX(idx, idx);
-        dofbw = dofbw > 1 ? dofbw : 1.0;
-        boost::math::students_t dist(dofbw);
-        double tcutoff = boost::math::quantile(dist, 0.975);
-        if (option.log)logger.AddLog("[%05d] [%s] Calculate GLS-BW power, SE %.3f DoF %.1f te %.3f \n", ImGui::GetFrameCount(), logger.cat[0], (float)sqrt(bvar), (float)dofbw, statmodel.te_pars[0]);
-        if (!isnan(bvar) && bvar > 0) {
-            zval = abs(statmodel.te_pars[0] / sqrt(bvar));
-            zval_gee = abs(statmodel.te_pars[0] / sqrt(bvar_gee));                         
-            summary.power_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval - tcutoff) * 100;
-            summary.dof_bw = dof - (*model).model.linear_predictor.P();
-            summary.ci_width_bw = tcutoff * summary.se;
-            summary.power_gee_indep_bw = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
-            summary.ci_width_gee_indep_bw = tcutoff * sqrt(bvar_gee);
-        }
-        else {
-            if (option.log) {
-                logger.AddLog("[%05d] [%s] (B-W) GLS Matrix not positive definite \n", ImGui::GetFrameCount(), logger.cat[2]);
-            }
-            summary.power_bw = 909;
-            summary.dof_bw = 0;
-            summary.ci_width_bw = 0;
-            summary.power_gee_indep_bw = 0;
-            summary.ci_width_gee_indep_bw = 0;
-        }
-        if (option.two_treatments) {
-            bvar = M(idx + 1, idx + 1);
-            bvar_gee = XtX(idx + 1, idx + 1);
-            if (!isnan(bvar) && bvar > 0) {
-                zval = abs(statmodel.te_pars[1] / sqrt(bvar));
-                zval_gee = abs(statmodel.te_pars[1] / sqrt(bvar_gee));      
-                summary.power_bw_2 = boost::math::cdf(dist, zval - tcutoff) * 100;
-                summary.dof_bw_2 = dofbw;
-                summary.ci_width_bw_2 = tcutoff * summary.se_2;
-                summary.power_gee_indep_bw_2 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
-                summary.ci_width_gee_indep_bw_2 = tcutoff * sqrt(bvar_gee);
-            }
-            else {
-                summary.power_bw_2 = 909;
-                summary.dof_bw_2 = 0;
-                summary.ci_width_bw_2 = 0;
-                summary.power_gee_indep_bw_2 = 909;
-                summary.ci_width_gee_indep_bw_2 = 0;
-            }            
-            bvar = M(idx + 2, idx + 2);
-            bvar_gee = XtX(idx + 2, idx + 2);
-            if (!isnan(bvar) && bvar > 0) {
-                zval = abs(statmodel.te_pars[2] / sqrt(M(idx + 2, idx + 2)));
-                zval_gee = abs(statmodel.te_pars[2] / sqrt(bvar_gee));  
-                summary.power_bw_12 = boost::math::cdf(dist, zval - tcutoff) * 100;
-                summary.dof_bw_12 = dofbw;
-                summary.ci_width_bw_12 = tcutoff * summary.se_12;
-                summary.power_gee_indep_bw_12 = dofbw == 1 ? 0.0 : boost::math::cdf(dist, zval_gee - tcutoff) * 100;
-                summary.ci_width_gee_indep_bw_12 = tcutoff * sqrt(bvar_gee);
-            }
-            else {
-                summary.power_bw_12 = 909;
-                summary.dof_bw_12 = 0;
-                summary.ci_width_bw_12 = 0;
-                summary.power_gee_indep_bw_12 = 909;
-                summary.ci_width_gee_indep_bw_12 = 0;
-            }
-            
-        }
     }
 }
 
@@ -812,84 +987,6 @@ double ClusterApp::glmmModel::design_effect() {
     return design_effect;
 }
 
-void ClusterApp::glmmModel::power_de(ClusterApp::modelSummary& summary, int type) {
-    //TYPES: 1 = glm model variance
-    //TYPES: 2 = chi-squared (applicable to binary outcome)
-    //TYPES: 3 = Fisher's exact test
-    //TYPES: 4 = t-test difference in means - not needed as equivalent to linear model
-    // also investigate count data and others.
-    summary.individual_n = individual_n();
-    summary.individual_n *= (1.0 / designs.time);
-    summary.design_effect = design_effect();
-    if (option.log)logger.AddLog("[%05d] [%s] Calculate design effect power \n", ImGui::GetFrameCount(), logger.cat[0]);
-
-    if (type == 0) {
-        double individual_var = mean_individual_variance(false);
-        if (!isnan(individual_var) && individual_var > 0) {
-            zcutoff = boost::math::quantile(norm, 1 - statmodel.alpha / 2);
-            summary.individual_var = mean_individual_variance(false);
-            summary.individual_se = sqrt(2 * summary.individual_var / summary.individual_n);
-            summary.se_de = sqrt(2 * summary.individual_var * summary.design_effect / summary.individual_n);
-            double zval = abs(statmodel.te_pars[0] / summary.se_de);
-            summary.power_de = boost::math::cdf(norm, zval - zcutoff) * 100;
-            summary.ci_width_de = zcutoff * summary.se_de;
-        }
-        else {
-            if (option.log)logger.AddLog("[%05d] [%s] Design effect, individual power is nan or zero: %.3f \n", ImGui::GetFrameCount(), logger.cat[2], (float)individual_var);
-            summary.individual_var = 0;
-            summary.individual_n = 0;
-            summary.design_effect = design_effect();
-            summary.individual_se = 0;
-            summary.se_de = 0;
-            summary.power_de = 909;
-            summary.ci_width_de = 0;
-        }
-    }
-    else if(type == 1) {
-        // chi-squared
-        std::pair<double, double> ymean = mean_outcome();
-        float ratio = designs.randomisation_ratio(1, false);
-        if (ymean.first <= 0 || ymean.first >= 1 || ymean.second <= 0 || ymean.second >= 1 || ratio == 0 || ratio == 1) {
-            if (option.log)logger.AddLog("[%05d] [%s] Design effect Chi-sq, complete case error [%.2f %.2f] ratio: %.2f  \n", ImGui::GetFrameCount(), logger.cat[2], (float)ymean.first, (float)ymean.second, (float)ratio);
-            summary.individual_var = 0;
-            summary.individual_n = 0;
-            summary.design_effect = design_effect();
-            summary.individual_se = ratio;
-            summary.se_de = ymean.first;
-            summary.power_de = 909;
-            summary.ci_width_de = ymean.second;
-        }
-        else {
-            double n = summary.individual_n / summary.design_effect;
-            double del = ymean.second - ymean.first;
-            //double non_central_param = del * del * n * ratio * (1-ratio) * (1 / (ymean.first * (1-ymean.first)));
-            // for test of independence above
-            double non_central_param = del * del * n / (2 * ymean.first);
-            boost::math::non_central_chi_squared dist(1, non_central_param);
-            boost::math::chi_squared chi_dist(1);
-            double k = boost::math::quantile(chi_dist, 1 - statmodel.alpha / 2);                        
-            summary.power_de = (1 - boost::math::cdf(dist, k)) * 100;
-        }       
-        
-    }
-
-    
-    //case 3:
-    //{
-    //    // fishers exact test to add another time - 
-    //    // proposed strategy is to define the hypergeometric distribution under the null,
-    //    // and then calculate probabilities for possible y counts under alternative and 
-    //    // take weighted average using binomial probablities, but likely very slow for 
-    //    // larger sample sizes. Put a cap on sample sizes.
-    //}
-    
-
-    // get sample sizes and design effects - also update summary to include new variables
-    
-
-    
-}
-
 std::vector<int> ClusterApp::glmmModel::round_weights(std::vector<float> w, int n) {
     if (option.log)logger.AddLog("[%05d] [%s] Rounding weights \n", ImGui::GetFrameCount(), logger.cat[0]);
     int total = w.size();
@@ -923,3 +1020,4 @@ std::vector<double> ClusterApp::glmmModel::sim_data() {
     std::vector<double> sim_data(mu.data(), mu.data()+mu.size());
     return sim_data;
 }
+

@@ -38,6 +38,7 @@ void ClusterApp::modelChecker::update() {
     updater.log.AddLog("[%05d] [%s] %s [%s, %s, %s] \n", ImGui::GetFrameCount(), updater.log.cat[0], "Running updater: ",dcheck ? "DESIGN" : ".", mcheck.first ? "MODEL 1": ".", mcheck.second ? "MODEL 2": ".");
     // if (!plot.updating && !krig.updating) {                    
     // } 
+    updater.is_updating = true;
     updater.requires_update = false;  
     if (dcheck) model.update_beta(designs);
     if (dcheck || mcheck.first || mcheck.second) {
@@ -53,7 +54,7 @@ void ClusterApp::modelChecker::update() {
         updater.log.AddLog("[%05d] [%s] Model checksum: %d \n", ImGui::GetFrameCount(), updater.log.cat[0], model.crc_val);
         updater.log.AddLog("[%05d] [%s] Parameter checksum: %d \n", ImGui::GetFrameCount(), updater.log.cat[0], model.crc_val_pars);
     }
-    if ((plot.initialised && (pcheck || dcheck || mcheck.first || mcheck.second) && option.plotter) || option.plotter && !plot.initialised){
+    if ((plot.initialised && (pcheck || dcheck || mcheck.first || mcheck.second) && plotopen) || plotopen && !plot.initialised){
         plot.update_data();
         bool update_crc_plot = plot.check();
         updater.plot_requires_update = false; 
@@ -64,6 +65,7 @@ void ClusterApp::modelChecker::update() {
     mcheck.second = false;
     bool update_crc = designs.check();
     std::pair<bool, bool> mcheck_new = model.check();
+    updater.is_updating = false;
 }
 
 

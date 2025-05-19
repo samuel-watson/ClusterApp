@@ -13,6 +13,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_spectrum.h"
 #include <iostream>
 #include "clusterapp.h"
 
@@ -62,88 +63,45 @@ void loop()
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();  
-  //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-
-  // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-  static ClusterApp::design designs;
-  static ClusterApp::options windows;
-  static ClusterApp::statisticalModel model(windows);
-  static ClusterApp::colourPicker colour;
-  static ClusterApp::modelSummary results(designs);
-  static ClusterApp::AppLog log;
-  static ClusterApp::glmmModel glmm(model, windows, designs, log);
-  static ClusterApp::modelUpdater updater(designs, model, results, glmm, log);
-  static ClusterApp::plotData plotdata(glmm,updater);
-  static ClusterApp::krigingData krigdata(glmm, updater);
-  static ClusterApp::modelChecker checker(designs, model, updater, plotdata, krigdata, windows);
-
   
+  static ClusterApp::options option;
+  static ClusterApp::AppLog logger;
+  static std::array<bool, 3>  isin{true,false,false};
+  static ClusterApp::appModel model1(option, logger, 0);
+  static ClusterApp::appModel model2(option, logger, 1);
+  static ClusterApp::appModel model3(option, logger, 2);
 
-  //ImGui::PushFont(main_font);
-  if (windows.light_mode) {
-      ImGui::PushStyleColor(ImGuiCol_WindowBg, colour.base3());
-      ImGui::PushStyleColor(ImGuiCol_Text, colour.base03());
-      ImGui::PushStyleColor(ImGuiCol_MenuBarBg, colour.base2());
-      ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, colour.base2());
-      ImGui::PushStyleColor(ImGuiCol_PopupBg, colour.base2());
+  static ClusterApp::colourPicker colour;
+  ImGui::SetNextWindowSize(ImVec2(160, 500), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+  ClusterApp::RenderSelector(isin, option);
+
+  static float maxx = ImGui::GetWindowPos().x;
+  static float xwidth = maxx > 700.0 ? maxx : 700.0;
+
+  int counter = 0;
+  for(int i = 0; i < 3; i++){
+    if(isin[i]){
+      ImGui::SetNextWindowSize(ImVec2((int)xwidth,800), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2((counter*50)+175, 50+(counter*50)), ImGuiCond_FirstUseEver);
+      if(i == 0){
+        model1.checker.check_time();
+        ClusterApp::RenderMenuBar(model1, option, &isin[0]);
+      } else if(i == 1){
+        model2.checker.check_time();
+        ClusterApp::RenderMenuBar(model2, option, &isin[1]);
+      } else {
+        model3.checker.check_time();
+        ClusterApp::RenderMenuBar(model3, option, &isin[2]);
+      }
+      counter++;
+    }    
   }
-  else {
-      ImGui::PushStyleColor(ImGuiCol_WindowBg, colour.base03());
-      ImGui::PushStyleColor(ImGuiCol_Text, colour.base1());
-      ImGui::PushStyleColor(ImGuiCol_MenuBarBg, colour.base02());
-      ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, colour.base02());
-      ImGui::PushStyleColor(ImGuiCol_PopupBg, colour.base02());
-  }
 
-  checker.check_time();
-  ClusterApp::ShowMainMenu(windows, designs, updater, results);
-  ClusterApp::AppDockSpace(&windows.dockspace);
-  ImGui::SetNextWindowSize(ImVec2(750,500), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowPos(ImVec2(400, 50), ImGuiCond_FirstUseEver);
-  ClusterApp::RenderDesigner(designs, updater, windows);
-  ImGui::SetNextWindowSize(ImVec2(400,800), ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowPos(ImVec2(0, 50), ImGuiCond_FirstUseEver);
-  ClusterApp::RenderMenuBar(designs, model, checker, windows);
-
-  if (windows.sample_size) {
-      ClusterApp::RenderSampleSize(designs);
+  if (option.log) {
+      ClusterApp::RenderLog(logger);
   }
       
-  if (windows.model) {
-      ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
-      ImGui::SetNextWindowPos(ImVec2(750, 50), ImGuiCond_FirstUseEver);
-      ClusterApp::RenderModel(designs, model, windows);
-  }
-      
-  if (windows.results) {
-      ImGui::SetNextWindowSize(ImVec2(750, 300), ImGuiCond_FirstUseEver);
-      ImGui::SetNextWindowPos(ImVec2(400, 550), ImGuiCond_FirstUseEver);
-      ClusterApp::RenderResults(checker, windows);
-  }
-      
-  if (windows.optimiser) {
-      ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
-      ImGui::SetNextWindowPos(ImVec2(750, 350), ImGuiCond_FirstUseEver);
-      ClusterApp::RenderOptimiser(designs, updater, results, windows);
-  }
-
-  if (windows.plotter) {
-      ClusterApp::RenderPlotter(plotdata, windows, checker);
-  }
-  if (windows.krigger) {
-      ClusterApp::RenderKriging(krigdata, windows);
-  }
-  if (windows.simulate) {
-      ClusterApp::RenderDataSim(glmm, windows);
-  }
-
-  if (windows.log) {
-      ClusterApp::RenderLog(log);
-  }
-      
-   
-  ////ImGui::PopFont();
-  ImGui::PopStyleColor(5);
 
   ImGui::Render();
 
@@ -199,8 +157,11 @@ int init_imgui()
 
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-  // Load Fonts
 
+  ImGui::Spectrum::StyleColorsSpectrum();
+  ImGui::Spectrum::LoadFont(18);
+  // Load Fonts
+  /*
   ImVector<ImWchar> ranges;
   ImFontGlyphRangesBuilder builder;                      
   builder.AddRanges(io.Fonts->GetGlyphRangesGreek()); // Add one of the default ranges - doesn't actually have greek but leaving here in case I change the font
@@ -209,7 +170,7 @@ int init_imgui()
 
   io.Fonts->AddFontFromFileTTF("data/twcen.ttf", 18.0f, nullptr, ranges.Data);
   //ImFont* uni_font = io.Fonts->AddFontFromFileTTF("data/didact.ttf", 18.0f, nullptr, ranges.Data); // this has greek but haven't figured out how to choose fonts
-  io.Fonts->Build();
+  io.Fonts->Build();*/
 
   resizeCanvas();
 
