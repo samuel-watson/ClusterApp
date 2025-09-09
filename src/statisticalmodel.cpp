@@ -18,6 +18,7 @@ std::pair<bool, bool> ClusterApp::statisticalModel::check() {
     crc(include_intercept);    
     crc(target_power);
     for (int i = 0; i < te_pars.size(); i++)crc2(te_pars[i]);
+    for (int i = 0; i < treat_control_means.size(); i++)crc2(treat_control_means[i]);
     for (int i = 0; i < ixx_pars.size(); i++)crc2(ixx_pars[i]);
     for (int i = 0; i < cov_pars.size(); i++)crc2(cov_pars[i]);
     for (int i = 0; i < beta_pars.size(); i++)crc2(beta_pars[i]);

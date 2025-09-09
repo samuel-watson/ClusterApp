@@ -7099,9 +7099,9 @@ var dynCall_iiiiijj = Module["dynCall_iiiiijj"] = (a0, a1, a2, a3, a4, a5, a6, a
 
 var dynCall_jiiii = Module["dynCall_jiiii"] = (a0, a1, a2, a3, a4) => (dynCall_jiiii = Module["dynCall_jiiii"] = wasmExports["jd"])(a0, a1, a2, a3, a4);
 
-var ___start_em_js = Module["___start_em_js"] = 464880;
+var ___start_em_js = Module["___start_em_js"] = 465184;
 
-var ___stop_em_js = Module["___stop_em_js"] = 465086;
+var ___stop_em_js = Module["___stop_em_js"] = 465390;
 
 function invoke_viiiii(index, a1, a2, a3, a4, a5) {
  var sp = stackSave();

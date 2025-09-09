@@ -82,17 +82,44 @@ void loop()
   int counter = 0;
   for(int i = 0; i < 3; i++){
     if(isin[i]){
-      ImGui::SetNextWindowSize(ImVec2((int)xwidth,800), ImGuiCond_FirstUseEver);
+      
       ImGui::SetNextWindowPos(ImVec2((counter*50)+175, 50+(counter*50)), ImGuiCond_FirstUseEver);
       if(i == 0){
         model1.checker.check_time();
-        ClusterApp::RenderMenuBar(model1, option, &isin[0]);
+        if(!model1.first_design_click && !model1.first_model_click && isin[0]){
+          ImGui::SetNextWindowSize(ImVec2(300,350), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderDesignSelector(model1, option);
+        } else if(model1.first_design_click && !model1.first_model_click && isin[0]) {
+          ImGui::SetNextWindowSize(ImVec2(500,600), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderModelSelector(model1, option);
+        } else {
+          ImGui::SetNextWindowSize(ImVec2((int)xwidth,800), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderMenuBar(model1, option, &isin[0]);
+        }        
       } else if(i == 1){
         model2.checker.check_time();
-        ClusterApp::RenderMenuBar(model2, option, &isin[1]);
+        if(!model2.first_design_click && !model2.first_model_click && isin[1]){
+          ImGui::SetNextWindowSize(ImVec2(300,350), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderDesignSelector(model2, option);
+        } else if(model2.first_design_click && !model2.first_model_click && isin[1]) {
+          ImGui::SetNextWindowSize(ImVec2(500,600), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderModelSelector(model2, option);
+        } else {
+          ImGui::SetNextWindowSize(ImVec2((int)xwidth,800), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderMenuBar(model2, option, &isin[1]);
+        } 
       } else {
         model3.checker.check_time();
-        ClusterApp::RenderMenuBar(model3, option, &isin[2]);
+        if(!model3.first_design_click && !model3.first_model_click && isin[2]){
+          ImGui::SetNextWindowSize(ImVec2(300,350), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderDesignSelector(model3, option);
+        } else if(model3.first_design_click && !model3.first_model_click && isin[2]) {
+          ImGui::SetNextWindowSize(ImVec2(500,600), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderModelSelector(model3, option);
+        } else {
+          ImGui::SetNextWindowSize(ImVec2((int)xwidth,800), ImGuiCond_FirstUseEver);
+          ClusterApp::RenderMenuBar(model3, option, &isin[2]);
+        } 
       }
       counter++;
     }    

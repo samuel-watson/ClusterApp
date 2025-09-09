@@ -116,6 +116,7 @@ namespace ClusterApp {
         int                     include_intercept = 1;
         float                   sigma = 1;
         std::array<float,3>     te_pars = { 0.5f,0.5f,0.5f };
+        std::array<float,2>     treat_control_means = {0.5f, 0.4f};
         std::array<float,4>     ixx_pars = { 0.05f,0.8f,0.5f, 0.05f };
         std::array<float,7>     cov_pars = { 0.5f,0.5f,0.5f, 0.5f,0.5f,0.5f, 0.5f };
         std::vector<float>      beta_pars = std::vector<float>(1, 0.0f);
@@ -196,19 +197,20 @@ namespace ClusterApp {
         std::vector<double>             optimal_weights = { 0.5, 0.5 };
         glmmModel(ClusterApp::statisticalModel& statmodel_, ClusterApp::options& option_, ClusterApp::design& designs_, ClusterApp::AppLog& log_) : statmodel(statmodel_), option(option_), designs(designs_), logger(log_) {};
         ~glmmModel() = default;
-        void                    update_formula();
-        void                    update_parameters();
-        void                    update_model_data(const Eigen::ArrayXXd& data);
-        std::vector<double>     sim_data();
-        void                    power(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype);
-        void                    optimum(int N);
-        float                   individual_n();
-        double                  design_effect();
-        double                  mean_individual_variance(bool weighted = true);
-        std::pair<double,double> mean_outcome();
-        std::vector<int>        round_weights(std::vector<float> w, int n);
+        void                        update_formula();
+        void                        update_parameters();
+        void                        update_model_data(const Eigen::ArrayXXd& data);
+        std::vector<double>         sim_data();
+        void                        power(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype);
+        void                        optimum(int N);
+        float                       individual_n();
+        double                      design_effect();
+        double                      mean_individual_variance(bool weighted = true);
+        std::pair<double,double>    mean_outcome();
+        std::vector<int>            round_weights(std::vector<float> w, int n);
+        std::pair<float, float>     icc_to_var_par(const float& baseline, const float& icc, const ClusterApp::Family& family);
     private:
-        void                    power_(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype, const float var_inflate);
+        void                        power_(ClusterApp::modelSummary& summary, const ClusterApp::PowerType& powertype, const float var_inflate);
     };
 
     class modelUpdater {
@@ -357,7 +359,7 @@ namespace ClusterApp {
         int     link_item_current = 0;
         int     outcome_item_current = 0;
         bool    designopen = false;
-        bool    modelopen = false;
+        bool    modelopen = true;
         bool    optimalopen = false;
         bool    kriggeropen = false;
         bool    openkrig = false;
@@ -366,6 +368,9 @@ namespace ClusterApp {
         int     target_cl_size  = 0;
         bool    find_period_size_trigger = false;
         bool    find_clusters_trigger = false;
+        bool    first_time = true;
+        bool    first_design_click = false;
+        bool    first_model_click = false;
 
         appModel(ClusterApp::options& option_, ClusterApp::AppLog& logger_, const int id_);
     };

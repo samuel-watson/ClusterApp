@@ -120,6 +120,36 @@ double ClusterApp::glmmModel::mean_individual_variance(bool weighted) {
     return var;
 }
 
+std::pair<float, float> ClusterApp::glmmModel::icc_to_var_par(const float& baseline, const float& icc, const ClusterApp::Family& family){
+    std::pair<float, float> result;
+    double a;
+    switch(family){
+        case ClusterApp::Family::poisson:
+        {
+            result.first = exp(baseline);
+            a = result.first * icc / (1.0 - icc);
+            result.second = log(a / (result.first * result.first) + 1.0);
+            break;
+        }
+        case ClusterApp::Family::binomial:
+        {
+            float p = exp(baseline)/(1+exp(baseline));
+            result.first = p * (1 - p);
+            a = result.first * icc / (1 - icc);
+            float b = 1.0 + exp(baseline);
+            result.second = a * b * b / (p * p);
+            break;
+        }
+        default:
+        {
+            result.first = baseline;
+            result.second = result.first * icc / (1 - icc);
+            break;
+        }
+    }
+    return result;
+}
+
 std::pair<double, double> ClusterApp::glmmModel::mean_outcome() {   
     Eigen::Vector2d xb;
     xb(0) = statmodel.beta_pars[0];
@@ -202,7 +232,12 @@ void ClusterApp::glmmModel::update_parameters() {
     else {
 
         // switch between ICC and parameter specifications
-        statmodel.cov_pars[2] = mean_individual_variance(false);
+        
+        std::pair<float, float> varvals = icc_to_var_par(statmodel.beta_pars[0], statmodel.ixx_pars[0], statmodel.family);
+
+        if (option.log)logger.AddLog("[%05d] [%s] Convert ICC (%f) and baseline (%f) to Variance: %f \n", ImGui::GetFrameCount(), logger.cat[0], statmodel.ixx_pars[0], statmodel.beta_pars[0], varvals.second);
+
+        statmodel.cov_pars[2] = varvals.first; //mean_individual_variance(false);
         double ind_level_error = statmodel.cov_pars[2];
         double cl_level_error;
         if (option.use_icc_for_non_gaussian) {
@@ -210,7 +245,7 @@ void ClusterApp::glmmModel::update_parameters() {
                 statmodel.cov_pars[3] = statmodel.ixx_pars[2] * statmodel.cov_pars[2] / (1 - statmodel.ixx_pars[2]);
                 ind_level_error += statmodel.cov_pars[3];
             }
-            cl_level_error = statmodel.ixx_pars[0] * ind_level_error / (1 - statmodel.ixx_pars[0]);            
+            cl_level_error = varvals.second;//statmodel.ixx_pars[0] * ind_level_error / (1 - statmodel.ixx_pars[0]);            
             if (statmodel.covariance == ClusterApp::Covariance::nested_exchangeable) {
                 statmodel.cov_pars[0] = statmodel.ixx_pars[1] * cl_level_error;
                 statmodel.cov_pars[1] = ( 1- statmodel.ixx_pars[1])  * cl_level_error;

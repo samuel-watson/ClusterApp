@@ -14,37 +14,18 @@ namespace ClusterApp {
         ImGuiColorEditFlags flags, ImGuiButtonFlags button_flags, const ImVec2& size_arg, const ImVec4& col_upper_left_hover, const ImVec4& col_upper_right_hover,
         const ImVec4& col_btm_left_hover, const ImVec4& col_btm_right_hover, const ImVec4& col_upper_left_active, const ImVec4& col_upper_right_active,
         const ImVec4& col_btm_left_active, const ImVec4& col_btm_right_active);
-
-    //bool BufferingBar(const char* label, float value,  const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col);
-
-    //bool Spinner(const char* label, float radius, int thickness, const ImU32& color);
-
-    // void ShowMainMenu(ClusterApp::options& windows, ClusterApp::design& designs, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary);
-
+    
     void AppDockSpace(bool* p_open);
-
-    // void RenderDesigner(ClusterApp::design& designs, ClusterApp::options& option);
-
-    // void RenderSampleSize(ClusterApp::design& designs);
-
-    // void RenderModel(ClusterApp::design& design, ClusterApp::statisticalModel& model, ClusterApp::options& option);
 
     void RenderSelector(std::array<bool,3>& isin, ClusterApp::options& option);
     
     void RenderMenuBar(ClusterApp::appModel& model, ClusterApp::options& option, bool* mopen);
+    
+    void RenderDesignSelector(ClusterApp::appModel& model, ClusterApp::options& option);
 
-    // void RenderResults(ClusterApp::modelChecker& checker, ClusterApp::options& option);
-
-    // void RenderOptimiser(ClusterApp::design& design, ClusterApp::modelUpdater& updater, ClusterApp::modelSummary& summary, ClusterApp::options& option);
-
-    // void RenderPlotter(ClusterApp::plotData& plot, ClusterApp::options& option, ClusterApp::modelChecker& checker);
-
-    // void RenderKriging(ClusterApp::krigingData& krig, ClusterApp::options& option);
-
-    // void RenderDataSim(ClusterApp::glmmModel& glmm, ClusterApp::options& option);
+    void RenderModelSelector(ClusterApp::appModel& model, ClusterApp::options& option);
 
     void RenderLog(ClusterApp::AppLog& log);
-
 
 }
 
