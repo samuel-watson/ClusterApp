@@ -1,4 +1,7 @@
-﻿# ClusterApp
+## Note
+The frontend of the online app at [clustertrial.app](https://www.clustertrial.app/) has now been rewritten in Javascript to allow for more web functionality, including downloading/uploading of files, and more flexible features for version 2. The new app is at this [repository](https://github.com/samuel-watson/ClusterApp2). This repository has been left here as it may still be useful to others and is still hosted online at [clustertrial.app/old](https://www.clustertrial.app/old).
+ 
+# ClusterApp
 An application for design analysis for cluster randomised trials. The application provides an interactive graphical user interface to design a cluster trial, set model parameters, identify optimal designs, and determine power. A wide range of models are provided for both fixed and random effects, including exchangeable, nested exchangeable, and exponential decay covariance models at cluster and individual levels; Gaussian, binomial, poisson, beta, and gamma models with a range of link functions; and, time fixed effects and cluster time trends. Power, confidence intervals, and standard errors are calculated using GLS covariance and with between-within and [Kenward-Roger](https://doi.org/10.2307/2533558) corrections. Optimal design weights are calculated using the ["Girling" algorithm](https://doi.org/10.2307/2533558). The app also include two treatment designs including factorial trials.
 
 The app is available online at [clustertrial.app](https://www.clustertrial.app/).
@@ -49,4 +52,5 @@ on Windows systems, assuming MinGW is the compiler. Similarly, the project can b
 
 - See [Watson & Pan (2023)](https://doi.org/10.1007/s11222-023-10280-w) for more information on rounding methods, and c-optimal designs using GLMMs using combinatorial optimisation algorithms.
 - [Watson, Hemming, and Girling (2023)](https://arxiv.org/abs/2303.07953) provides an overview of optimal cluster trial designs and methods.
+
 
